@@ -1,5 +1,8 @@
 from setuptools import setup
 import os
+import codecs
+import itertools
+
 
 VERSION = "0.0.1"
 
@@ -10,6 +13,20 @@ def get_long_description():
         encoding="utf8",
     ) as fp:
         return fp.read()
+    
+    
+def read_requirements(filename):
+    base = os.path.abspath(os.path.dirname(__file__))
+    with codecs.open(os.path.join(base, filename), "rb", "utf-8") as f:
+        lineiter = (line.strip() for line in f)
+        return [line for line in lineiter if line and not line.startswith("#")]
+
+
+requirements = {
+    "base": read_requirements("requirements/base.txt"),
+    # "tensorflow": read_requirements("requirements/tensorflow.txt"),
+    "dev": read_requirements("requirements/dev.txt"),
+}
 
 
 setup(
@@ -27,7 +44,12 @@ setup(
     license="Apache License, Version 2.0",
     version=VERSION,
     packages=["crossfit"],
-    install_requires=[],
-    extras_require={"test": ["pytest"]},
+    install_requires=requirements["base"],
+    include_package_data=True,
+    extras_require={
+        **requirements,
+        "all": list(itertools.chain(*list(requirements.values()))),
+    },
     python_requires=">=3.7",
+    test_suite="tests",
 )
