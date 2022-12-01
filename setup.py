@@ -1,8 +1,8 @@
-from setuptools import setup
-import os
 import codecs
 import itertools
+import os
 
+from setuptools import setup
 
 VERSION = "0.0.1"
 
@@ -13,8 +13,8 @@ def get_long_description():
         encoding="utf8",
     ) as fp:
         return fp.read()
-    
-    
+
+
 def read_requirements(filename):
     base = os.path.abspath(os.path.dirname(__file__))
     with codecs.open(os.path.join(base, filename), "rb", "utf-8") as f:

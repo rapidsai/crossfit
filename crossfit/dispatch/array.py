@@ -4,7 +4,6 @@ from typing import Any, Type, TypeVar
 import numpy as np
 from dask.utils import Dispatch
 
-
 InputType = TypeVar("InputType")
 IntermediateType = TypeVar("IntermediateType")
 ToType = TypeVar("ToType")
@@ -17,9 +16,9 @@ class ToDispatch(Dispatch):
 
 class FromDispatch(Dispatch):
     def __call__(
-        self, 
+        self,
         intermediate: IntermediateType,
-        to: Type[ToType], 
+        to: Type[ToType],
     ) -> ToType:
         meth = self.dispatch(to)
         return meth(intermediate)
@@ -97,7 +96,7 @@ def register_cupy_to_array():
 
 @dispatch_from_array.register_lazy("cupy")
 @dispatch_from_cuda_array.register_lazy("cupy")
-def register_cupy_to_array():
+def register_cupy_from_array():
     import cupy as cp
 
     @dispatch_from_array.register(cp.ndarray)
@@ -150,7 +149,7 @@ def register_cudf_to_array():
 
 @dispatch_from_array.register_lazy("cudf")
 @dispatch_from_cuda_array.register_lazy("cudf")
-def register_cudf_from_dlpack():
+def register_cudf_from_array():
     import cudf
 
     @dispatch_from_array.register(cudf.Series)
@@ -172,7 +171,7 @@ def register_tf_to_dlpack():
 
 
 @dispatch_from_dlpack.register_lazy("tensorflow")
-def register_tf_to_dlpack():
+def register_tf_from_dlpack():
     import tensorflow as tf
 
     @dispatch_from_dlpack.register(tf.Tensor)
@@ -182,7 +181,7 @@ def register_tf_to_dlpack():
 
 
 @dispatch_to_array.register_lazy("tensorflow")
-def register_tf_to_dlpack():
+def register_tf_to_array():
     import tensorflow as tf
 
     @dispatch_to_array.register(tf.Tensor)
@@ -192,7 +191,7 @@ def register_tf_to_dlpack():
 
 
 @dispatch_from_array.register_lazy("tensorflow")
-def register_tf_to_dlpack():
+def register_tf_from_array():
     import tensorflow as tf
 
     @dispatch_from_array.register(tf.Tensor)
@@ -201,74 +200,13 @@ def register_tf_to_dlpack():
         return tf.convert_to_tensor(array)
 
 
-# ================== cupy ==================
-@dispatch_to_dlpack.register_lazy("cupy")
-def register_cupy_to_dlpack():
-    import cupy as cp
-
-    @dispatch_to_dlpack.register(cp.ndarray)
-    def cupy_to_dlpack(input_array: cp.ndarray):
-        logging.debug(f"Converting {input_array} to DLPack")
-        try:
-            return input_array.to_dlpack()
-        except AttributeError:
-            return input_array.toDlpack()
-
-
-@dispatch_from_dlpack.register_lazy("cupy")
-def register_cupy_to_dlpack():
-    import cupy as cp
-
-    @dispatch_from_dlpack.register(cp.ndarray)
-    def cupy_from_dlpack(capsule) -> cp.ndarray:
-        logging.debug(f"Converting {capsule} to cp.ndarray")
-        try:
-            return cp.from_dlpack(capsule)
-        except AttributeError:
-            return cp.fromDlpack(capsule)
-
-
-@dispatch_to_array.register_lazy("cupy")
-def register_cupy_to_dlpack():
-    import cupy as cp
-
-    @dispatch_to_array.register(cp.ndarray)
-    def cupy_to_array(input_array: cp.ndarray):
-        logging.debug(f"Converting {input_array} to np.ndarray")
-        return cp.asnumpy(input_array)
-
-
-@dispatch_from_array.register_lazy("cupy")
-@dispatch_from_cuda_array.register_lazy("cupy")
-def register_cupy_to_dlpack():
-    import cupy as cp
-
-    @dispatch_from_array.register(cp.ndarray)
-    @dispatch_from_cuda_array.register(cp.ndarray)
-    def cupy_from_array(array) -> cp.ndarray:
-        logging.debug(f"Converting {array} to cp.ndarray")
-        return cp.asarray(array)
-
-
-@dispatch_to_cuda_array.register_lazy("cupy")
-def register_cupy_to_dlpack():
-    import cupy as cp
-
-    @dispatch_to_cuda_array.register(cp.ndarray)
-    def cudf_to_cuda_array(input_array: cp.ndarray):
-        logging.debug(f"Converting {input_array} to cp.ndarray")
-        return input_array
-
-
 def convert(input: Any, to: Type[ToType]) -> ToType:
     if isinstance(input, to):
         return input
 
     # 1. Try through cuda-array
     try:
-        return dispatch_from_cuda_array(
-            dispatch_to_cuda_array(input), to
-        )
+        return dispatch_from_cuda_array(dispatch_to_cuda_array(input), to)
     except Exception:
         pass
 
