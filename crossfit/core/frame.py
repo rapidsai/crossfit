@@ -2,7 +2,7 @@ from typing import Type
 
 import pandas as pd
 
-from crossfit.core.state import MetricState
+from crossfit.core.metric import MetricState
 
 
 class MetricFrame:

@@ -2,8 +2,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from crossfit.core.metric import Metric, OutputType, StateType
-from crossfit.core.state import ArrayType, MetricState
+from crossfit.core.metric import ArrayType, Metric, MetricState, OutputType, StateType
 
 
 # Adapted from:
@@ -14,7 +13,7 @@ class MomentsState(MetricState[ArrayType]):
     mean: ArrayType
     var: ArrayType
 
-    def merge(self, other: "MomentsState") -> "MomentsState":
+    def combine(self, other: "MomentsState") -> "MomentsState":
         delta = other.mean - self.mean
         tot_count = self.count + other.count
 
