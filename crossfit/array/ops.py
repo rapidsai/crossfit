@@ -68,16 +68,4 @@ maximum = with_dispatch(np.maximum)
 all = with_dispatch(np.all)
 
 
-# # ================== cupy ==================
-@np_backend_dispatch.register_lazy("cupy")
-def register_cupy_backend():
-    import cupy as cp
-
-    class CupyBackend(NPBackend):
-        def __init__(self):
-            super().__init__(cp)
-
-    np_backend_dispatch.register(cp.ndarray)(CupyBackend())
-
-
 __all__ = ["maximum", "minimum", "all"]

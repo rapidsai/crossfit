@@ -23,6 +23,8 @@ def test_moments_per_col():
     result = mf.result()
     assert isinstance(result, pd.DataFrame)
     assert list(result.index) == ["a", "a2", "b", "c"]
+    np.testing.assert_allclose(result["mean"], df.mean())
+    np.testing.assert_allclose(result["variance"], df.var())
 
 
 def test_moments_per_col_grouped():
