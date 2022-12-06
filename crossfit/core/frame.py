@@ -2,7 +2,7 @@ from typing import Type
 
 import pandas as pd
 
-from crossfit.core.state import MetricState
+from crossfit.core.metric import MetricState
 
 
 class MetricFrame:
@@ -28,6 +28,8 @@ class MetricFrame:
 
     def result(self):
         metric_result = self.metric.present(self.state)
+        if isinstance(metric_result, MetricState):
+            metric_result = metric_result.state_dict
         if not isinstance(metric_result, dict):
             metric_result = {"result": metric_result}
 

@@ -2,19 +2,18 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from crossfit.core.metric import Metric, OutputType, StateType
-from crossfit.core.state import ArrayType, MetricState
+from crossfit.core.metric import Array, Metric, MetricState, OutputType, StateType
 
 
 # Adapted from:
 # https://github.com/openai/gym/blob/6a04d49722724677610e36c1f92908e72f51da0c/gym/wrappers/normalize.py#L25
 @dataclass(frozen=True)
-class MomentsState(MetricState[ArrayType]):
-    count: ArrayType
-    mean: ArrayType
-    var: ArrayType
+class MomentsState(MetricState[Array]):
+    count: Array
+    mean: Array
+    var: Array
 
-    def merge(self, other: "MomentsState") -> "MomentsState":
+    def combine(self, other: "MomentsState") -> "MomentsState":
         delta = other.mean - self.mean
         tot_count = self.count + other.count
 
@@ -40,7 +39,7 @@ class Moments(Metric[MomentsState]):
     def __init__(self, axis=0):
         self.axis = axis
 
-    def prepare(self, data: ArrayType) -> MomentsState:
+    def prepare(self, data: Array) -> MomentsState:
         return MomentsState(
             count=data.shape[self.axis],
             mean=data.mean(axis=self.axis),

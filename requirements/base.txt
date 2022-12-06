@@ -1,1 +1,5 @@
-merlin-core
+pandas
+numpy
+dask
+typing_extensions
+typing_utils

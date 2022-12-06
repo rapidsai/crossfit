@@ -45,6 +45,6 @@ def calculate_per_col(df, metric: Metric) -> MetricFrame:
         rows.append(state_df)
 
     df = pd.concat(rows, axis=0)
-    mdf = MetricFrame(df, metric=metric, index=pd.Index(index, name="col"))
+    mf = MetricFrame(df, metric=metric, index=pd.Index(index, name="col"))
 
-    return mdf
+    return mf
