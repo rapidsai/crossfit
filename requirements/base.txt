@@ -1,5 +1,6 @@
 pandas
 numpy
 dask
+tensorflow_metadata
 typing_extensions
 typing_utils

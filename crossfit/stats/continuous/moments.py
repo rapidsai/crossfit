@@ -1,8 +1,9 @@
+from typing import Dict
 from dataclasses import dataclass
 
 import numpy as np
 
-from crossfit.core.metric import Array, Metric, MetricState, OutputType, StateType
+from crossfit.core.metric import Array, Metric, MetricState
 
 
 # Adapted from:
@@ -46,5 +47,8 @@ class Moments(Metric[MomentsState]):
             var=data.var(axis=self.axis),
         )
 
-    def present(self, state: StateType) -> OutputType:
-        return {"mean": state.mean, "variance": state.variance}
+    def present(self, state: MomentsState) -> Dict[str, Array]:
+        out = state.state_dict
+        out["std"] = state.std
+
+        return out

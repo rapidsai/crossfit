@@ -27,6 +27,7 @@ def test_continuous_stats_per_col():
         "range.min",
         "range.max",
         "moments.mean",
+        "moments.std",
         "moments.var",
         "moments.count",
     }
@@ -39,4 +40,4 @@ def test_continuous_stats_per_col_grouped():
     result = mf.result()
     assert isinstance(result, pd.DataFrame)
     assert len(result.index) == 5
-    assert len(result.columns) == 14
+    assert len(result.columns) == 16

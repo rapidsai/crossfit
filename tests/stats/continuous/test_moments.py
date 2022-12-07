@@ -24,7 +24,8 @@ def test_moments_per_col():
     assert isinstance(result, pd.DataFrame)
     assert list(result.index) == ["a", "a2", "b", "c"]
     np.testing.assert_allclose(result["mean"], df.mean())
-    np.testing.assert_allclose(result["variance"], df.var())
+    np.testing.assert_allclose(result["std"], df.std())
+    np.testing.assert_allclose(result["var"], df.var())
 
 
 def test_moments_per_col_grouped():
@@ -36,6 +37,6 @@ def test_moments_per_col_grouped():
     result = mf.result()
     assert isinstance(result, pd.DataFrame)
     assert isinstance(result.columns, pd.MultiIndex)
-    assert list(result.columns.levels[0]) == ["mean", "variance"]
+    assert set(result.columns.levels[0]) == {"mean", "var", "count", "std"}
     assert sorted(list(result.columns.levels[1])) == ["b", "c"]
     assert sorted(list(result.index.names)) == ["a", "a2"]

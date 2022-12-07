@@ -22,3 +22,11 @@ class ContinuousStats(AxisMetric[ContinuousStatsState]):
             Moments(axis=self.axis).prepare(data),
             CommonStats().prepare(data),
         )
+
+    def present(self, state: ContinuousStatsState):
+        out = state.state_dict
+        moments = Moments(axis=self.axis).present(state.moments)
+        for key, val in moments.items():
+            out["moments." + key] = val
+
+        return out
