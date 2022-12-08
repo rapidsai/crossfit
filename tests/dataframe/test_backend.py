@@ -2,7 +2,7 @@ import pytest
 
 import pandas as pd
 
-from crossfit.dataframe import df_backend, cudf_backend, pandas_backend
+from crossfit.dataframe import df_backend, cudf_backend, pandas_backend, Backend
 
 cpd = df_backend()
 data = {"a": [1, 2, 3], "b": [1, 2, 3]}

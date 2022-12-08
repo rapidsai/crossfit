@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, Protocol, runtime_checkable, Optional, Union
 
 from crossfit.dataframe import pandas_backend
 from crossfit.dataframe import cudf_backend
@@ -8,7 +8,15 @@ from crossfit.utils.df_utils import requires_df_backend
 BackendName = Literal["pandas", "cpu", "cudf", "gpu"]
 
 
-def df_backend(name_or_obj: BackendName = "pandas"):
+@runtime_checkable
+class Backend(Protocol):
+    def is_grouped(self, df) -> bool:
+        ...
+
+
+def df_backend(
+    name_or_obj: BackendName = "pandas", protocol: Optional[Backend] = None
+) -> Backend:
     if not isinstance(name_or_obj, str):
         name = name_or_obj.__module__.split(".")[0]
     else:
@@ -29,6 +37,13 @@ def df_backend(name_or_obj: BackendName = "pandas"):
     raise ValueError(f"Unknown library name: {name}")
 
 
+def test_function(a: int = 1) -> Union[int, str]:
+    if a == 1:
+        return 1
+
+    return str(a)
+
+
 __all__ = [
     "df_backend",
     "requires_df_backend",
@@ -36,3 +51,9 @@ __all__ = [
     "cudf_backend",
     "BackendName",
 ]
+
+
+if __name__ == "__main__":
+    # cd = df_backend("cudf")
+
+    reveal_type(test_function(1))
