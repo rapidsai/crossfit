@@ -5,7 +5,7 @@ from crossfit.stats.common import CommonStats
 
 # from crossfit.stats.continuous.histogram import Histogram
 from crossfit.stats.continuous.moments import Moments
-from crossfit.stats.continuous.range import Range
+from crossfit.stats.continuous.common import Range
 
 
 @dataclass

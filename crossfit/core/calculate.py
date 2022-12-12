@@ -1,7 +1,7 @@
 import pandas as pd
 
 from crossfit.core.frame import MetricFrame
-from crossfit.core.metric import Metric
+from crossfit.core.metric import Metric, MetricState
 
 
 def _calculate_grouped_per_col(df_grouped, metric: Metric) -> MetricFrame:
@@ -39,7 +39,7 @@ def calculate_per_col(df, metric: Metric) -> MetricFrame:
     rows = []
     index = []
     for name_col, col in df.items():
-        state = metric.prepare(col)
+        state: MetricState = metric.prepare(col)
         state_df = state.state_df()
         index.append(name_col)
         rows.append(state_df)

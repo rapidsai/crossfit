@@ -21,6 +21,7 @@ def field(
     *,
     combine=None,
     equals=None,
+    is_list=False,
     default=MISSING,
     default_factory=MISSING,
     init=True,
@@ -36,6 +37,8 @@ def field(
         metadata["combine"] = combine
     if equals is not None:
         metadata["equals"] = equals
+    if is_list:
+        metadata["is_list"] = is_list
 
     return dataclass_field(
         default=default,
@@ -141,7 +144,10 @@ class MetricState(Generic[Array]):
         for field in fields(self):
             val = getattr(self, field.name)
             if field.type == Array:
-                output[field.name] = val
+                if "is_list" in field.metadata and val.ndim == 1:
+                    output[field.name] = [val]
+                else:
+                    output[field.name] = val
             elif isinstance(getattr(self, field.name), MetricState):
                 for key, child_val in getattr(self, field.name).state_dict.items():
                     output[".".join([field.name, key])] = child_val

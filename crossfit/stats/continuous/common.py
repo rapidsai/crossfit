@@ -13,3 +13,18 @@ class RangeState(MetricState):
 class Range(AxisMetric):
     def prepare(self, data) -> RangeState:
         return RangeState(data.min(axis=self.axis), data.max(axis=self.axis))
+
+
+@dataclass
+class AverageState(MetricState):
+    count: Array = field(combine=sum)
+    sum: Array = field(combine=sum)
+
+    @property
+    def average(self) -> Array:
+        return self.sum / self.count
+
+
+class Average(AxisMetric):
+    def prepare(self, data) -> AverageState:
+        return AverageState(len(data), data.sum(axis=self.axis))

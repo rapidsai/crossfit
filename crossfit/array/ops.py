@@ -66,6 +66,7 @@ class NPBackend:
 minimum = with_dispatch(np.minimum)
 maximum = with_dispatch(np.maximum)
 all = with_dispatch(np.all)
+unique = with_dispatch(np.unique)
 
 
 __all__ = ["maximum", "minimum", "all"]
