@@ -23,10 +23,28 @@ class MetricFrame:
 
         return state
 
+    @property
+    def group_names(self):
+        if self.data is None:
+            return None
+
+        group_cols = set(self.data.columns) - {"col"}
+        names = None
+        for c in list(self.data.columns):
+            if c not in group_cols:
+                continue
+            part = f"{c}=" + self.data[c].astype(str)
+            if names is None:
+                names = part
+            else:
+                names = names + "&" + part
+
+        return names
+
     def all(self):
         return pd.concat([self.state_df, self.data], axis=1)
 
-    def result(self):
+    def result(self, pivot=True):
         metric_result = self.metric.present(self.state)
         if isinstance(metric_result, MetricState):
             metric_result = metric_result.state_dict
@@ -37,7 +55,10 @@ class MetricFrame:
 
         if self.data is not None:
             df = pd.concat([self.data, pd.DataFrame(metric_result)], axis=1)
-            df = df.pivot(index=set(self.data.columns) - set(["col"]), columns=["col"])
+            if pivot:
+                df = df.pivot(
+                    index=set(self.data.columns) - set(["col"]), columns=["col"]
+                )
 
             return df
 

@@ -12,75 +12,79 @@ STATS_FILE_NAME = "stats.pb"
 def visualize(
     con_mf: MetricFrame, cat_mf: MetricFrame, name="data"
 ) -> "FacetsOverview":
-    data = statistics_pb2.DatasetFeatureStatisticsList()
+    output = statistics_pb2.DatasetFeatureStatisticsList()
+    datasets = {}
 
-    if con_mf.data is None:
-        stats = None
-        if con_mf is not None:
-            con_result = con_mf.result()
+    if con_mf is not None:
+        con_result = con_mf.result(pivot=False)
+        dataset_name = con_mf.group_names
+        if dataset_name is None:
+            dataset_name = name
+        con_result["__dataset__"] = dataset_name
 
-            if stats is None:
-                stats = statistics_pb2.DatasetFeatureStatistics(
-                    name=name, num_examples=int(con_result.iloc[0]["common.count"])
+        for row_name, row in con_result.iterrows():
+            if row["__dataset__"] not in datasets:
+                datasets[row["__dataset__"]] = statistics_pb2.DatasetFeatureStatistics(
+                    name=row["__dataset__"], num_examples=int(row["common.count"])
                 )
 
-            for row_name, row in con_result.iterrows():
-                feature = stats.features.add()
-                feature.name = row_name
-                common_stats = _create_common_stats(row)
-                feature.num_stats.CopyFrom(
-                    statistics_pb2.NumericStatistics(
-                        min=row["range.min"],
-                        max=row["range.max"],
-                        # histograms=[hist],    # TODO: Add histogram
-                        common_stats=common_stats,
-                        # TODO: Add median
-                        mean=row["moments.mean"],
-                        std_dev=row["moments.std"],
-                        # num_zeros=dask_stats[col]["num_zeroes"].item(),
+            feature = datasets[row["__dataset__"]].features.add()
+            feature.name = row["col"] if "col" in row else row_name
+            common_stats = _create_common_stats(row)
+            feature.num_stats.CopyFrom(
+                statistics_pb2.NumericStatistics(
+                    min=row["range.min"],
+                    max=row["range.max"],
+                    # histograms=[hist],    # TODO: Add histogram
+                    common_stats=common_stats,
+                    # TODO: Add median
+                    mean=row["moments.mean"],
+                    std_dev=row["moments.std"],
+                    # num_zeros=dask_stats[col]["num_zeroes"].item(),
+                )
+            )
+
+    if cat_mf is not None:
+        cat_result = cat_mf.result(pivot=False)
+        dataset_name = cat_mf.group_names
+        if dataset_name is None:
+            dataset_name = name
+        cat_result["__dataset__"] = dataset_name
+
+        for row_name, row in cat_result.iterrows():
+            if row["__dataset__"] not in datasets:
+                datasets[row["__dataset__"]] = statistics_pb2.DatasetFeatureStatistics(
+                    name=row["__dataset__"], num_examples=int(row["common.count"])
+                )
+
+            feature = datasets[row["__dataset__"]].features.add()
+            feature.name = row["col"] if "col" in row else row_name
+            common_stats = _create_common_stats(row)
+            feature.string_stats.CopyFrom(
+                statistics_pb2.StringStatistics(
+                    common_stats=common_stats,
+                    unique=row["num_unique"],
+                    avg_length=row["str_len"],
+                )
+            )
+
+            ranks = feature.string_stats.rank_histogram
+            for k, (val, freq) in enumerate(zip(row["top_values"], row["top_counts"])):
+                f = feature.string_stats.top_values.add()
+                f.value = val
+                f.frequency = freq
+                b = ranks.buckets.add()
+                b.CopyFrom(
+                    statistics_pb2.RankHistogram.Bucket(
+                        low_rank=k, high_rank=k, label=val, sample_count=freq
                     )
                 )
 
-        if cat_mf is not None:
-            cat_result = cat_mf.result()
+    for dataset in datasets.values():
+        d = output.datasets.add()
+        d.CopyFrom(dataset)
 
-            if stats is None:
-                stats = statistics_pb2.DatasetFeatureStatistics(
-                    name=name, num_examples=int(cat_result.iloc[0]["common.count"])
-                )
-
-            for row_name, row in cat_result.iterrows():
-                feature = stats.features.add()
-                feature.name = row_name
-                common_stats = _create_common_stats(row)
-                feature.string_stats.CopyFrom(
-                    statistics_pb2.StringStatistics(
-                        common_stats=common_stats,
-                        unique=row["num_unique"],
-                        avg_length=row["str_len"],
-                    )
-                )
-
-                ranks = feature.string_stats.rank_histogram
-                for k, (val, freq) in enumerate(
-                    zip(row["top_values"], row["top_counts"])
-                ):
-                    f = feature.string_stats.top_values.add()
-                    f.value = val
-                    f.frequency = freq
-                    b = ranks.buckets.add()
-                    b.CopyFrom(
-                        statistics_pb2.RankHistogram.Bucket(
-                            low_rank=k, high_rank=k, label=val, sample_count=freq
-                        )
-                    )
-
-        d = data.datasets.add()
-        d.CopyFrom(stats)
-    else:
-        raise ValueError("Group-by metric-frame is not supported yet.")
-
-    return FacetsOverview(data)
+    return FacetsOverview(output)
 
 
 def load(path, file_name=STATS_FILE_NAME) -> "FacetsOverview":

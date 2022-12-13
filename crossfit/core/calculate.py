@@ -13,14 +13,16 @@ def _calculate_grouped_per_col(df_grouped, metric: Metric) -> MetricFrame:
                 continue
             state = metric.prepare(col)
             state_df = state.state_df()
+            if not isinstance(slice_key, tuple):
+                slice_key = (slice_key,)
             index.append((name_col,) + slice_key)
 
             rows.append(state_df)
-    if len(df_grouped.keys) > 1:
-        pd_index = pd.MultiIndex.from_tuples(index, names=["col"] + df_grouped.keys)
-    else:
-        pd_index = pd.Index(index, name=df_grouped.keys)
+    keys = df_grouped.keys
+    if isinstance(keys, str):
+        keys = [keys]
 
+    pd_index = pd.MultiIndex.from_tuples(index, names=["col"] + keys)
     df = pd.concat(rows, axis=0)
     df.index = pd_index
 

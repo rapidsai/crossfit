@@ -31,3 +31,15 @@ def test_facets_overview():
 
     vis = facets_overview.visualize(con_mf=con_mf, cat_mf=cat_mf)
     assert isinstance(vis, facets_overview.FacetsOverview)
+
+
+def test_facets_overview_grouped():
+    group_cols = ["a"]
+    con_grouped = df[group_cols + ["b", "c"]].groupby("a")
+    cat_grouped = df[group_cols + ["cat"]].groupby("a")
+
+    con_mf: cf.MetricFrame = calculate_per_col(con_grouped, ContinuousStats())
+    cat_mf: cf.MetricFrame = calculate_per_col(cat_grouped, CategoricalStats())
+
+    vis = facets_overview.visualize(con_mf=con_mf, cat_mf=cat_mf)
+    assert isinstance(vis, facets_overview.FacetsOverview)
