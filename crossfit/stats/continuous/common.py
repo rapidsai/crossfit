@@ -24,6 +24,10 @@ class AverageState(MetricState):
     def average(self) -> Array:
         return self.sum / self.count
 
+    @property
+    def result(self) -> Array:
+        return self.average
+
 
 class Average(AxisMetric):
     def prepare(self, data) -> AverageState:

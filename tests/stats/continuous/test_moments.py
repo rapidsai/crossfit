@@ -16,7 +16,7 @@ df = pd.DataFrame(
 
 
 def test_moments_per_col():
-    mf: MetricFrame = calculate_per_col(df, Moments())
+    mf: MetricFrame = calculate_per_col(Moments(), df)
     assert isinstance(mf, MetricFrame)
     assert list(mf.state_df.columns) == ["count", "mean", "var"]
 
@@ -29,7 +29,7 @@ def test_moments_per_col():
 
 
 def test_moments_per_col_grouped():
-    mf: MetricFrame = calculate_per_col(df.groupby(["a", "a2"]), Moments())
+    mf: MetricFrame = calculate_per_col(Moments(), df.groupby(["a", "a2"]))
     assert isinstance(mf, MetricFrame)
     assert sorted(list(mf.data.columns)) == ["a", "a2", "col"]
     assert len(mf.data) == 10

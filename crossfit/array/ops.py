@@ -65,8 +65,9 @@ class NPBackend:
 
 minimum = with_dispatch(np.minimum)
 maximum = with_dispatch(np.maximum)
+sum = with_dispatch(np.sum)
 all = with_dispatch(np.all)
 unique = with_dispatch(np.unique)
 
 
-__all__ = ["maximum", "minimum", "all"]
+__all__ = ["maximum", "minimum", "all", "sum"]

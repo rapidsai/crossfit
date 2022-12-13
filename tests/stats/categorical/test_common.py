@@ -16,7 +16,7 @@ df = pd.DataFrame(
 
 
 def test_value_counts_calculate():
-    mf: MetricFrame = calculate_per_col(df[["a", "a2"]], ValueCounts())
+    mf: MetricFrame = calculate_per_col(ValueCounts(), df[["a", "a2"]])
 
     assert isinstance(mf, MetricFrame)
     assert len(mf.state_df) == 2

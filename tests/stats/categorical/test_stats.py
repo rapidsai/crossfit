@@ -15,7 +15,7 @@ df = pd.DataFrame(
 
 
 def test_categorical_stats_per_col():
-    mf: MetricFrame = calculate_per_col(df, CategoricalStats())
+    mf: MetricFrame = calculate_per_col(CategoricalStats(), df)
     assert isinstance(mf, MetricFrame)
 
     result = mf.result()

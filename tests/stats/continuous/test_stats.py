@@ -16,7 +16,7 @@ df = pd.DataFrame(
 
 
 def test_continuous_stats_per_col():
-    mf: MetricFrame = calculate_per_col(df, ContinuousStats())
+    mf: MetricFrame = calculate_per_col(ContinuousStats(), df)
     assert isinstance(mf, MetricFrame)
 
     result = mf.result()
@@ -34,7 +34,7 @@ def test_continuous_stats_per_col():
 
 
 def test_continuous_stats_per_col_grouped():
-    mf: MetricFrame = calculate_per_col(df.groupby(["a", "a2"]), ContinuousStats())
+    mf: MetricFrame = calculate_per_col(ContinuousStats(), df.groupby(["a", "a2"]))
     assert isinstance(mf, MetricFrame)
 
     result = mf.result()

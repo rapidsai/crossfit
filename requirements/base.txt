@@ -1,6 +1,7 @@
 pandas
 numpy
 dask
+scikit-learn
 tensorflow_metadata
 typing_extensions
 typing_utils

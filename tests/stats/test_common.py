@@ -8,7 +8,7 @@ from crossfit.stats.common import CommonStats
 def test_common_basic_test():
     df = pd.DataFrame(dict(col=[1] * 5 + [None] * 5))
 
-    mf = calculate_per_col(df, CommonStats())
+    mf = calculate_per_col(CommonStats(), df)
     assert isinstance(mf, MetricFrame)
 
     result = mf.result().iloc[0]

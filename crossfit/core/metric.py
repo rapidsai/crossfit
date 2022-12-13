@@ -237,6 +237,14 @@ class Metric(Generic[StateType], abc.ABC):
     def present(self, state: StateType) -> OutputType:
         return state
 
+    def __call__(self, data: Array, present=True, **kwargs):
+        state = self.prepare(data, **kwargs)
+
+        if not present:
+            return state
+
+        return self.present(state)
+
     @classmethod
     def state_type(cls):
         prepare_type = inspect.signature(cls.prepare).return_annotation
@@ -259,10 +267,13 @@ class ComparisonMetric(Metric[StateType], Generic[StateType], abc.ABC):
     def prepare(self, data: Array, comparison: Array, **kwargs) -> StateType:
         raise NotImplementedError()
 
-    def __call__(self, data: Array, comparison: Array, **kwargs) -> float:
+    def __call__(self, data: Array, comparison: Array, present=True, **kwargs):
         state = self.prepare(data, comparison, **kwargs)
 
-        return self.__class__(state=state)
+        if not present:
+            return state
+
+        return self.present(state)
 
 
 def _sum(left, right):
