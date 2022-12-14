@@ -28,7 +28,7 @@ class TFMetric(Generic[TFMetricType, StateType], ComparisonMetric[StateType], ab
         self,
         data: Array,
         comparison: Array,
-        sample_weight: Array = None,
+        sample_weight: Optional[Array] = None,
     ) -> StateType:
         metric = self.metric()
         metric.update_state(
@@ -132,3 +132,44 @@ TFCategoricalCrossentropy = mean_metric(tf.keras.metrics.CategoricalCrossentropy
 TFSparseCategoricalCrossentropy = mean_metric(
     tf.keras.metrics.SparseCategoricalCrossentropy
 )
+
+
+class TFAUC(TFMetric):
+    def __init__(
+        self,
+        num_thresholds=200,
+        curve="ROC",
+        summation_method="interpolation",
+        thresholds=None,
+        multi_label=False,
+        num_labels=None,
+        label_weights=None,
+        from_logits=False,
+    ):
+        self.num_thresholds = num_thresholds
+        self.curve = curve
+        self.summation_method = summation_method
+        self.thresholds = thresholds
+        self.multi_label = multi_label
+        self.num_labels = num_labels
+        self.label_weights = label_weights
+        self.from_logits = from_logits
+
+    def metric(self) -> tf.keras.metrics.AUC:
+        return tf.keras.metrics.AUC(
+            num_thresholds=self.num_thresholds,
+            curve=self.curve,
+            summation_method=self.summation_method,
+            thresholds=self.thresholds,
+            multi_label=self.multi_label,
+            num_labels=self.num_labels,
+            label_weights=self.label_weights,
+            from_logits=self.from_logits,
+        )
+
+    def present_metric(
+        self,
+        metric: TFMetricType,
+        array_type: Type[Array],
+    ) -> StateType:
+        raise NotImplementedError()
