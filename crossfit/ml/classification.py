@@ -2,12 +2,13 @@ from dataclasses import dataclass
 
 import crossfit.array as cnp
 import numpy as np
+import numba as nb
 
 from crossfit.core.metric import Array, ComparisonMetric, MetricState, field
 
 
 @dataclass
-class BinaryClfState(MetricState):
+class BinClfState(MetricState):
     tp: Array = field(combine=sum)
     tn: Array = field(combine=sum)
     fp: Array = field(combine=sum)
@@ -33,22 +34,10 @@ class BinaryClfState(MetricState):
         precision = self.precision
         recall = self.recall
         return 2 * precision * recall / (precision + recall)
-
-    @property
-    def tpr(self):
-        return self.tp / (self.tp + self.fn)
-
-    @property
-    def fpr(self):
-        return self.fp / (self.fp + self.tn)
-
+    
     @property
     def count(self):
         return self.tp + self.fp + self.tn + self.fn
-
-    @property
-    def auc(self):
-        return np.trapz([self.tpr, self.fpr], [0, 1])
 
     def plot_confusion_matrix(self, colorscale="blues"):
         import plotly.figure_factory as ff
@@ -62,21 +51,98 @@ class BinaryClfState(MetricState):
         figure.show()
 
 
-class BinaryMetrics(ComparisonMetric[BinaryClfState]):
+class BinaryMetrics(ComparisonMetric[BinClfState]):
     def __init__(self, threshold: float = 0.5, apply_threshold=True):
         self.threshold = threshold
         self.apply_threshold = apply_threshold
 
-    def prepare(self, data: Array, comparison: Array, **kwargs) -> BinaryClfState:
+    def prepare(self, data: Array, comparison: Array, **kwargs) -> BinClfState:
         if self.apply_threshold:
             data = data > self.threshold
 
         tp, tn, fp, fn = calculate_binary_classification_metrics(data, comparison)
-        return BinaryClfState(tp=tp, fp=fp, tn=tn, fn=fn)
+        return BinClfState(tp=tp, fp=fp, tn=tn, fn=fn)
+    
+    
+@dataclass
+class BinClfThresholdedState(MetricState):        
+    total_true_labels: Array
+    total_false_labels: Array
+    thresholds: Array = field(is_list=True)
+    tp: Array = field(is_list=True)
+    fp: Array = field(is_list=True)    
+    
+    @property
+    def tpr(self):
+        return self.tp / (self.tp + self.fn)
+
+    @property
+    def fpr(self):
+        return self.fp / (self.fp + self.tn)
+    
+    @property
+    def fn(self):
+        return self.total_true_labels - self.tp
+    
+    @property
+    def tn(self):
+        return self.total_false_labels - self.fp
+
+    @property
+    def auc(self):
+        from sklearn import metrics
+        
+        return metrics.auc(self.fpr, self.tpr)
+    
+    def combine(self, other: "BinClfThresholdedState"):
+        if len(self.thresholds) == len(other.thresholds):
+            # TODO: Account for rounding errors
+            if np.all(self.thresholds == other.thresholds):
+                return BinClfThresholdedState(
+                    tp=self.tp + other.tp,
+                    tn=self.tn + other.tn,
+                    fp=self.fp + other.fp,
+                    fn=self.fn + other.fn,
+                    thresholds=self.thresholds,
+                )
+                
+        _thresholds = [self.thresholds, other.thresholds]
+        longest_i = np.argmax([len(t) for t in _thresholds])
+        shortest_i = 1 - longest_i
+        
+        def _merge_value(values):
+            short_interp = np.interp(_thresholds[longest_i], _thresholds[shortest_i], values[shortest_i])
+            long_interp = np.interp(_thresholds[longest_i], _thresholds[longest_i], values[longest_i])
+
+            return short_interp + long_interp
+        
+        return BinClfThresholdedState(
+            tp=_merge_value([self.tp, other.tp]),
+            fp=_merge_value([self.fp, other.fp]),
+            total_true_labels = self.total_true_labels + other.total_true_labels,
+            total_false_labels=self.total_false_labels + other.total_false_labels,
+            thresholds=_thresholds[longest_i],
+        )
+    
+    
+
+
+class BinaryMetricsThresholded(ComparisonMetric[BinClfThresholdedState]):
+    def __init__(self, num_thresholds: int = 200):
+        self.num_thresholds = num_thresholds
+
+    def prepare(self, data: Array, comparison: Array, **kwargs) -> BinClfThresholdedState:
+        tp, fp, tn, fn, thresholds = confusion_matrix_per_threshold(
+            comparison, data, self.num_thresholds
+        )
+        
+        return BinClfThresholdedState(tp=tp, fp=fp, tn=tn, fn=fn, thresholds=thresholds)
 
 
 @dataclass
 class BinaryCurveState(MetricState):
+    total_true_labels: Array
+    total_false_labels: Array
     thresholds: Array = field(is_list=True)
     tp: Array = field(is_list=True)
     fp: Array = field(is_list=True)
@@ -216,3 +282,74 @@ def calculate_binary_classification_metrics(predictions, labels):
     fn = cnp.sum((predictions == 0) & (labels == 1))
 
     return tp, tn, fp, fn
+
+
+@nb.njit
+def unsorted_segment_sum(arr, segment_ids, num_segments):
+    # Create an empty array of the correct shape to hold the result
+    result = np.zeros((num_segments,) + arr.shape[1:])
+
+    # Loop through each segment and sum the values in the segment
+    # into the corresponding entry in the result array
+    for i in range(num_segments):
+        result[i] = np.sum(arr[segment_ids == i], axis=0)
+
+    return result
+
+
+# @nb.njit
+def confusion_matrix_per_threshold(y_true, y_pred, num_thresholds):
+    thresholds = np.linspace(0, 1, num_thresholds)
+    bucket_indices = (np.ceil(y_pred * (num_thresholds - 1)) - 1).astype(np.int32)
+
+    true_labels = y_true
+    false_labels = 1.0 - y_true
+
+    total_true_labels = true_labels.sum()
+    total_false_labels = false_labels.sum()
+
+    tp_bucket_v = unsorted_segment_sum(true_labels, bucket_indices, num_thresholds)
+    fp_bucket_v = unsorted_segment_sum(false_labels, bucket_indices, num_thresholds)
+
+    tp = np.cumsum(tp_bucket_v[::-1])[::-1]
+    fp = np.cumsum(fp_bucket_v[::-1])[::-1]
+    tn = total_false_labels - fp
+    fn = total_true_labels - tp
+    
+    # _tpr = tp / (tp + fn)
+    # _fpr = fp / (fp + tn)
+    
+    # __tp = np.cumsum(tp_bucket_v)
+    # __fp = np.cumsum(fp_bucket_v)
+    # __tn = total_false_labels - __fp
+    # __fn = total_true_labels - __tp
+    
+    # __tpr = __tp / (__tp + __fn)
+    # __fpr = __fp / (__fp + __tn)
+    
+    # from sklearn.metrics import roc_curve, auc
+    # fpr, tpr, _ = roc_curve(y_true, y_pred)  
+    
+    return tp, fp, tn, fn, thresholds
+
+
+
+def confusion_matrix_per_threshold(y_true, y_pred, num_thresholds):
+    thresholds = np.linspace(0, 1, num_thresholds)
+    bucket_indices = (np.ceil(y_pred * (num_thresholds - 1)) - 1).astype(np.int32)
+
+    true_labels = y_true
+    false_labels = 1.0 - y_true
+
+    total_true_labels = true_labels.sum()
+    total_false_labels = false_labels.sum()
+
+    tp_bucket_v = unsorted_segment_sum(true_labels, bucket_indices, num_thresholds)
+    fp_bucket_v = unsorted_segment_sum(false_labels, bucket_indices, num_thresholds)
+
+    tp = np.cumsum(tp_bucket_v[::-1])[::-1]
+    fp = np.cumsum(fp_bucket_v[::-1])[::-1]
+    tn = total_false_labels - fp
+    fn = total_true_labels - tp
+    
+    return tp, fp, tn, fn, thresholds

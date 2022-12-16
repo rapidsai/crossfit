@@ -5,7 +5,7 @@ from crossfit.array import ops
 
 
 @ops.np_backend_dispatch.register_lazy("tensorflow")
-def register_cupy_backend():
+def register_tf_backend():
     import tensorflow as tf
     import tensorflow.experimental.numpy as tnp
 
