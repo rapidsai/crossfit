@@ -35,7 +35,7 @@ class State:
             self.states = state
 
     def obj(self, obj_type: Type[MetricStateT] = None) -> MetricStateT:
-        if obj_type == None:
+        if obj_type is None:
             if len(self.states) == 1:
                 obj_type = list(self.states.keys())[0]
             else:
@@ -120,3 +120,8 @@ class Grouped(Metric):
             state = state.join(m, name)
 
         return state
+
+
+# con_per_col = PerColumn(ContinuousStats()),
+# con_stats = Grouped(con_per_col, "country")(df)
+# stats = Grouped(Stats(), "country")(df)
