@@ -4,38 +4,39 @@ import pandas as pd
 from crossfit.core.calculate import calculate_per_col
 from crossfit.core.frame import MetricFrame
 from crossfit.stats.continuous.moments import Moments
+from tests.utils import sample_df, to_list
 
-df = pd.DataFrame(
-    {
-        "a": list(range(5)) * 2,
-        "a2": list(range(5)) * 2,
-        "b": np.random.rand(10),
-        "c": np.random.rand(10),
-    }
-)
+data = {
+    "a": list(range(5)) * 2,
+    "a2": list(range(5)) * 2,
+    "b": np.random.rand(10),
+    "c": np.random.rand(10),
+}
 
 
-def test_moments_per_col():
+@sample_df(data)
+def test_moments_per_col(df):
     mf: MetricFrame = calculate_per_col(Moments(), df)
     assert isinstance(mf, MetricFrame)
     assert list(mf.state_df.columns) == ["count", "mean", "var"]
 
     result = mf.result()
-    assert isinstance(result, pd.DataFrame)
-    assert list(result.index) == ["a", "a2", "b", "c"]
-    np.testing.assert_allclose(result["mean"], df.mean())
-    np.testing.assert_allclose(result["std"], df.std())
-    np.testing.assert_allclose(result["var"], df.var())
+    assert isinstance(result, type(df))
+    assert list(to_list(result.index)) == ["a", "a2", "b", "c"]
+    np.testing.assert_allclose(to_list(result["mean"]), to_list(df.mean()))
+    np.testing.assert_allclose(to_list(result["var"]), to_list(df.var()))
+    np.testing.assert_allclose(to_list(result["std"]), to_list(df.std()))
 
 
-def test_moments_per_col_grouped():
+@sample_df(data)
+def test_moments_per_col_grouped(df):
     mf: MetricFrame = calculate_per_col(Moments(), df.groupby(["a", "a2"]))
     assert isinstance(mf, MetricFrame)
     assert sorted(list(mf.data.columns)) == ["a", "a2", "col"]
     assert len(mf.data) == 10
 
     result = mf.result()
-    assert isinstance(result, pd.DataFrame)
+    assert isinstance(result, type(df))
     assert isinstance(result.columns, pd.MultiIndex)
     assert set(result.columns.levels[0]) == {"mean", "var", "count", "std"}
     assert sorted(list(result.columns.levels[1])) == ["b", "c"]
