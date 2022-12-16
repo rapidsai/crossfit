@@ -117,7 +117,7 @@ class Grouped(Metric):
         for name, slice in dict(grouped.groups).items():
             group = grouped.obj.iloc[slice]
             m = self.metric.prepare(group)
-            state = state.join(m, name)
+            state = state.join(m, name)  # TODO: Implement this
 
         return state
 
