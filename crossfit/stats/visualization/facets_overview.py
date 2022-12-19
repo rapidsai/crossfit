@@ -9,6 +9,13 @@ from crossfit.core.frame import MetricFrame
 STATS_FILE_NAME = "stats.pb"
 
 
+def _maybe_to_pandas(data):
+    # Utility to covert cudf data to pandas (for now)
+    if hasattr(data, "to_pandas"):
+        return data.to_pandas()
+    return data
+
+
 def visualize(
     con_mf: MetricFrame, cat_mf: MetricFrame, name="data"
 ) -> "FacetsOverview":
@@ -16,11 +23,12 @@ def visualize(
     datasets = {}
 
     if con_mf is not None:
-        con_result = con_mf.result(pivot=False)
+        # Always convert to pandas (for now)
+        con_result = _maybe_to_pandas(con_mf.result(pivot=False))
         dataset_name = con_mf.group_names
         if dataset_name is None:
             dataset_name = name
-        con_result["__dataset__"] = dataset_name
+        con_result["__dataset__"] = _maybe_to_pandas(dataset_name)
 
         for row_name, row in con_result.iterrows():
             if row["__dataset__"] not in datasets:
@@ -45,11 +53,12 @@ def visualize(
             )
 
     if cat_mf is not None:
-        cat_result = cat_mf.result(pivot=False)
+        # Always convert to pandas (for now)
+        cat_result = _maybe_to_pandas(cat_mf.result(pivot=False))
         dataset_name = cat_mf.group_names
         if dataset_name is None:
             dataset_name = name
-        cat_result["__dataset__"] = dataset_name
+        cat_result["__dataset__"] = _maybe_to_pandas(dataset_name)
 
         for row_name, row in cat_result.iterrows():
             if row["__dataset__"] not in datasets:

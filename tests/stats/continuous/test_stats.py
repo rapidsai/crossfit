@@ -34,7 +34,7 @@ def test_continuous_stats_per_col(df):
 
 @sample_df(data)
 def test_continuous_stats_per_col_grouped(df):
-    mf: MetricFrame = calculate_per_col(ContinuousStats(), df.groupby(["a", "a2"]))
+    mf: MetricFrame = calculate_per_col(ContinuousStats(), df, groupby=["a", "a2"])
     assert isinstance(mf, MetricFrame)
 
     result = mf.result()

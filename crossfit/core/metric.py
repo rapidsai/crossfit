@@ -12,6 +12,7 @@ from typing_utils import get_args, get_origin
 
 from crossfit.array.conversion import ToType, convert
 from crossfit.utils.types import get_generic_type_arg
+from crossfit.dataframe.core import AbstractFrame
 
 OutputType = TypeVar("OutputType")
 Array = TypeVar("Array", np.ndarray, pd.Series)
@@ -174,17 +175,16 @@ class MetricState(Generic[Array]):
 
         return cls(**params)
 
-    def state_df(self, index: Optional[str] = None, **kwargs):
+    def state_df(self, adf: AbstractFrame, index: Optional[str] = None):
         if not index:
             index = [
                 self.cls_path(),
             ]
-        return pd.DataFrame(self.state_dict, index=list(index), **kwargs)
+        return adf.from_dict(self.state_dict, index=list(index))
 
     @classmethod
-    def from_state_df(cls, df: pd.DataFrame):
-        d = {key: val.values for key, val in df.to_dict(orient="series").items()}
-        return cls.from_state(d)
+    def from_state_df(cls, df: AbstractFrame):
+        return cls.from_state(df.to_dict())
 
     @classmethod
     def cls_path(cls):

@@ -1,12 +1,11 @@
 from typing import Type
 
-import pandas as pd
-
 from crossfit.core.metric import MetricState
+from crossfit.dataframe.core import AbstractFrame
 
 
 class MetricFrame:
-    def __init__(self, state_df, metric=None, data=None, index=None):
+    def __init__(self, state_df: AbstractFrame, metric=None, data=None, index=None):
         if not metric:
             if "cls" not in state_df.attrs:
                 raise ValueError("Please provide a `metric`")
@@ -33,7 +32,7 @@ class MetricFrame:
         for c in list(self.data.columns):
             if c not in group_cols:
                 continue
-            part = f"{c}=" + self.data[c].astype(str)
+            part = f"{c}=" + self.data.select_column(c).astype(str)
             if names is None:
                 names = part
             else:
@@ -42,7 +41,7 @@ class MetricFrame:
         return names
 
     def all(self):
-        return pd.concat([self.state_df, self.data], axis=1)
+        return self.state_df.concat([self.state_df, self.data], axis=1)
 
     def result(self, pivot=True):
         metric_result = self.metric.present(self.state)
@@ -51,15 +50,23 @@ class MetricFrame:
         if not isinstance(metric_result, dict):
             metric_result = {"result": metric_result}
 
-        result_df = pd.DataFrame(metric_result, index=self.index)
+        result_df = self.state_df.from_dict(metric_result, index=self.index)
 
         if self.data is not None:
-            df = pd.concat([self.data, pd.DataFrame(metric_result)], axis=1)
+            df = self.state_df.concat(
+                [self.data, self.state_df.from_dict(metric_result)], axis=1
+            )
             if pivot:
-                df = df.pivot(
-                    index=set(self.data.columns) - set(["col"]), columns=["col"]
+                # Explicit column projection is work-around for conflicting
+                # pandas/cudf behavior in older versions of cudf
+                return (
+                    df.pivot(
+                        index=list(set(self.data.columns) - {"col"}), columns=["col"]
+                    )
+                    .project_columns(list(metric_result.keys()))
+                    .data
                 )
 
-            return df
+            return df.data
 
-        return result_df
+        return result_df.data

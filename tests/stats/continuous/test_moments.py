@@ -30,7 +30,7 @@ def test_moments_per_col(df):
 
 @sample_df(data)
 def test_moments_per_col_grouped(df):
-    mf: MetricFrame = calculate_per_col(Moments(), df.groupby(["a", "a2"]))
+    mf: MetricFrame = calculate_per_col(Moments(), df, groupby=["a", "a2"])
     assert isinstance(mf, MetricFrame)
     assert sorted(list(mf.data.columns)) == ["a", "a2", "col"]
     assert len(mf.data) == 10

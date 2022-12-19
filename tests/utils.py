@@ -37,8 +37,7 @@ def sample_df(data: dict):
             pytest.param(
                 cudf.DataFrame(data) if cudf else None,
                 id="cudf",
-                # TODO: Remove xfail when cudf is supported
-                marks=[CUDF_MARK, pytest.mark.xfail(reason="cudf not supported")],
+                marks=CUDF_MARK,
             ),
         ],
     )
