@@ -19,10 +19,10 @@ class MomentsState(MetricState[Array]):
         tot_count = self.count + other.count
 
         new_mean = self.mean + delta * other.count / tot_count
-        m_self = self.var * self.count
-        m_other = other.var * other.count
+        m_self = self.var * max(self.count - 1, 1)
+        m_other = other.var * max(other.count - 1, 1)
         M2 = m_self + m_other + (delta**2) * self.count * other.count / tot_count
-        new_var = M2 / tot_count
+        new_var = M2 / max(tot_count - 1, 1)
         new_count = tot_count
 
         return MomentsState(count=new_count, mean=new_mean, var=new_var)

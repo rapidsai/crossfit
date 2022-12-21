@@ -3,7 +3,7 @@ import numpy as np
 from crossfit.core.calculate import calculate_per_col
 from crossfit.core.frame import MetricFrame
 from crossfit.stats.continuous.stats import ContinuousStats
-from tests.utils import sample_df
+from tests.utils import sample_df, to_list
 
 data = {
     "a": list(range(5)) * 2,
@@ -41,3 +41,29 @@ def test_continuous_stats_per_col_grouped(df):
     assert isinstance(result, type(df))
     assert len(result.index) == 5
     assert len(result.columns) == 16
+
+
+@sample_df({"a": [1, 2] * 20, "b": range(10, 50)})
+def test_continuous_stats_reduce(df):
+    # Use simple DataFrame
+    stride = 10
+    ser = df["b"]
+    size_ser = len(ser)
+    sers = [
+        ser.iloc[i * stride : i * stride + stride] for i in range(size_ser // stride)
+    ]
+
+    # Prepare, concat, and reduce states
+    metric = ContinuousStats()
+    states = [metric.prepare(s) for s in sers]
+    concatenated = states[0].concat(*states[1:])
+    reduced = concatenated.reduce()
+
+    # Check reduced-state result
+    assert to_list(reduced.range.min) == [ser.min()]
+    assert to_list(reduced.range.max) == [ser.max()]
+    assert to_list(reduced.moments.count) == [len(ser)]
+    assert to_list(reduced.common.count) == [len(ser)]
+    assert to_list(reduced.common.num_missing) == [0]
+    np.testing.assert_allclose(to_list(reduced.moments.mean), [ser.mean()])
+    np.testing.assert_allclose(to_list(reduced.moments.var), [ser.var()])

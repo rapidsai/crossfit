@@ -125,6 +125,45 @@ class MetricState(Generic[Array]):
 
         return self.__class__(**params)
 
+    def reduce(self):
+        # Loop through fields, separating Array dependencies
+        # from nested MetricState dependencies
+        state_deps, array_deps, sizes = {}, {}, set()
+        for field in fields(self):
+            if field.type == Array:
+                array_deps[field.name] = getattr(self, field.name)
+                sizes.add(array_deps[field.name].shape[0])
+            elif isinstance(getattr(self, field.name), MetricState):
+                state_deps[field.name] = getattr(self, field.name).reduce()
+            else:
+                attr = getattr(self, field.name)
+                raise ValueError(f"Expected Array or MetricState field, got {attr}")
+
+        # Default logic requires all values in array_deps
+        # to have the same length in the 0th dimension.
+        # Otherwise, the MomentState subclass must define
+        # a custom reduce method.
+        if len(sizes) > 1:
+            raise ValueError(
+                f"Default reduce logic failed for {self.__class__}. "
+                f"Field-array lengths do not all match: {sizes}."
+            )
+        size = list(sizes)[0] if len(sizes) else 1
+
+        # Use combine logic to iteratively update a global state
+        state = self.__class__(
+            **{k: v[:1] for k, v in array_deps.items()},
+            **state_deps,
+        )
+        for i in range(1, size):
+            state = state.combine(
+                self.__class__(
+                    **{k: v[i : i + 1] for k, v in array_deps.items()},
+                    **state_deps,
+                )
+            )
+        return state
+
     def concat(self, *other, axis=None):
         params = {}
         for field in fields(self):
@@ -136,6 +175,14 @@ class MetricState(Generic[Array]):
                     ],
                     axis=axis,
                 )
+            elif isinstance(getattr(self, field.name), MetricState):
+                params[field.name] = getattr(self, field.name).concat(
+                    *map(lambda x: getattr(x, field.name), other),
+                    axis=axis,
+                )
+            else:
+                attr = getattr(self, field.name)
+                raise ValueError(f"Expected Array or MetricState field, got {attr}")
 
         return self.__class__(**params)
 
