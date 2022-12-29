@@ -4,6 +4,8 @@
 */.jupyter/*
 */.local/*
 
+.crossfit
+
 cache/*
 data*/*
 

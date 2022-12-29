@@ -1,5 +1,4 @@
 import numpy as np
-from sklearn.metrics import roc_auc_score
 
 from crossfit.ml.classification import BinaryMetrics
 
@@ -20,6 +19,8 @@ def test_auc_calculation():
 
     state = BinaryMetrics()(y_pred, y_true)
     assert state.auc == auc_numpy
+
+    from sklearn.metrics import roc_auc_score
 
     # Calculate the AUC using scikit-learn
     auc_sklearn = roc_auc_score(y_true, y_pred)

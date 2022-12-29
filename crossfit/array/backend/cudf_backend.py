@@ -1,18 +1,18 @@
 import logging
 
 from crossfit.array import conversion
-from crossfit.array import ops
+from crossfit.array.dispatch import np_backend_dispatch, NPBackend
 
 
-@ops.np_backend_dispatch.register_lazy("cudf")
+@np_backend_dispatch.register_lazy("cudf")
 def register_cupy_backend():
     import cudf
 
-    class CudfBackend(ops.NPBackend):
+    class CudfBackend(NPBackend):
         def __init__(self):
             super().__init__(cudf)
 
-    ops.np_backend_dispatch.register(cudf.Series)(CudfBackend())
+    np_backend_dispatch.register(cudf.Series)(CudfBackend())
 
 
 @conversion.dispatch_to_dlpack.register_lazy("cudf")

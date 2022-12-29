@@ -22,10 +22,15 @@ def read_requirements(filename):
         return [line for line in lineiter if line and not line.startswith("#")]
 
 
+_dev = read_requirements("requirements/dev.txt")
+
 requirements = {
     "base": read_requirements("requirements/base.txt"),
-    # "tensorflow": read_requirements("requirements/tensorflow.txt"),
-    "dev": read_requirements("requirements/dev.txt"),
+    "dev": _dev,
+    "tensorflow": read_requirements("requirements/tensorflow.txt"),
+}
+dev_requirements = {
+    "tensorflow-dev": requirements["tensorflow"] + _dev,
 }
 
 
@@ -48,6 +53,7 @@ setup(
     include_package_data=True,
     extras_require={
         **requirements,
+        **dev_requirements,
         "all": list(itertools.chain(*list(requirements.values()))),
     },
     python_requires=">=3.7",
