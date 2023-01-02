@@ -15,6 +15,9 @@ try:
         def __init__(self):
             super().__init__(tnp)
 
+        def namespace(self):
+            return self
+
         def asarray(self, a, dtype=None, copy=False):
             return self.np.asarray(a, dtype=dtype)
 

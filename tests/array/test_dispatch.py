@@ -1,6 +1,6 @@
 import numpy as np
 
-from crossfit.array.monkey_patch import MonkeyPatchNumpy
+from crossfit.array.dispatch import MonkeyPatchNumpy
 
 
 def custom_function(a, b):

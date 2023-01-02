@@ -32,7 +32,7 @@ def register_cupy_to_dlpack():
 def register_cupy_from_dlpack():
     import cupy as cp
 
-    @conversion.dispatch_from_dlpack.register_lazy(cp.ndarray)
+    @conversion.dispatch_from_dlpack.register(cp.ndarray)
     def cupy_from_dlpack(capsule) -> cp.ndarray:
         logging.debug(f"Converting {capsule} to cp.ndarray")
         try:

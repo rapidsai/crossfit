@@ -2,8 +2,8 @@
 
 from crossfit.array.ops import *  # noqa: F401, F403
 from crossfit.array.conversion import convert  # noqa: F401
-from crossfit.array.monkey_patch import crossnp  # noqa: F401
 from crossfit.array.dispatch import (  # noqa: F401
+    crossnp,  # noqa: F401
     with_dispatch,  # noqa: F401
     np_backend_dispatch,  # noqa: F401
     NPBackend,  # noqa: F401
@@ -13,6 +13,7 @@ from crossfit.array.dispatch import (  # noqa: F401
 from crossfit.array.backend.cupy_backend import *  # noqa: F401, F403
 from crossfit.array.backend.cudf_backend import *  # noqa: F401, F403
 from crossfit.array.backend.tf_backend import *  # noqa: F401, F403
+from crossfit.array.backend.torch_backend import *  # noqa: F401, F403
 
 
 # __all__ = [

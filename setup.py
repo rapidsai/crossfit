@@ -28,9 +28,11 @@ requirements = {
     "base": read_requirements("requirements/base.txt"),
     "dev": _dev,
     "tensorflow": read_requirements("requirements/tensorflow.txt"),
+    "pytorch": read_requirements("requirements/pytorch.txt"),
 }
 dev_requirements = {
     "tensorflow-dev": requirements["tensorflow"] + _dev,
+    "pytorch-dev": requirements["pytorch"] + _dev,
 }
 
 
