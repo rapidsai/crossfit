@@ -1,4 +1,6 @@
 [tool.pytest.ini_options]
 markers = [
-    "tensorflow"
+    "tensorflow",
+    "pytorch",
+    "jax",
 ]

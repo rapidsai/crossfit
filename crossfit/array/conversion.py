@@ -15,6 +15,15 @@ class ToDispatch(Dispatch):
     def __call__(self, input: InputType) -> IntermediateType:
         return super().__call__(input)
 
+    def dispatch(self, cls):
+        try:
+            return super().dispatch(cls)
+        except TypeError:
+            for key, val in self._lookup.items():
+                if issubclass(cls, key):
+                    return val
+            raise TypeError(f"Cannot convert {cls} to {self.name}")
+
 
 class FromDispatch(Dispatch):
     def __call__(

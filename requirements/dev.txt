@@ -9,6 +9,7 @@ bandit==1.7.0
 flake8-nb==0.3.0
 pytest>=5
 pytest-cov>=2
+pytest-xdist
 
 moto>=2
 cpplint>=1.5

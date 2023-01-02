@@ -37,7 +37,8 @@ jobs:
           python setup.py develop
       - name: Run Tensorflow tests
         run: |
-          pytest tests -m "tensorflow"
+          pytest --cov="crossfit/array" -m "tensorflow"
+  
   pytorch:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -65,4 +66,33 @@ jobs:
           python setup.py develop
       - name: Run Pytorch tests
         run: |
-          pytest tests -m "pytorch"
+          pytest --cov="crossfit/array" -m "pytorch"
+
+  jax:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        python-version: [3.8]
+        os: [ubuntu-latest]
+        jax-version: ["~=0.3.0", "~=0.4.0"]
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+          cache-dependency-path: |
+            **/setup.cfg
+            requirements/*.txt
+      - name: Install dependencies
+        run: |
+          python -m pip install "jax[cpu]${{ matrix.jax-version }}"
+          python -m pip install .[jax-dev]
+      - name: Build
+        run: |
+          python setup.py develop
+      - name: Run Jax tests
+        run: |
+          pytest --cov="crossfit/array" -m "jax"

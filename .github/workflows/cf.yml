@@ -28,5 +28,5 @@ jobs:
         pip install -e '.[all]'
     - name: Run tests
       run: |
-        pytest
+        pytest --cov="crossfit"
 

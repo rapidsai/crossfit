@@ -10,8 +10,9 @@ from crossfit.array.dispatch import (  # noqa: F401
 )
 
 
-from crossfit.array.backend.cupy_backend import *  # noqa: F401, F403
 from crossfit.array.backend.cudf_backend import *  # noqa: F401, F403
+from crossfit.array.backend.cupy_backend import *  # noqa: F401, F403
+from crossfit.array.backend.jax_backend import *  # noqa: F401, F403
 from crossfit.array.backend.tf_backend import *  # noqa: F401, F403
 from crossfit.array.backend.torch_backend import *  # noqa: F401, F403
 
