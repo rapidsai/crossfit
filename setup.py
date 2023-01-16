@@ -22,10 +22,12 @@ def read_requirements(filename):
         return [line for line in lineiter if line and not line.startswith("#")]
 
 
-_dev = read_requirements("requirements/dev.txt")
+_vis = read_requirements("requirements/vis.txt")
+_dev = read_requirements("requirements/dev.txt") + _vis
 
 requirements = {
     "base": read_requirements("requirements/base.txt"),
+    "vis": _vis,
     "dev": _dev,
     "tensorflow": read_requirements("requirements/tensorflow.txt"),
     "pytorch": read_requirements("requirements/pytorch.txt"),

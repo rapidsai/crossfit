@@ -5,7 +5,6 @@ import crossfit.array as cnp
 from crossfit.array import convert
 from crossfit.utils import test_utils
 
-
 arr1 = [1, 2, 3]
 arr2 = [4, 5, 6]
 
