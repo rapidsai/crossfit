@@ -1,0 +1,3 @@
+recursive-include crossfit/dashboard *.html
+recursive-include crossfit/dashboard *.css
+recursive-include crossfit/dashboard *.js

@@ -1,7 +1,8 @@
 from .layout import Card
-from .text import Text
+from .text import Text, Metric
 
 __all__ = [
     "Card",
-    "Text"
+    "Text",
+    "Metric"
 ]

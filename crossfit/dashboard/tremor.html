@@ -1,123 +1,161 @@
-{% extends base %}
+{% from macros import embed %}
 
-<!-- goes in body -->
-{% block preamble %}
-{% if app_favicon %}<link rel="icon" href="{{ app_favicon }}" type="{{favicon_type}}">{% endif %}
-{% if manifest %}<link rel="manifest" href="{{ manifest }}">{% endif %}
-{% if meta_name %}<meta name="name" content="{{ meta_name }}">{% endif %}
-{% if meta_description %}<meta name="description" content="{{ meta_description }}">{% endif %}
-{% if meta_keywords %}<meta name="keywords" content="{{ meta_keywords }}">{% endif %}
-{% if meta_author %}<meta name="author" content="{{ meta_author }}">{% endif %}
-{% if meta_refresh %}<meta http-equiv="refresh" content="{{ meta_refresh }}">{% endif %}
-{% if meta_viewport %}<meta name="viewport" content="{{ meta_viewport }}">{% endif %}
-{% if base_url and base_target %}<base href="{{ base_url }}" target="{{ base_target }}">{% endif %}
-{% if manifest %}<link rel="manifest" href="{{ manifest_url }}">{% endif %}
-{% endblock %}
-
-{% block postamble %}
-<!-- Template CSS -->
-{% for css in template_resources['css'].values() %}
-<link rel="stylesheet" href="{{ css }}">
-{% endfor %}
-{% for src in template_resources['extra_css'] %}
-<link rel="stylesheet"  href="{{ src }}">
-{% endfor %}
-{% for raw_css in template_resources['raw_css'] %}
-<style type="text/css">
-{{ raw_css }}
-</style>
-{% endfor %}
-
-<!-- Template JS -->
-{% for src in template_resources['js'].values() %}
-<script src="{{ src }}"></script>
-{% endfor %}
-{% for src in template_resources['js_modules'].values() %}
-<script src="{{ src }}" type="module"></script>
-{% endfor %}
-{% endblock %}
-
-<!-- goes in body -->
-{% block contents %}
-
-<div id="root">
-  <main class="bg-slate-50 p-6 sm:p-10" id="container">
-    <div id="header">
-      <div id="header-items">
-      {% for doc in docs %}
-      {% for root in doc.roots %}
-      {% if "header" in root.tags %}
-      {{ embed(root) | indent(8) }}
-      {% endif %}
-      {% endfor %}
-      {% endfor %}
-      {% if busy %}
-      </div>
-      
-      {% endif %}
-    </div>
-    
+<!DOCTYPE html>
+<html lang="en">
+{% block head %}
+<head>
+    {% block inner_head %}
+    <meta charset="utf-8">
+    <title>{% block title %}{{ title | e if title else "Panel App" }}{% endblock %}</title>
     
 
-    <p class="text-elem tremor-base tr-shrink-0 tr-mt-0 tr-text-gray-700 tr-text-lg tr-font-medium">
-        {% if app_logo %}<a class="navbar-brand app-logo" href="{{ site_url }}"><img src="{{ app_logo }}" class="app-logo"></a>{% endif %}        
-        {% if site_title and app_title%}<span class="title">-</span>{% endif %}
-        {% if app_title %}<a class="title" href="" >{{ app_title }}</a>{% endif %}
-        {% if site_title %}<a class="title" href="{{ site_url }}" >{{ site_title }}</a>{% endif %}
-        {{ embed(roots.busy_indicator) | indent(6) }}
-    </p>
-    <p class="text-elem tremor-base tr-shrink-0 tr-mt-0 tr-text-left tr-text-gray-500 tr-text-sm tr-font-normal">Some description</p>
+    {% if app_favicon %}<link rel="icon" href="{{ app_favicon }}" type="{{favicon_type}}">{% endif %}
+    {% if manifest %}<link rel="manifest" href="{{ manifest }}">{% endif %}
+    {% if meta_name %}<meta name="name" content="{{ meta_name }}">{% endif %}
+    {% if meta_description %}<meta name="description" content="{{ meta_description }}">{% endif %}
+    {% if meta_keywords %}<meta name="keywords" content="{{ meta_keywords }}">{% endif %}
+    {% if meta_author %}<meta name="author" content="{{ meta_author }}">{% endif %}
+    {% if meta_refresh %}<meta http-equiv="refresh" content="{{ meta_refresh }}">{% endif %}
+    {% if meta_viewport %}<meta name="viewport" content="{{ meta_viewport }}">{% endif %}
+    {% if base_url and base_target %}<base href="{{ base_url }}" target="{{ base_target }}">{% endif %}
+    {% if manifest %}<link rel="manifest" href="{{ manifest_url }}">{% endif %}
 
-    <div class="tremor-base tr-relative tr-w-full tr-mx-auto tr-text-left tr-ring-1 tr-mt-0 tr-max-w-none tr-bg-white tr-shadow tr-border-blue-400 tr-ring-gray-200 tr-pl-6 tr-pr-6 tr-pt-6 tr-pb-6 tr-rounded-lg">
-      <div class="tr-w-full tr-max-w-none tr-text-left tr-truncate tr-whitespace-nowrap tr-mt-0">
-          <p class="text-elem tremor-base tr-shrink-0 tr-mt-0 tr-text-left tr-text-gray-500 tr-text-sm tr-font-normal">AUC</p>
-          <div class="tremor-base tr-mt-0">
-              <p class="text-elem tr-whitespace-nowrap tr-truncate tr-text-gray-700 tr-text-3xl tr-font-semibold"> 0.76</p>
-          </div>
-      </div>
-      <div class="tremor-base tr-flex tr-items-center tr-w-full tr-mt-2">
-        <div class="tr-relative tr-flex tr-items-center tr-w-full tr-bg-blue-100 tr-h-2 tr-rounded-lg">
-            <div class="tr-bg-blue-500 tr-flex-col tr-h-full tr-rounded-lg" style="width: 72%; transition: all 2s ease 0s;"
-            ></div>
-        </div>
-      </div>
-    </div>
 
-    <div class="tr-w-full tr-max-w-none tr-text-left tr-mt-6" id="content">
-      {% if nav %}
-      <div class="sidenav" id="sidebar">
-        <ul class="nav flex-column">
-        {% for doc in docs %}
-        {% for root in doc.roots %}
-        {% if "nav" in root.tags %}
+    {% block resources %}
+        {% block css_resources %}
+        {{ bokeh_css | indent(8) if bokeh_css }}
+        {% endblock %}
+        {% block js_resources %}
+        {{ bokeh_js | indent(8) if bokeh_js }}
+        {% endblock %}
+    {% endblock %}
+    
+
+    <!-- Template CSS -->
+    {% for css in template_resources['css'].values() %}
+    <link rel="stylesheet" href="{{ css }}">
+    {% endfor %}
+    {% for src in template_resources['extra_css'] %}
+    <link rel="stylesheet"  href="{{ src }}">
+    {% endfor %}
+    {% for raw_css in template_resources['raw_css'] %}
+    <style type="text/css">
+    {{ raw_css }}
+    </style>
+    {% endfor %}
+
+
+    <script>
+      // This is a hacky way to remove the styling bokeh adds somehow.
+      // TODO: Figure out a better way to do this.
+      let style = document.querySelector("style.bk");
+      let parent = style.parentNode;
+      parent.removeChild(style);
+  
+
+    </script>
+
+
+    <!-- Template JS -->
+    {% for src in template_resources['js'].values() %}
+    <script type="text/javascript" src="{{ src }}"></script>
+    {% endfor %}
+    {% for src in template_resources['js_modules'].values() %}
+    <script type="text/javascript" src="{{ src }}" type="module"></script>
+    {% endfor %}
+
+
+    {% endblock %}
+</head>
+{% endblock %}
+{% block body %}
+<body>
+    {% block inner_body %}
+    <main id="root" class="bg-slate-50 p-6 sm:p-10">
+      <div id="container">
+        <p class="text-elem tremor-base tr-shrink-0 tr-mt-0 tr-text-gray-700 tr-text-lg tr-font-medium">
+          {% if app_logo %}<a class="navbar-brand app-logo" href="{{ site_url }}"><img src="{{ app_logo }}" class="app-logo"></a>{% endif %}        
+          {% if site_title and app_title%}<span class="title">-</span>{% endif %}
+          {% if app_title %}<a class="title" href="" >{{ app_title }}</a>{% endif %}
+          {% if site_title %}<a class="title" href="{{ site_url }}" >{{ site_title }}</a>{% endif %}
+          {{ embed(roots.busy_indicator) | indent(6) }}
+      </p>
+      <p class="text-elem tremor-base tr-shrink-0 tr-mt-0 tr-text-left tr-text-gray-500 tr-text-sm tr-font-normal">Some description</p>
+  
+        
+        
+        <div id="header">
+          <div id="header-items">
+          {% for doc in docs %}
+          {% for root in doc.roots %}
+          {% if "header" in root.tags %}
           {{ embed(root) | indent(8) }}
-        {% endif %}
-        {% endfor %}
-        {% endfor %}
-        </ul>
-      </div>
-      {% endif %}
-
-    <div class="tr-w-full tr-max-w-none tr-text-left tr-mt-6" id="main">
-      {% for doc in docs %}
-      {% for root in doc.roots %}
-      {% if "main" in root.tags %}
-      {{ embed(root) | indent(6) }}
-      {% endif %}
-      {% endfor %}
-      {% endfor %}
-    </div>
-
+          {% endif %}
+          {% endfor %}
+          {% endfor %}
+          {% if busy %}
+          </div>
+          
+          {% endif %}
+        </div>
     
+        <div class="tr-w-full tr-max-w-none tr-text-left tr-mt-6" id="content">
+          {% if nav %}
+          <div class="sidenav" id="sidebar">
+            <ul class="nav flex-column">
+            {% for doc in docs %}
+            {% for root in doc.roots %}
+            {% if "nav" in root.tags %}
+              {{ embed(root) | indent(8) }}
+            {% endif %}
+            {% endfor %}
+            {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+    
+        <div class="tr-w-full tr-max-w-none tr-text-left tr-mt-6">
+          <div class="tremor-base tr-relative tr-w-full tr-mx-auto tr-text-left tr-ring-1 tr-mt-0 tr-max-w-xs tr-bg-white tr-shadow tr-border-indigo-400 tr-ring-gray-200 tr-border-t-4 tr-pl-6 tr-pr-6 tr-pt-6 tr-pb-6 tr-rounded-lg" style="position: relative; display: block; left: 0px; top: 0px; width: 1114px; height: 114px; margin: 5px;">
+            <div class="tr-w-full tr-max-w-none tr-text-left tr-truncate tr-whitespace-nowrap tr-mt-0">
+                <p class="text-elem tremor-base tr-shrink-0 tr-mt-0 tr-text-left tr-text-gray-500 tr-text-sm tr-font-normal">AUC</p>
+                <div class="tremor-base tr-mt-0">
+                    <p class="text-elem tr-whitespace-nowrap tr-truncate tr-text-gray-700 tr-text-3xl tr-font-semibold"> 0.76</p>
+                </div>
+            </div>
+            <div class="tremor-base tr-flex tr-items-center tr-w-full tr-mt-2">
+              <div class="tr-relative tr-flex tr-items-center tr-w-full tr-bg-blue-100 tr-h-2 tr-rounded-lg">
+                  <div class="tr-bg-blue-500 tr-flex-col tr-h-full tr-rounded-lg" style="width: 72%; transition: all 2s ease 0s;"
+                  ></div>
+              </div>
+            </div>
+          </div>
+          
+          
+          {% for doc in docs %}
+          {% for root in doc.roots %}
+          {% if "main" in root.tags %}
+          {{ embed(root) | indent(6) }}
+          {% endif %}
+          {% endfor %}
+          {% endfor %}
+        </div>
+    
+        
+    
+      
+      </div>
+    </main>
+    
+    {{ embed(roots.js_area) }}
+    {{ embed(roots.actions) }}
+    {{ embed(roots.location) }}
+    {% if notifications %}
+    {{ embed(roots.notifications) }}
+    {% endif %}
 
-  </main>
-</div>
 
-{{ embed(roots.js_area) }}
-{{ embed(roots.actions) }}
-{{ embed(roots.location) }}
-{% if notifications %}
-{{ embed(roots.notifications) }}
-{% endif %}
-
+    {{ plot_script | indent(8) }}
+    {% endblock %}
+</body>
 {% endblock %}
+</html>

@@ -6,7 +6,7 @@ from panel.config import config
 from panel.io.resources import CSS_URLS
 
 
-from crossfit.dashboard.components import Card, Text
+from crossfit.dashboard import components as tr
 
 
 pn.extension(sizing_mode = 'stretch_both')
@@ -104,13 +104,21 @@ def _parse_decoration(decoration):
     
     
 dashboard = TremorDashboard(site_title="Model Performance")
+dashboard.main.append(
+    tr.Card(
+        tr.Text("AUC"),
+        tr.Metric("0.9"),
+        decoration="top"
+    )
+)
 dashboard.sidebar.append(
     pn.Row(
-        Card(
-            # pn.panel("# bbb")
-            Text("Some text"), 
+        tr.Card(
+            tr.Text("AUC"),
+            tr.Metric("0.9"),
+            decoration="top"
         ),
-        Card("# bbb")
+        tr.Card("# bbb")
     )
 )
 

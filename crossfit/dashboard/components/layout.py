@@ -1,20 +1,21 @@
 import panel as pn
 
-from crossfit.dashboard.lib.primitives import BaseColor, HorizontalPosition, VerticalPosition
-from crossfit.dashboard.lib.shape import border
+from crossfit.dashboard import lib
 
 
-def parseDecorationAlignment(decorationAlignment: str) -> str:
-    if not decorationAlignment:
+
+def parseDecorationAlignment(alignment: str) -> str:
+    if not alignment:
         return ""
-    if decorationAlignment == HorizontalPosition.Left:
-        return border["lg"]["left"]
-    elif decorationAlignment == VerticalPosition.Top:
-        return border["lg"]["top"]
-    elif decorationAlignment == HorizontalPosition.Right:
-        return border["lg"]["right"]
-    elif decorationAlignment == VerticalPosition.Bottom:
-        return border["lg"]["bottom"]
+    alignment = str(alignment)
+    if alignment == str(lib.HorizontalPosition.Left):
+        return lib.border["lg"]["left"]
+    elif alignment == str(lib.VerticalPosition.Top):
+        return lib.border["lg"]["top"]
+    elif alignment == str(lib.HorizontalPosition.Right):
+        return lib.border["lg"]["right"]
+    elif alignment == str(lib.VerticalPosition.Bottom):
+        return lib.border["lg"]["bottom"]
     else:
         return ""
 
@@ -26,7 +27,7 @@ def Card(
     h_full: bool = False,
     shadow: bool = True,
     decoration: str = "",
-    decoration_color: str = BaseColor.Blue,
+    decoration_color: str = lib.BaseColor.Blue,
     margin_top: str = "mt-0",
     **kwargs
 ) -> pn.Card:
@@ -49,25 +50,30 @@ def Card(
             Controls the top margin. Defaults to "mt-0".
     """
     
-    css_classes = "tremor-base tr-relative tr-w-full tr-mx-auto tr-text-left tr-ring-1 tr-rounded-lg".split(" ")
-    css_classes.append(max_width)
-    if h_full:
-        css_classes.append("tr-h-full")
-    if shadow:
-        css_classes.append("tr-shadow")
-    # TODO: Fix this 
-    # https://github.com/tremorlabs/tremor/blob/238f7ea533ac3954722af0371a3a5bb6b3f59074/src/components/layout-elements/Card/Card.tsx#L29
-    # if decoration:
-    #     css_classes.append(f"tr-border-{decoration_color}-400")
-    #     css_classes.append(f"tr-ring-{decoration_color}-200")
-    css_classes.extend("tr-ring-1 tr-mt-0 tr-max-w-none tr-bg-white tr-ring-gray-200".split(" "))
     
-    
-    css_classes.append(margin_top)
+    classes = "tremor-base tr-relative tr-w-full tr-mx-auto tr-text-left tr-ring-1".split(" ")
+    extra_classes = [
+        lib.parseMarginTop(margin_top),
+        lib.parseHFullOption(h_full),
+        lib.parseMaxWidth(max_width),
+        lib.getColorVariantsFromColorThemeValue(lib.defaultColors.white).bgColor,
+        lib.boxShadow["md"] if shadow else "",
+        lib.getColorVariantsFromColorThemeValue(
+          lib.getColorTheme(decoration_color)["border"]
+        ).borderColor,
+        lib.getColorVariantsFromColorThemeValue(lib.defaultColors.lightBorder).ringColor,
+        parseDecorationAlignment(decoration),
+        lib.spacing["threeXl"]["paddingLeft"],
+        lib.spacing["threeXl"]["paddingRight"],
+        lib.spacing["threeXl"]["paddingTop"],
+        lib.spacing["threeXl"]["paddingBottom"],
+        lib.borderRadius["lg"]["all"]
+    ]
+    classes.extend([c for c in extra_classes if c])
     
     return pn.Card(
         *args, 
-        css_classes=css_classes, 
+        css_classes=classes, 
         collapsible=False,
         hide_header=True,
         **kwargs
