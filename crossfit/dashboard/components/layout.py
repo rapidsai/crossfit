@@ -1,7 +1,6 @@
 import panel as pn
 
-from crossfit.dashboard import lib
-
+from crossfit.dashboard import utils as lib
 
 
 def parseDecorationAlignment(alignment: str) -> str:
@@ -20,7 +19,6 @@ def parseDecorationAlignment(alignment: str) -> str:
         return ""
 
 
-
 def Card(
     *args,
     max_width: str = "max-w-none",
@@ -32,26 +30,27 @@ def Card(
     **kwargs
 ) -> pn.Card:
     """Cards are a fundamental building block for compositions, such as KPI cards, forms, or sections.
-    
+
     Based on: https://github.com/tremorlabs/tremor/blob/main/src/components/layout-elements/Card/Card.tsx#L55
 
     Args:
-        max_width (str, optional): 
+        max_width (str, optional):
             Set the maximum width of the component. Defaults to "max-w-none".
-        h_full (bool, optional): 
+        h_full (bool, optional):
             Set the component's height behavior. Defaults to False.
-        shadow (bool, optional): 
+        shadow (bool, optional):
             Control a card's shadow. Defaults to True.
-        decoration (Optional[str], optional): 
+        decoration (Optional[str], optional):
             Add a decorative border to the card. Defaults to None.
-        decoration_color (str, optional): 
+        decoration_color (str, optional):
             Set a color to the border decoration. Defaults to "blue".
-        margin_top (str, optional): 
+        margin_top (str, optional):
             Controls the top margin. Defaults to "mt-0".
     """
-    
-    
-    classes = "tremor-base tr-relative tr-w-full tr-mx-auto tr-text-left tr-ring-1".split(" ")
+
+    classes = (
+        "tremor-base tr-relative tr-w-full tr-mx-auto tr-text-left tr-ring-1".split(" ")
+    )
     extra_classes = [
         lib.parseMarginTop(margin_top),
         lib.parseHFullOption(h_full),
@@ -59,22 +58,20 @@ def Card(
         lib.getColorVariantsFromColorThemeValue(lib.defaultColors.white).bgColor,
         lib.boxShadow["md"] if shadow else "",
         lib.getColorVariantsFromColorThemeValue(
-          lib.getColorTheme(decoration_color)["border"]
+            lib.getColorTheme(decoration_color)["border"]
         ).borderColor,
-        lib.getColorVariantsFromColorThemeValue(lib.defaultColors.lightBorder).ringColor,
+        lib.getColorVariantsFromColorThemeValue(
+            lib.defaultColors.lightBorder
+        ).ringColor,
         parseDecorationAlignment(decoration),
         lib.spacing["threeXl"]["paddingLeft"],
         lib.spacing["threeXl"]["paddingRight"],
         lib.spacing["threeXl"]["paddingTop"],
         lib.spacing["threeXl"]["paddingBottom"],
-        lib.borderRadius["lg"]["all"]
+        lib.borderRadius["lg"]["all"],
     ]
     classes.extend([c for c in extra_classes if c])
-    
+
     return pn.Card(
-        *args, 
-        css_classes=classes, 
-        collapsible=False,
-        hide_header=True,
-        **kwargs
+        *args, css_classes=classes, collapsible=False, hide_header=True, **kwargs
     )
