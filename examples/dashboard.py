@@ -78,7 +78,7 @@ overview = [
     Card(
         Flex(
             Text("Product A"), 
-            Badge("+45%"),
+            BadgeDelta("+45%"),
             Text("+$9,000 (+45%)"), 
         ),
         DeltaBar(-30), 
