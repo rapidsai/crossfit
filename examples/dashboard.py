@@ -13,6 +13,7 @@ import reacton.ipywidgets as w
 from crossfit.ml.vis.classification import plot_roc_auc_curve, plot_confusion_matrix
 from crossfit.dashboard.template import TremorDashboard
 from crossfit.dashboard.components import *
+from crossfit.dashboard.components.bar import DeltaBar
 
 # Calculate the true positive rate and false positive rate at various thresholds
 y_true = np.random.randint(2, size=1000)
@@ -74,6 +75,15 @@ df = pd.DataFrame([
 
 overview = [    
     TopMetricCards(df),
+    Card(
+        Flex(
+            Text("Product A"), 
+            Badge("+45%"),
+            Text("+$9,000 (+45%)"), 
+        ),
+        DeltaBar(-30), 
+        html=True
+    ),
     pn.Row(
         Card(
             Text("Confusion Matrix"),
@@ -157,7 +167,7 @@ comp_df = pd.DataFrame([
 ])
 
 comparison = [
-    Card(pn.panel(ButtonClick()), html=False),
+    # Card(pn.panel(ButtonClick()), html=False),
     TopMetricCompare(comp_df)
 ]
 

@@ -1,7 +1,7 @@
 import pandera as pa
 from pandera.typing import Series
 
-from crossfit.dashboard.components.layout import ColGrid
+from crossfit.dashboard.components.layout import ColGrid, Card
 from crossfit.dashboard.components.metrics import MetricOverviewCard
 
 
@@ -11,6 +11,17 @@ class ComparisonSchema(pa.SchemaModel):
     top_metric_name: Series[str] = pa.Field()
     top_metric_value: Series[float] = pa.Field()
     metrics: Series[object] = pa.Field()
+    
+    
+    
+def MetricOverviewCompareCard(
+    current,
+    reference,
+    threshold=0.5, 
+    progress_main_color="blue",
+    **kwargs
+) -> Card:
+    ...
 
 
 # @pa.check_input(ComparisonSchema)
