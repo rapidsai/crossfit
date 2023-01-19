@@ -10,7 +10,7 @@ import crossfit.dashboard.utils as lib
 
 def ProgressBar(
     value,
-    # label=None,
+    label=None,
     # tooltip=None,
     show_animation=True,
     color = lib.BaseColor.Blue,
@@ -43,10 +43,27 @@ def ProgressBar(
     ])
     bar_styles = f"width: {value}%; transition: {'all 6s' if show_animation else ''};"
     
+    label_div = ""
+    if label:
+        label_p_classes = lib.classNames([
+            "text-elem tr-shrink-0 tr-whitespace-nowrap tr-truncate",
+            lib.FontSize.sm,
+            lib.FontWeight.sm
+        ])
+        label_p = f"""<p class=\"{label_p_classes}\">{label}</p>"""
+        label_div_classes = lib.classNames([
+            "tr-w-16 tr-truncate tr-text-right",
+            lib.getColorVariantsFromColorThemeValue(lib.defaultColors.darkText).textColor,
+            lib.spacing["sm"]["marginLeft"]
+        ])
+        label_div = f"""<div class=\"{label_div_classes}\">{label_p}</div>"""
+    
+    
     html = f"""<div class=\"{outer_classes}\">
         <div class=\"{inner_classes}\">
             <div class=\"{bar_classes}\" style=\"{bar_styles}\"></div>
         </div>
+        {label_div}
     </div>"""
     
     # TODO: Add label
@@ -101,6 +118,7 @@ def MetricOverviewCard(
                 Text(row["name"]),
                 ProgressBar(
                     row["value"], 
+                    label=f"{row['value']}%" if row["value"] > 1 else str(row["value"]),
                     margin_top="mt-1",
                     color=progress_main_color if row["value"] >= _threshold else "red", 
                 )
