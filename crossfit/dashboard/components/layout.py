@@ -19,6 +19,19 @@ def parseDecorationAlignment(alignment: str) -> str:
         return ""
 
 
+def Flex(
+  children,
+  justifyContent = "justify-between",
+  alignItems = "items-center",
+  spaceX = "",
+  truncate = False,
+  marginTop = "mt-0",
+  
+):
+    ...
+
+
+
 def Card(
     *args,
     max_width: str = "max-w-none",
