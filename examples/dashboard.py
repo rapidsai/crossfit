@@ -1,5 +1,6 @@
 import panel as pn
 import numpy as np
+import pandas as pd
 import reacton
 from sklearn.metrics import roc_curve, roc_auc_score, confusion_matrix
 from vega_datasets import data
@@ -63,23 +64,16 @@ def ButtonClick():
     return button
 
 
-dashboard.main.append(Card(pn.panel(ButtonClick())))
-dashboard.main.append(
-    ColGrid( 
-        Col(
-            MetricCard("KPI 1", 0.9),
-            num_col_span=1, num_col_span_lg=2
-        ),
-        Card(Text("Title"), Metric("KPI 2"), html=True),
-        Col(
-            MetricCard("KPI 3", 0.9),
-        ),
-        MetricCard("KPI 4", 0.4),
-        Card(Text("Title"), Metric("KPI 5"), html=True),
-        num_cols=1, num_cols_sm=2, num_cols_lg=3, gap_x="gap-x-2", gap_y="gap-y-2"
-    )
-)
-dashboard.main.append(
+df = pd.DataFrame([
+    {"name": "AUC", "value": 0.9},
+    {"name": "Accuracy", "value": 56.0},
+    {"name": "Precision", "value": 65.0},
+    {"name": "Recall", "value": 43.0},
+])
+
+
+overview = [    
+    TopMetricCards(df),
     pn.Row(
         Card(
             Text("Confusion Matrix"),
@@ -96,36 +90,137 @@ dashboard.main.append(
             ),
              height=500
         )
-    )
-    
-    
-    # Card(
-    #     pn.Tabs(
-    #         ("AUC-ROC Curve", roc),
-    #         ("Confusion Matrix", cf),            
-    #         ("AUC-PR Curve", "# css"),
-    #         tabs_location='above'
-    #     ),
-    #     max_width="max-w-full"
-    # )
-)
-
-dashboard.main.append(
+    ),
     Card(
         pn.widgets.Tabulator(data.iris())
     )
+]
+
+
+comp_df = pd.DataFrame([
+    {
+        "name": "Model A", 
+        "color": "orange", 
+        "top_metric_name": "AUC", 
+        "top_metric_value": 0.78,
+        "metrics": [
+            {
+                "name": 'Accuracy',
+                "value": 89,
+            },
+            {
+                "name": 'Precision',
+                "value": 64,
+            },
+            {
+                "name": 'Recall',
+                "value": 49,
+            },
+            {
+                "name": 'F1 Score',
+                "value": 72,
+            },
+            {
+                "name": 'Log Loss',
+                "value": 67,
+            },
+        ]
+    },
+    {
+        "name": "Model B", 
+        "color": "yellow", 
+        "top_metric_name": "AUC", 
+        "top_metric_value": 0.9,
+        "metrics": [
+            {
+                "name": 'Accuracy',
+                "value": 89,
+            },
+            {
+                "name": 'Precision',
+                "value": 64,
+            },
+            {
+                "name": 'Recall',
+                "value": 79,
+            },
+            {
+                "name": 'F1 Score',
+                "value": 72,
+            },
+            {
+                "name": 'Log Loss',
+                "value": 67,
+            },
+        ]
+    },
+])
+
+comparison = [
+    Card(pn.panel(ButtonClick()), html=False),
+    TopMetricCompare(comp_df)
+]
+
+
+main_tabs = pn.Tabs(
+    ("Overview", pn.Column(*overview)),
+    ("Comparison", pn.Column(*comparison))
 )
 
-# dashboard.sidebar.append(
-#     pn.Row(
-#         dash.Card(
-#             dash.Text("AUC"),
-#             dash.Metric("0.9"),
-#             decoration="top"
+dashboard.main.append(main_tabs)
+# dashboard.main.append()
+# dashboard.main.append(
+#     ColGrid( 
+#         Col(
+#             MetricCard("KPI 1", 0.9),
+#             num_col_span=1, num_col_span_lg=2
 #         ),
-#         dash.Card("# bbb")
+#         MetricCard("KPI 3", 0.9),
+        
+#         MetricCard("KPI 3", 0.9),
+#         MetricCard("KPI 4", 0.4),
+#         MetricCard("KPI 5", 0.4),
+#         num_cols_sm=3, num_cols_lg=3, gap_x="gap-x-4", gap_y="gap-y-4"
 #     )
 # )
 
+
+# dashboard.main.append(TopMetricCards(df))
+# dashboard.main.append(
+#     pn.Row(
+#         Card(
+#             Text("Confusion Matrix"),
+#             cf,
+#             height=500
+#         ),
+#         Card(
+#              pn.Tabs(
+#                 ("AUC-ROC Curve", roc),
+#                 # ("Confusion Matrix", cf),            
+#                 ("AUC-PR Curve", roc),
+#                 tabs_location='above',
+#                 css_classes=["w-full"]
+#             ),
+#              height=500
+#         )
+#     )
+    
+    
+#     # Card(
+#     #     pn.Tabs(
+#     #         ("AUC-ROC Curve", roc),
+#     #         ("Confusion Matrix", cf),            
+#     #         ("AUC-PR Curve", "# css"),
+#     #         tabs_location='above'
+#     #     ),
+#     #     max_width="max-w-full"
+#     # )
+# )
+
+# dashboard.main.append(
+#     Card(
+#         pn.widgets.Tabulator(data.iris())
+#     )
+# )
 
 dashboard.servable()

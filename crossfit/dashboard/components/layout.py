@@ -22,6 +22,29 @@ def parseDecorationAlignment(alignment: str) -> str:
 
 
 @lib.html_component
+def Block(
+    children,
+    max_width = "max-w-none",
+    space_y = "",
+    textAlignment = lib.TextAlignment.Left,
+    truncate = False,
+    margin_top = "mt-0",
+    **kwargs
+) -> pn.pane.HTML:
+    classes = lib.classNames([
+        "tr-w-full",
+        lib.parseMaxWidth(max_width),
+        lib.parseSpaceY(space_y) if space_y else space_y,
+        lib.parseTextAlignment(textAlignment),
+        lib.parseTruncateOption(truncate),
+        "tr-whitespace-nowrap" if truncate else "",
+        lib.parseMarginTop(margin_top)
+    ])
+    
+    return pn.pane.HTML(f"<div class=\"{classes}\">{children}</div>", **kwargs)
+
+
+@lib.html_component
 def Flex(
   children,
   justifyContent = "justify-between",
@@ -81,7 +104,7 @@ def ColGrid(
     def get_grid_cols(num_cols, grid_cols_mapping):
         if num_cols is None:
             return ""
-        if str(num_cols) not in grid_cols_mapping:
+        if num_cols not in grid_cols_mapping:
             return ""
         return grid_cols_mapping[num_cols]
         
@@ -159,7 +182,10 @@ def Card(
     classes.extend([c for c in extra_classes if c])
     
     if html:
-        children = " ".join(lib.parse_html_args(*args))
+        if len(args) > 1:
+            children = " ".join(lib.parse_html_args(*args))
+        else:
+            children = args
         return pn.pane.HTML(f"<div class=\"{lib.classNames(classes)}\">{children}</div>", **kwargs)
 
     return pn.Card(
