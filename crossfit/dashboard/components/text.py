@@ -3,6 +3,28 @@ import panel as pn
 from crossfit.dashboard import utils as lib
 
 
+@lib.html_component
+def Title(
+    children,
+    color = lib.BaseColor.Gray,
+    truncate = False,
+    margin_top = "mt-0",
+    **kwargs
+):
+    classes = lib.classNames([
+        "text-elem tremor-base",
+        "tr-whitespace-nowrap" if truncate else "tr-shrink-0",
+        lib.parseTruncateOption(truncate),
+        lib.parseMarginTop(margin_top),
+        lib.getColorVariantsFromColorThemeValue(lib.getColorTheme(color)["darkText"]).textColor,
+        lib.FontSize.lg,
+        lib.FontWeight.md
+    ])
+    
+    return pn.pane.HTML(f"<p class=\"{classes}\">{children}</p>", **kwargs)
+
+
+@lib.html_component
 def Text(
     text,
     color=lib.BaseColor.Gray,
@@ -32,6 +54,7 @@ def Text(
     return pn.pane.HTML(f'<p class="{classes}">{text}</p>', **kwargs)
 
 
+@lib.html_component
 def Metric(
     value, color=lib.BaseColor.Gray, truncate=False, margin_top="mt-0", **kwargs
 ) -> pn.pane.HTML:

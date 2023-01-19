@@ -453,3 +453,7 @@ colorTheme = {
         "icon": "rose-500",
     },
 }
+
+_colors = list(colorTheme.keys())
+for color in _colors:
+    colorTheme[color.value] = colorTheme[color]

@@ -225,15 +225,18 @@
     {% block inner_body %}
     <main id="root" class="bg-slate-50 p-6 sm:p-10">
       <div id="container">
-        <p class="text-elem tremor-base tr-shrink-0 tr-mt-0 tr-text-gray-700 tr-text-lg tr-font-medium">
-          {% if app_logo %}<a class="navbar-brand app-logo" href="{{ site_url }}"><img src="{{ app_logo }}" class="app-logo"></a>{% endif %}        
-          {% if site_title and app_title%}<span class="title">-</span>{% endif %}
-          {% if app_title %}<a class="title" href="" >{{ app_title }}</a>{% endif %}
-          {% if site_title %}<a class="title" href="{{ site_url }}" >{{ site_title }}</a>{% endif %}
-          {{ embed(roots.busy_indicator) | indent(6) }}
-      </p>
-      <p class="text-elem tremor-base tr-shrink-0 tr-mt-0 tr-text-left tr-text-gray-500 tr-text-sm tr-font-normal">Some description</p>
-  
+        <div class="tr-flex tr-w-full tr-justify-between tr-items-center tr-mt-0">          
+          <div>
+            <p class="text-elem tremor-base tr-shrink-0 tr-mt-0 tr-text-gray-700 tr-text-lg tr-font-medium">
+              {% if app_logo %}<a class="navbar-brand app-logo" href="{{ site_url }}"><img src="{{ app_logo }}" class="app-logo"></a>{% endif %}        
+              {% if site_title and app_title%}<span class="title">-</span>{% endif %}
+              {% if app_title %}<a class="title" href="" >{{ app_title }}</a>{% endif %}
+              {% if site_title %}<a class="title" href="{{ site_url }}" >{{ site_title }}</a>{% endif %}           
+            </p>
+            <p class="text-elem tremor-base tr-shrink-0 tr-mt-0 tr-text-left tr-text-gray-500 tr-text-sm tr-font-normal">Some description</p>
+          </div>
+          <div> {{ embed(roots.busy_indicator) | indent(6) }}</div>
+        </div>
         
         
         <div id="header">

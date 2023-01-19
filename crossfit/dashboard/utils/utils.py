@@ -16,8 +16,8 @@ def isBaseColor(baseColor: str) -> bool:
 
 
 def getColorTheme(baseColor: str, defaultColor: str = BaseColor.Blue) -> dict:
-    if not baseColor or not isBaseColor(baseColor):
-        return colorTheme[defaultColor]
+    # if not baseColor or not isBaseColor(baseColor):
+    #     return colorTheme[defaultColor]
     return colorTheme[baseColor]
 
 

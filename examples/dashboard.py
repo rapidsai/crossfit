@@ -27,7 +27,7 @@ pn.extension(name="vega", sizing_mode="stretch_width")
 
 auc_metric = Card(Text("AUC"), Metric("0.9"), decoration="top")
 
-dashboard = TremorDashboard(site_title="Model Performance")
+dashboard = TremorDashboard(title="Model Performance")
 # dashboard.main.append(auc_metric)
 
 
@@ -65,9 +65,24 @@ def ButtonClick():
 
 dashboard.main.append(Card(pn.panel(ButtonClick())))
 dashboard.main.append(
+    ColGrid( 
+        Col(
+            MetricCard("KPI 1", 0.9),
+            num_col_span=1, num_col_span_lg=2
+        ),
+        Card(Text("Title"), Metric("KPI 2"), html=True),
+        Col(
+            MetricCard("KPI 3", 0.9),
+        ),
+        MetricCard("KPI 4", 0.4),
+        Card(Text("Title"), Metric("KPI 5"), html=True),
+        num_cols=1, num_cols_sm=2, num_cols_lg=3, gap_x="gap-x-2", gap_y="gap-y-2"
+    )
+)
+dashboard.main.append(
     pn.Row(
         Card(
-            Text(pn.panel(Metric("Confusion Matrix"))),
+            Text("Confusion Matrix"),
             cf,
             height=500
         ),
