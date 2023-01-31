@@ -170,7 +170,7 @@ try:
 
     def tf_equals(self, other):
         # TODO: Do this only when inside MonkeyPatchNumpy
-        if not self.dtype == other.dtype:
+        if hasattr(other, "dtype") and not self.dtype == other.dtype:
             other = tf.cast(other, self.dtype)
         return eq(self, other)
 

@@ -75,9 +75,15 @@ class Aggregator:
     def present(self, state):
         return state
 
-    def __call__(self, data, groupby: Sequence[str] = (), per_col=False):
-        data = frame_dispatch(data)
-        prepare = self.prepare
+    def __call__(
+        self, data, *args, groupby: Sequence[str] = (), per_col=False, **kwargs
+    ):
+        # TODO: Remove this in favor of detecting the type of data
+        try:
+            data = frame_dispatch(data)
+        except TypeError:
+            pass
+        prepare = partial(self.prepare, *args, **kwargs)
 
         if per_col:
             prepare = partial(self.call_per_col, to_call=prepare)

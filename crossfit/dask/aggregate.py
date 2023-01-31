@@ -9,8 +9,8 @@ from crossfit.core.aggregate import Aggregator
 
 
 def aggregate(
-    aggregator: Aggregator,
     ddf: dd.DataFrame,
+    aggregator: Aggregator,
     groupby: Sequence[str] = (),
     per_col=False,
 ):

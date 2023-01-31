@@ -1,14 +1,59 @@
 import abc
+from dataclasses import fields, asdict
 import functools
 from typing import Optional, TypeVar, Generic, Type, overload
 
 import tensorflow as tf
 
 from crossfit.array import convert
+from crossfit.core.aggregate import Aggregator
+from crossfit.array.dispatch import MonkeyPatchNumpy
 from crossfit.core.metric import ComparisonMetric, StateType, Array
 from crossfit.stats.continuous.common import AverageState
 
 TFMetricType = TypeVar("TFMetricType", bound=tf.keras.metrics.Metric)
+
+
+class Metric(tf.keras.metrics.Metric):
+    def __init__(self, aggregator: Aggregator, name=None, **kwargs):
+        super().__init__(name=name, **kwargs)
+        self.aggregator = aggregator
+
+    def build(self, input_shape):
+        for field in fields(self.aggregator.state):
+            setattr(self, field.name, self.add_weight(field.name, initializer="zeros"))
+        return super().build(input_shape)
+
+    def prepare(self, y_true, y_pred, sample_weight=None):
+        with MonkeyPatchNumpy():
+            self.build(y_true.shape)
+            batch = self.aggregator(y_true, y_pred, sample_weight=sample_weight)
+            current_state = {
+                field.name: tf.convert_to_tensor(getattr(self, field.name))
+                for field in fields(self.aggregator.state)
+            }
+
+            updated_state = batch.combine(self.aggregator.state(**current_state))
+            for key, val in asdict(updated_state).items():
+                variable = getattr(self, key)
+                variable.assign(tf.cast(val, variable.dtype))
+
+    def update_state(self, y_true, y_pred, sample_weight=None):
+        self.prepare(y_true, y_pred, sample_weight)
+
+    def result(self):
+        state_dict = {}
+
+        for field in fields(self.aggregator.state):
+            state_dict[field.name] = getattr(self, field.name)
+
+        state = self.aggregator.state(**state_dict)
+        outputs = self.aggregator.present(state)
+
+        if len(outputs) == 1:
+            return list(outputs.values())[0]
+
+        return outputs
 
 
 class TFMetric(Generic[TFMetricType, StateType], ComparisonMetric[StateType], abc.ABC):
