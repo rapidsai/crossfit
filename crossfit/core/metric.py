@@ -11,6 +11,7 @@ from typing_extensions import dataclass_transform
 from typing_utils import get_args, get_origin
 
 from crossfit.array.conversion import ToType, convert
+from crossfit.array.ops import concatenate
 from crossfit.utils.types import get_generic_type_arg
 from crossfit.dataframe.core import AbstractFrame
 
@@ -168,7 +169,7 @@ class MetricState(Generic[Array]):
         params = {}
         for field in fields(self):
             if field.type == Array:
-                params[field.name] = np.concatenate(
+                params[field.name] = concatenate(
                     [
                         getattr(self, field.name),
                         *map(lambda x: getattr(x, field.name), other),

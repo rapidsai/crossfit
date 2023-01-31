@@ -12,7 +12,10 @@ def register_cupy_backend():
         def __init__(self):
             super().__init__(cudf)
 
-    np_backend_dispatch.register(cudf.Series)(CudfBackend())
+        def concatenate(self, series_list, *, axis=None):
+            return cudf.concat(series_list, axis=axis or 0)
+
+    np_backend_dispatch.register((cudf.Series, cudf.GenericIndex))(CudfBackend())
 
 
 @conversion.dispatch_to_dlpack.register_lazy("cudf")

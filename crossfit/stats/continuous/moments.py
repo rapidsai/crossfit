@@ -42,7 +42,7 @@ class Moments(Metric[MomentsState]):
 
     def prepare(self, data: Array) -> MomentsState:
         return MomentsState(
-            count=data.shape[self.axis],
+            count=data.count(),
             mean=data.mean(axis=self.axis),
             var=data.var(axis=self.axis),
         )

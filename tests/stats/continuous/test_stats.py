@@ -1,3 +1,5 @@
+import pytest
+
 import numpy as np
 
 from crossfit.core.calculate import calculate_per_col
@@ -43,15 +45,13 @@ def test_continuous_stats_per_col_grouped(df):
     assert len(result.columns) == 16
 
 
-@sample_df({"a": [1, 2] * 20, "b": range(10, 50)})
+@sample_df({"b": range(10, 50)})
 def test_continuous_stats_reduce(df):
     # Use simple DataFrame
     stride = 10
     ser = df["b"]
     size_ser = len(ser)
-    sers = [
-        ser.iloc[i * stride : i * stride + stride] for i in range(size_ser // stride)
-    ]
+    sers = [ser.iloc[i : i + stride] for i in range(0, size_ser, stride)]
 
     # Prepare, concat, and reduce states
     metric = ContinuousStats()
@@ -67,3 +67,21 @@ def test_continuous_stats_reduce(df):
     assert to_list(reduced.common.num_missing) == [0]
     np.testing.assert_allclose(to_list(reduced.moments.mean), [ser.mean()])
     np.testing.assert_allclose(to_list(reduced.moments.var), [ser.var()])
+
+
+@sample_df({"a": [1, 2] * 2000, "b": range(1000, 5000)})
+@pytest.mark.parametrize("groupby", [None, "a"])
+@pytest.mark.parametrize("npartitions", [1, 4])
+def test_continuous_stats_dd(df, groupby, npartitions):
+    dd = pytest.importorskip("dask.dataframe")
+
+    from crossfit.dask.calculate import calculate_per_col as calculate_dask
+
+    ddf = dd.from_pandas(df, npartitions=npartitions)
+    metric = ContinuousStats()
+    mf: MetricFrame = calculate_dask(metric, ddf, groupby=groupby)
+    assert isinstance(mf, MetricFrame)
+
+    result = mf.result()
+    expect = calculate_per_col(ContinuousStats(), df, groupby=groupby).result()
+    dd.assert_eq(result, expect)

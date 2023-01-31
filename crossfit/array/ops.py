@@ -1,6 +1,6 @@
 import numpy as np
 
-from crossfit.array.dispatch import with_dispatch
+from crossfit.array.dispatch import with_dispatch, np_backend_dispatch
 
 dtype = with_dispatch(np.dtype)
 errstate = np.errstate
@@ -177,6 +177,17 @@ trunc = with_dispatch(np.trunc)
 abs = absolute
 
 
+def concatenate(arrays: list, axis=0):
+    """Dispatched version of np.concatenate"""
+    if len(arrays) == 0:
+        raise ValueError("Zero-length list passed to concatenate")
+    try:
+        backend = np_backend_dispatch.dispatch(type(arrays[0]))
+    except TypeError:
+        return np.concatenate(arrays, axis=axis)
+    return backend(np.concatenate, arrays, axis=axis)
+
+
 __all__ = [
     "dtype",
     "errstate",
@@ -194,6 +205,7 @@ __all__ = [
     "choose",
     "clip",
     "compress",
+    "concatenate",
     "cumprod",
     "cumproduct",
     "cumsum",

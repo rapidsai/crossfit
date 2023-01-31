@@ -29,21 +29,40 @@ class ValueCountsState(MetricState):
             column_name="count",
             index=other.values,
         ).select_column("count")
-        combined = self_series + other_series
-
-        return ValueCountsState(combined.index.values, combined.values)
+        combined_frame = (
+            self_series.to_frame()
+            .join(
+                other_series.to_frame(),
+                lsuffix="_l",
+                rsuffix="_r",
+                how="outer",
+            )
+            .fillna(0)
+        )
+        combined = (combined_frame["count_l"] + combined_frame["count_r"]).astype(
+            "int64"
+        )
+        return ValueCountsState(combined.index, combined.values)
 
     def top_k(self, k=10) -> Dict[str, int]:
         counts = {"top_values": [], "top_counts": []}
-
-        if self.values.dtype == object:
-            for i, val in enumerate(self.values):
-                counts["top_values"].append(val[:k])
-                counts["top_counts"].append(self.counts[i][:k])
+        # TODO: This doesn't actually return
+        # "top k", just the first k unique items
+        # (in an undetermined order)
+        if hasattr(self.values, "to_pandas"):
+            _values = self.values.to_pandas()
+            _counts = self.counts.to_pandas()
         else:
-            counts["top_counts"] = self.counts[:k]
-            counts["top_values"] = self.values[:k]
+            _values = self.values
+            _counts = self.counts
 
+        if _values.dtype == object:
+            for i, val in enumerate(_values):
+                counts["top_values"].append(val[:k])
+                counts["top_counts"].append(_counts[i][:k])
+        else:
+            counts["top_counts"] = _counts[:k]
+            counts["top_values"] = _values[:k]
         return counts
 
 

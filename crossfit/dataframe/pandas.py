@@ -74,7 +74,7 @@ class PandasDataFrame(AbstractFrame):
     def groupby_partition(self, by: list) -> dict:
         grouped = self.data.groupby(by)
         return {
-            slice_key: frame_dispatch(grouped.obj.iloc[slice])
+            slice_key: frame_dispatch(grouped.obj.loc[slice])
             for slice_key, slice in dict(grouped.groups).items()
         }
 
