@@ -8,6 +8,15 @@ from dask.utils import Dispatch
 from crossfit.utils import dispatch_utils
 
 
+# TODO: Should this be here?
+try:
+    import sklearn
+
+    sklearn.set_config(array_api_dispatch=True)
+except ImportError:
+    pass
+
+
 class NPBackendDispatch(Dispatch):
     def __call__(self, np_func, arg, *args, **kwargs):
         try:
@@ -67,25 +76,110 @@ def with_dispatch(func):
 
 
 class NPBackend:
-    def __init__(self, np_like_module):
+    """Class to provide a compatible interface for functions in a numpy-like module.
+
+    This class is meant to be used with numpy-like modules (such as `cupy` or `numpyro`)
+    and wraps functions to make them compatible with other numpy-like modules.
+
+    Attributes
+    ----------
+    np : module
+        A numpy-like module.
+
+    """
+
+    def __init__(self, np_like_module: types.ModuleType):
+        """Initialize the class with a numpy-like module.
+
+        Parameters
+        ----------
+        np_like_module : module
+            A numpy-like module.
+
+        """
         self.np = np_like_module
 
-    def namespace(self):
+    def namespace(self) -> types.ModuleType:
+        """Return the numpy-like module.
+
+        Returns
+        -------
+        module
+            The numpy-like module.
+
+        """
         return np
 
     def __call__(self, np_func, *args, **kwargs):
+        """Call the function with the given arguments.
+
+        This method is used to call numpy-like functions.
+
+        Parameters
+        ----------
+        np_func : callable
+            The numpy-like function to be called.
+        *args : tuple
+            The arguments for the function.
+        **kwargs : dict
+            The keyword arguments for the function.
+
+        Returns
+        -------
+        Any
+            The result of calling the function.
+
+        """
         fn_name = np_func.__name__
 
         return getattr(self, fn_name)(*args, **kwargs)
 
-    def __getattr__(self, name):
+    def __getattr__(self, name) -> types.FunctionType:
+        """Get the attribute by name.
+
+        If the attribute does not exist in the numpy-like module, a
+        `NotImplementedError` is raised.
+
+        Parameters
+        ----------
+        name : str
+            The name of the attribute to get.
+
+        Returns
+        -------
+        Any
+            The attribute with the given name.
+
+        Raises
+        ------
+        NotImplementedError
+            If the attribute does not exist in the numpy-like module.
+
+        """
+
         if not hasattr(self.np, name):
             raise NotImplementedError(f"Function {name} not implemented for {self.np}")
         fn = getattr(self.np, name)
 
         return fn
 
-    def __contains__(self, np_func):
+    def __contains__(self, np_func) -> bool:
+        """Check if the numpy-like function exists in the backend.
+
+        The method checks if the function exists in the backend and returns True if
+        it exists.
+
+        Parameters
+        ----------
+        np_func : str or callable
+            The name or the function to check for existence.
+
+        Returns
+        -------
+        bool
+            True if the function exists in the backend, False otherwise.
+
+        """
         if isinstance(np_func, str):
             fn_name = np_func
         else:
@@ -95,7 +189,7 @@ class NPBackend:
         if fn_name == "dtype":
             return True
 
-        if fn_name in CNP.no_dispatch:
+        if fn_name in CrossNumpy.no_dispatch:
             return True
 
         if hasattr(self, fn_name) and callable(getattr(self, fn_name)):
@@ -107,7 +201,7 @@ class NPBackend:
         return False
 
 
-class CNP(object):
+class DispatchedNumpy:
     fns = {}
     no_dispatch = {"errstate", "may_share_memory", "finfo"}
 
@@ -128,10 +222,16 @@ class CNP(object):
         return self.fns[name]
 
 
-cnp = CNP()
+numpy = DispatchedNumpy()
+
+FuncType = TypeVar("FuncType", bound=types.FunctionType)
 
 
-class MonkeyPatchNumpy:
+class CrossNumpy:
+    """A context-manager that allows a function to work with various backends
+    that implement the numpy API.
+    """
+
     no_dispatch = {
         "dtype",
         "errstate",
@@ -143,6 +243,19 @@ class MonkeyPatchNumpy:
 
     @classmethod
     def np_patch_dict(cls, orig_np):
+        """Generate a dictionary of numpy functions that are patched to work with various backends.
+
+        Parameters
+        ----------
+        orig_np: dict
+            The original `numpy` module's __dict__.
+
+        Returns
+        -------
+        dict
+            A dictionary of patched numpy functions.
+        """
+
         to_update = {
             key: with_dispatch(val)
             for key, val in orig_np.items()
@@ -156,56 +269,49 @@ class MonkeyPatchNumpy:
         return to_update
 
     def __enter__(self):
+        """Enter the context-manager and patch numpy functions to work with various backends."""
         self._original_numpy = np.__dict__.copy()
         patch_dict = self.np_patch_dict(self._original_numpy)
         np.__dict__.update(patch_dict)
         np.__origdict__ = self._original_numpy
 
     def __exit__(self, *args):
+        """Exit the context-manager and restore the original numpy functions."""
         np.__dict__.clear()
         np.__dict__.update(self._original_numpy)
 
+    def __call__(self, func: FuncType) -> FuncType:
+        """Make `func` work with various backends that implement the numpy-API.
 
-FuncType = TypeVar("FuncType", bound=types.FunctionType)
-
-
-def crossnp(func: FuncType) -> FuncType:
-    """Make `func` work with various backends that implement the numpy-API.
-
-    A few different scenarios are supported:
-    1. Pass in a numpy function and get back the corresponding function from cnp
-    2. A custom function that uses numpy functions.
+        A few different scenarios are supported:
+        1. Pass in a numpy function and get back the corresponding function from cnp
+        2. A custom function that uses numpy functions.
 
 
-    Parameters
-    __________
-    func: Callable
-        The function to make work with various backends.
+        Parameters
+        __________
+        func: Callable
+            The function to make work with various backends.
 
 
-    Returns
-    _______
-    Callable
-        The function that works with various backends.
+        Returns
+        _______
+        Callable
+            The function that works with various backends.
 
-    """
+        """
+        if isinstance(func, np.ufunc) or func.__module__ == "numpy":
+            return getattr(numpy, func.__name__)
 
-    try:
-        import sklearn
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            with self:
+                return func(*args, **kwargs)
 
-        sklearn.set_config(array_api_dispatch=True)
-    except ImportError:
-        pass
-
-    if isinstance(func, np.ufunc) or func.__module__ == "numpy":
-        return getattr(cnp, func.__name__)
-
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        with MonkeyPatchNumpy():
-            return func(*args, **kwargs)
-
-    return wrapper
+        return wrapper
 
 
-__all__ = ["NPBackend", "with_dispatch", "np_backend_dispatch", "cnp", "crossnp"]
+crossnp = CrossNumpy()
+
+
+__all__ = ["NPBackend", "with_dispatch", "np_backend_dispatch", "numpy", "crossnp"]

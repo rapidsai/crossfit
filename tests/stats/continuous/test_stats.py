@@ -1,9 +1,6 @@
-import pytest
-
 import numpy as np
 
 from crossfit.core.calculate import calculate_per_col
-from crossfit.core.measure import measure, GroupedMeasurement, Measurement
 from crossfit.core.frame import MetricFrame
 from crossfit.stats.continuous.stats import ContinuousStats
 from tests.utils import sample_df, to_list
@@ -17,14 +14,8 @@ data = {
 
 
 @sample_df(data)
-@pytest.mark.parametrize("use_measure", [True, False])
-def test_continuous_stats_per_col(df, use_measure):
-    if use_measure:
-        mt: Measurement = measure(ContinuousStats(), df)
-        assert isinstance(mt, Measurement)
-        mf: MetricFrame = mt.finalize()
-    else:
-        mf: MetricFrame = calculate_per_col(ContinuousStats(), df)
+def test_continuous_stats_per_col(df):
+    mf: MetricFrame = calculate_per_col(ContinuousStats(), df)
 
     assert isinstance(mf, MetricFrame)
     result = mf.result()
@@ -42,14 +33,8 @@ def test_continuous_stats_per_col(df, use_measure):
 
 
 @sample_df(data)
-@pytest.mark.parametrize("use_measure", [True, False])
-def test_continuous_stats_per_col_grouped(df, use_measure):
-    if use_measure:
-        mt: GroupedMeasurement = measure(ContinuousStats(), df, groupby=["a", "a2"])
-        assert isinstance(mt, GroupedMeasurement)
-        mf: MetricFrame = mt.finalize()
-    else:
-        mf: MetricFrame = calculate_per_col(ContinuousStats(), df, groupby=["a", "a2"])
+def test_continuous_stats_per_col_grouped(df):
+    mf: MetricFrame = calculate_per_col(ContinuousStats(), df, groupby=["a", "a2"])
 
     assert isinstance(mf, MetricFrame)
     result = mf.result()
@@ -80,23 +65,3 @@ def test_continuous_stats_reduce(df):
     assert to_list(reduced.common.num_missing) == [0]
     np.testing.assert_allclose(to_list(reduced.moments.mean), [ser.mean()])
     np.testing.assert_allclose(to_list(reduced.moments.var), [ser.var()])
-
-
-@sample_df({"a": [1, 2] * 2000, "b": range(1000, 5000)})
-@pytest.mark.parametrize("groupby", [None, "a"])
-@pytest.mark.parametrize("npartitions", [1, 4])
-def test_continuous_stats_dd(df, groupby, npartitions):
-    dd = pytest.importorskip("dask.dataframe")
-
-    from crossfit.dask.calculate import measure_collection
-
-    ddf = dd.from_pandas(df, npartitions=npartitions)
-    metric = ContinuousStats()
-    mt: Measurement = measure_collection(metric, ddf, groupby=groupby)
-    assert isinstance(mt, Measurement)
-    mf: MetricFrame = mt.finalize()
-    assert isinstance(mf, MetricFrame)
-
-    result = mf.result()
-    expect = calculate_per_col(ContinuousStats(), df, groupby=groupby).result()
-    dd.assert_eq(result, expect)

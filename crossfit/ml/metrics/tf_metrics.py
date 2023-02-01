@@ -7,7 +7,7 @@ import tensorflow as tf
 
 from crossfit.array import convert
 from crossfit.core.aggregate import Aggregator
-from crossfit.array.dispatch import MonkeyPatchNumpy
+from crossfit.array import crossnp
 from crossfit.core.metric import ComparisonMetric, StateType, Array
 from crossfit.stats.continuous.common import AverageState
 
@@ -25,7 +25,7 @@ class Metric(tf.keras.metrics.Metric):
         return super().build(input_shape)
 
     def prepare(self, y_true, y_pred, sample_weight=None):
-        with MonkeyPatchNumpy():
+        with crossnp:
             self.build(y_true.shape)
             batch = self.aggregator(y_true, y_pred, sample_weight=sample_weight)
             current_state = {

@@ -11,7 +11,7 @@ from itertools import zip_longest
 import astunparse
 import numpy as np
 
-from crossfit.array.dispatch import cnp, np_backend_dispatch
+from crossfit.array import numpy as cnp, np_backend_dispatch
 
 
 _CALL_HANDLER_ID = "__crossfit_call_handler__"

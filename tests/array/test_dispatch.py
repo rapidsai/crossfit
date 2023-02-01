@@ -1,6 +1,6 @@
 import numpy as np
 
-from crossfit.array.dispatch import MonkeyPatchNumpy
+from crossfit.array import crossnp
 
 
 def custom_function(a, b):
@@ -22,7 +22,7 @@ def test_monkey_path_np():
     from sklearn import metrics
 
     # Call the custom function within the context manager
-    with MonkeyPatchNumpy():
+    with crossnp:
         x = np.array(arr1)
         y = np.array(arr2)
         z = custom_function(x, y)

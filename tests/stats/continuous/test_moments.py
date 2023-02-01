@@ -1,5 +1,3 @@
-import pytest
-
 import numpy as np
 import pandas as pd
 
@@ -43,21 +41,3 @@ def test_moments_per_col_grouped(df):
     assert set(result.columns.levels[0]) == {"mean", "var", "count", "std"}
     assert sorted(list(result.columns.levels[1])) == ["b", "c"]
     assert sorted(list(result.index.names)) == ["a", "a2"]
-
-
-@sample_df({"a": [1, 2] * 2000, "b": range(1000, 5000)})
-@pytest.mark.parametrize("groupby", [None, "a"])
-@pytest.mark.parametrize("npartitions", [1, 4])
-def test_moments_dd(df, groupby, npartitions):
-    dd = pytest.importorskip("dask.dataframe")
-
-    from crossfit.dask.calculate import calculate_per_col as calculate_dask
-
-    ddf = dd.from_pandas(df, npartitions=npartitions)
-    metric = Moments()
-    mf: MetricFrame = calculate_dask(metric, ddf, groupby=groupby)
-    assert isinstance(mf, MetricFrame)
-
-    result = mf.result()
-    expect = calculate_per_col(Moments(), df, groupby=groupby).result()
-    dd.assert_eq(result, expect)
