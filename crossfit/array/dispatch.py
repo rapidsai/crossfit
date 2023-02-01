@@ -157,6 +157,9 @@ class NPBackend:
 
         """
 
+        if hasattr(self, name):
+            return getattr(self, name)
+
         if not hasattr(self.np, name):
             raise NotImplementedError(f"Function {name} not implemented for {self.np}")
         fn = getattr(self.np, name)
@@ -241,6 +244,12 @@ class CrossNumpy:
         "isscalar",
     }
 
+    np_dict = np.__dict__.copy()
+    stack = []
+
+    def __init__(self):
+        self.dispatch_dict = self.np_patch_dict(self.np_dict)
+
     @classmethod
     def np_patch_dict(cls, orig_np):
         """Generate a dictionary of numpy functions that are patched to work with various backends.
@@ -270,15 +279,21 @@ class CrossNumpy:
 
     def __enter__(self):
         """Enter the context-manager and patch numpy functions to work with various backends."""
-        self._original_numpy = np.__dict__.copy()
-        patch_dict = self.np_patch_dict(self._original_numpy)
-        np.__dict__.update(patch_dict)
-        np.__origdict__ = self._original_numpy
+
+        if not self.stack:
+            np.__dict__.update(self.dispatch_dict)
+            np.__origdict__ = self.np_dict
+            self.stack = [True]
+        else:
+            self.stack.append(True)
 
     def __exit__(self, *args):
         """Exit the context-manager and restore the original numpy functions."""
-        np.__dict__.clear()
-        np.__dict__.update(self._original_numpy)
+        self.stack.pop()
+
+        if not self.stack:
+            np.__dict__.clear()
+            np.__dict__.update(self.np_dict)
 
     def __call__(self, func: FuncType) -> FuncType:
         """Make `func` work with various backends that implement the numpy-API.

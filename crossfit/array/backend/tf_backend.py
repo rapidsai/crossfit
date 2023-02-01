@@ -3,6 +3,9 @@ import logging
 from crossfit.array import conversion
 from crossfit.array.dispatch import np_backend_dispatch, NPBackend
 
+jit_compile = False
+
+
 try:
     import tensorflow as tf
     import tensorflow.experimental.numpy as tnp
@@ -14,6 +17,21 @@ try:
     class TFBackend(NPBackend):
         def __init__(self):
             super().__init__(tnp)
+
+        def __getattr__(self, name):
+            if not hasattr(self.np, name):
+                raise NotImplementedError(
+                    f"Function {name} not implemented for {self.np}"
+                )
+            fn = getattr(self.np, name)
+
+            if jit_compile:
+                compiled = tf.function(fn, jit_compile=True)
+                setattr(self, name, compiled)
+
+                return compiled
+
+            return fn
 
         def namespace(self):
             return self
@@ -161,10 +179,16 @@ try:
     def tf_astype(self, dtype):
         return tf.cast(self, tf_utils.parse_dtype(dtype))
 
+    def tf_tolist(self):
+        return self.numpy().tolist()
+
+    def tf_any(self):
+        return tf.experimental.numpy.any(self)
+
     setattr(tf.Tensor, "__array_namespace__", tf_array_namespace)
     setattr(tf.Tensor, "astype", tf_astype)
-    setattr(tf.Tensor, "tolist", lambda self: self.numpy().tolist())
-    setattr(tf.Tensor, "any", lambda self: tf.experimental.numpy.any(self))
+    setattr(tf.Tensor, "tolist", tf_tolist)
+    setattr(tf.Tensor, "any", tf_any)
 
     eq = tf.Tensor.__eq__
 
