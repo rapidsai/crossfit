@@ -1,11 +1,11 @@
 from typing import Type
 
 from crossfit.core.metric import MetricState
-from crossfit.dataframe.core import AbstractFrame
+from crossfit.dataframe.core import CrossFrame
 
 
 class MetricFrame:
-    def __init__(self, state_df: AbstractFrame, metric=None, data=None, index=None):
+    def __init__(self, state_df: CrossFrame, metric=None, data=None, index=None):
         if not metric:
             if "cls" not in state_df.attrs:
                 raise ValueError("Please provide a `metric`")

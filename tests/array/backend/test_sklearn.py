@@ -5,7 +5,7 @@ from sklearn import metrics
 from sklearn.utils.multiclass import type_of_target
 from sklearn.utils._array_api import get_namespace
 
-from crossfit.array import crossnp, np_backend_dispatch
+from crossfit.array import crossarray, np_backend_dispatch
 
 
 arr1 = [1, 2, 3]
@@ -22,7 +22,7 @@ tensor_types = [
 @pytest.mark.parametrize("array_type", tensor_types)
 def test_crossnp_type_of_target(array_type):
     backend = np_backend_dispatch.get_backend(array_type)
-    tot = crossnp(type_of_target)
+    tot = crossarray(type_of_target)
     con = [0.1, 0.6]
 
     if backend.namespace() != np:
@@ -44,7 +44,7 @@ def test_crossnp_type_of_target(array_type):
 )
 @pytest.mark.parametrize("array_type", tensor_types)
 def test_crossnp_sklearn_regression(metric, array_type):
-    metric = crossnp(getattr(metrics, metric))
+    metric = crossarray(getattr(metrics, metric))
     backend = np_backend_dispatch.get_backend(array_type)
 
     cnp_out = metric(
@@ -67,7 +67,7 @@ def test_crossnp_sklearn_clf(metric, array_type):
     y_true = np.random.randint(2, size=1000)
     y_pred = np.random.rand(1000)
 
-    cross = crossnp(metric)
+    cross = crossarray(metric)
 
     cnp_out = cross(backend.asarray(y_true), backend.asarray(y_pred) > 0.5)
     np_out = cross(y_true, y_pred > 0.5)

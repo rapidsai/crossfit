@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from typing import Callable, List
 
-from crossfit.dataframe.core import AbstractFrame
+from crossfit.dataframe.core import CrossFrame
 from crossfit.dataframe.dispatch import frame_dispatch
 
 
-class PandasDataFrame(AbstractFrame):
+class PandasDataFrame(CrossFrame):
     @classmethod
     def _lib(cls):
         """Private method to return the backend library
@@ -23,7 +23,7 @@ class PandasDataFrame(AbstractFrame):
     @classmethod
     def concat(
         cls,
-        frames: List[AbstractFrame],
+        frames: List[CrossFrame],
         ignore_index: bool = False,
         axis: int = 0,
     ):

@@ -26,7 +26,7 @@ def test_tf_backend():
 
 
 def test_tf_crossnp():
-    cross_max = cnp.crossnp(max_test)
+    cross_max = cnp.crossarray(max_test)
     tf_out = cross_max(tf.constant(arr1), tf.constant(arr2))
     np_out = cross_max(np.array(arr1, dtype=np.int32), np.array(arr2, dtype=np.int32))
 
@@ -34,7 +34,7 @@ def test_tf_crossnp():
 
 
 def test_tf_crossnp_nested():
-    cross_nested = cnp.crossnp(nested)
+    cross_nested = cnp.crossarray(nested)
     tf_out = cross_nested(tf.constant(arr1), tf.constant(arr2))
     np_out = cross_nested(
         np.array(arr1, dtype=np.int32), np.array(arr2, dtype=np.int32)

@@ -5,7 +5,7 @@ import pandas as pd
 
 from crossfit.core.frame import MetricFrame
 from crossfit.core.metric import Metric, MetricState, Array
-from crossfit.dataframe.core import AbstractFrame
+from crossfit.dataframe.core import CrossFrame
 from crossfit.dataframe.dispatch import frame_dispatch
 
 
@@ -75,7 +75,7 @@ def calculate_per_col(metric: Metric, df, *args, groupby=None, **kwargs) -> Metr
 
 
 def _calculate_grouped_per_col(
-    metric: Metric, adf: AbstractFrame, keys: list, *args, **kwargs
+    metric: Metric, adf: CrossFrame, keys: list, *args, **kwargs
 ) -> MetricFrame:
 
     # Perform groupby partitioning

@@ -4,7 +4,7 @@ import astunparse
 import numpy as np
 
 
-from crossfit.array import crossnp
+from crossfit.array import crossarray
 from crossfit.array import decorator as dec
 from crossfit.utils import test_utils
 
@@ -21,7 +21,7 @@ def nesting_test(x, y):
     "fn", [np.all, np.sum, np.mean, np.std, np.var, np.any, np.prod]
 )
 def test_simple_numpy_function_crossnp(fn):
-    crossfn = crossnp(fn)
+    crossfn = crossarray(fn)
 
     x = np.array([1, 2, 3])
 
@@ -33,7 +33,7 @@ def test_simple_numpy_function_crossnp(fn):
 
 @pytest.mark.parametrize("fn", [np.minimum, np.maximum, max_test, test_utils.min_test])
 def test_combine_numpy_function_crossnp(fn):
-    crossfn = crossnp(fn)
+    crossfn = crossarray(fn)
 
     x = np.array([1, 2, 3])
     y = np.array([4, 5, 6])

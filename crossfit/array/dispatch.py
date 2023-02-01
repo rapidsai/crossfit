@@ -157,9 +157,6 @@ class NPBackend:
 
         """
 
-        if hasattr(self, name):
-            return getattr(self, name)
-
         if not hasattr(self.np, name):
             raise NotImplementedError(f"Function {name} not implemented for {self.np}")
         fn = getattr(self.np, name)
@@ -192,7 +189,7 @@ class NPBackend:
         if fn_name == "dtype":
             return True
 
-        if fn_name in CrossNumpy.no_dispatch:
+        if fn_name in CrossArray.no_dispatch:
             return True
 
         if hasattr(self, fn_name) and callable(getattr(self, fn_name)):
@@ -230,7 +227,7 @@ numpy = DispatchedNumpy()
 FuncType = TypeVar("FuncType", bound=types.FunctionType)
 
 
-class CrossNumpy:
+class CrossArray:
     """A context-manager that allows a function to work with various backends
     that implement the numpy API.
     """
@@ -295,7 +292,7 @@ class CrossNumpy:
             np.__dict__.clear()
             np.__dict__.update(self.np_dict)
 
-    def __call__(self, func: FuncType) -> FuncType:
+    def __call__(self, func: FuncType, jit_compile=False) -> FuncType:
         """Make `func` work with various backends that implement the numpy-API.
 
         A few different scenarios are supported:
@@ -326,7 +323,7 @@ class CrossNumpy:
         return wrapper
 
 
-crossnp = CrossNumpy()
+crossarray = CrossArray()
 
 
-__all__ = ["NPBackend", "with_dispatch", "np_backend_dispatch", "numpy", "crossnp"]
+__all__ = ["NPBackend", "with_dispatch", "np_backend_dispatch", "numpy", "crossarray"]

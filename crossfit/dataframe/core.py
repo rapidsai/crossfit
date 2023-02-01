@@ -5,7 +5,7 @@ from typing import Callable, List
 from crossfit.dataframe.dispatch import frame_dispatch
 
 
-class AbstractFrame:
+class CrossFrame:
     def __init__(self, data):
         self.__data = data
 
@@ -16,7 +16,7 @@ class AbstractFrame:
 
     def __getitem__(self, key):
         raise AttributeError(
-            "getitem indexing not supported for AbstractFrame. "
+            "getitem indexing not supported for CrossFrame. "
             "Please use `project_columns` or `select_column`. "
         )
 
@@ -24,7 +24,7 @@ class AbstractFrame:
         return len(self.data)
 
     def __repr__(self):
-        return f"<AbstractFrame: data={self.data.__repr__()}>"
+        return f"<CrossFrame: data={self.data.__repr__()}>"
 
     # Abstract Methods
     # Sub-classes must define these methods
@@ -32,23 +32,23 @@ class AbstractFrame:
     @classmethod
     def concat(
         cls,
-        frames: List[AbstractFrame],
+        frames: List[CrossFrame],
         ignore_index: bool = False,
         axis: int = 0,
     ):
-        """concatenate a list of ``AbstractFrame`` obects
+        """concatenate a list of ``CrossFrame`` obects
 
-        Must return a new ``AbstractFrame`` instance.
+        Must return a new ``CrossFrame`` instance.
         """
         raise NotImplementedError()
 
     @classmethod
     def from_dict(cls, data: dict, index=None):
-        """Convert a dict to a new ``AbstractFrame`` object"""
+        """Convert a dict to a new ``CrossFrame`` object"""
         raise NotImplementedError()
 
     def to_dict(self, orient: str = "dict"):
-        """Convert an AbstractFrame to a dict"""
+        """Convert an CrossFrame to a dict"""
         raise NotImplementedError()
 
     @property
@@ -66,14 +66,14 @@ class AbstractFrame:
     def project_columns(self, columns: list | tuple | str | int):
         """Select a column or list of columns
 
-        Must return a new ``AbstractFrame`` instance.
+        Must return a new ``CrossFrame`` instance.
         """
         raise NotImplementedError()
 
     def groupby_partition(self, by: list):
-        """Partition an AbstractFrame by group
+        """Partition an CrossFrame by group
 
-        Must return a dictionary of new ``AbstractFrame`` instances.
+        Must return a dictionary of new ``CrossFrame`` instances.
         """
         raise NotImplementedError()
 
@@ -83,19 +83,19 @@ class AbstractFrame:
         NOTE: This method is not yet used, but should be faster
         than looping over the result of ``groupby_partition``
 
-        Must return a new ``AbstractFrame`` instance.
+        Must return a new ``CrossFrame`` instance.
         """
         raise NotImplementedError()
 
     def pivot(self, index=None, columns=None, values=None):
-        """Return reshaped AbstractFrame
+        """Return reshaped CrossFrame
 
-        Must return a new ``AbstractFrame`` instance.
+        Must return a new ``CrossFrame`` instance.
         """
         raise NotImplementedError()
 
 
-# Make sure frame_dispatch(AbstractFrame) -> AbstractFrame
-@frame_dispatch.register(AbstractFrame)
+# Make sure frame_dispatch(CrossFrame) -> CrossFrame
+@frame_dispatch.register(CrossFrame)
 def _(data):
     return data

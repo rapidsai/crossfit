@@ -3,7 +3,7 @@
 from crossfit.array.ops import *  # noqa: F401, F403
 from crossfit.array.conversion import convert  # noqa: F401
 from crossfit.array.dispatch import (  # noqa: F401
-    crossnp,  # noqa: F401
+    crossarray,  # noqa: F401
     numpy,  # noqa: F401
     with_dispatch,  # noqa: F401
     np_backend_dispatch,  # noqa: F401
