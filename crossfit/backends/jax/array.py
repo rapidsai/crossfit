@@ -2,8 +2,7 @@ import logging
 
 import numpy as np
 
-from crossfit.core.array import conversion
-from crossfit.core.array.dispatch import np_backend_dispatch, NPBackend
+from crossfit.data import conversion, np_backend_dispatch, NPBackend
 
 
 try:

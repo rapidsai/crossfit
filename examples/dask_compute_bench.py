@@ -2,7 +2,7 @@ import time
 
 import dask
 
-from crossfit.core.frame import MetricFrame
+from crossfit.calculate.frame import MetricFrame
 from crossfit.dask.calculate import calculate_per_col as calculate_dask
 from crossfit.stats.continuous.stats import ContinuousStats
 

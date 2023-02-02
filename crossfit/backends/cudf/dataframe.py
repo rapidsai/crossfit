@@ -1,4 +1,4 @@
-from crossfit.core.dataframe.dispatch import frame_dispatch
+from crossfit.data.dataframe.dispatch import frame_dispatch
 from crossfit.backends.pandas.dataframe import PandasDataFrame
 
 

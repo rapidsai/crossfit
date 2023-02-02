@@ -1,22 +1,27 @@
 # import abc
 from dataclasses import fields, asdict
+
 # import functools
-from typing import TypeVar
+from typing import TypeVar, Generic
+
 # from typing import Optional, TypeVar, Generic, Type, overload
 
 import tensorflow as tf
 
-from crossfit.core.array.conversion import convert
-from crossfit.core.aggregate import Aggregator
-from crossfit.core.array.dispatch import crossarray
+from crossfit.calculate.aggregate import Aggregator
+from crossfit.data import crossarray
+from crossfit.metrics.base import CrossMetric
+
 # from crossfit.core.metric import ComparisonMetric, StateType, Array
 # from crossfit.stats.continuous.common import AverageState
 
 TFMetricType = TypeVar("TFMetricType", bound=tf.keras.metrics.Metric)
+AggregatorType = TypeVar("AggregatorType", bound=Aggregator)
 
 
-class Metric(tf.keras.metrics.Metric):
-    def __init__(self, aggregator: Aggregator, name=None, **kwargs):
+class AggregatorMetric(tf.keras.metrics.Metric, Generic[AggregatorType]):
+    def __init__(self, aggregator: AggregatorType, name=None, **kwargs):
+        name = name or aggregator.__class__.__name__
         super().__init__(name=name, **kwargs)
         self.aggregator = aggregator
 
@@ -57,6 +62,12 @@ class Metric(tf.keras.metrics.Metric):
         return outputs
 
 
+def to_tf_metric(aggregator: AggregatorType) -> AggregatorMetric[AggregatorType]:
+    if isinstance(aggregator, CrossMetric):
+        aggregator = aggregator.to_aggregator()
+    return AggregatorMetric(aggregator)
+
+
 # class TFMetric(Generic[TFMetricType, StateType], ComparisonMetric[StateType], abc.ABC):
 #     @abc.abstractmethod
 #     def metric(self) -> TFMetricType:
@@ -78,8 +89,8 @@ class Metric(tf.keras.metrics.Metric):
 #     ) -> StateType:
 #         metric = self.metric()
 #         metric.update_state(
-#             convert(data, tf.Tensor),
-#             convert(comparison, tf.Tensor),
+#             convert_array(data, tf.Tensor),
+#             convert_array(comparison, tf.Tensor),
 #             sample_weight=self.parse_sample_weight(sample_weight),
 #         )
 
@@ -91,7 +102,7 @@ class Metric(tf.keras.metrics.Metric):
 #         if sample_weight is None:
 #             return None
 
-#         return convert(sample_weight, tf.Tensor)
+#         return convert_array(sample_weight, tf.Tensor)
 
 
 # class TFMeanMetric(
@@ -111,8 +122,8 @@ class Metric(tf.keras.metrics.Metric):
 #         array_type: Type[Array],
 #     ) -> AverageState:
 #         return AverageState(
-#             count=convert(tf.convert_to_tensor(metric.count), array_type),
-#             sum=convert(tf.convert_to_tensor(metric.total), array_type),
+#             count=convert_array(tf.convert_to_tensor(metric.count), array_type),
+#             sum=convert_array(tf.convert_to_tensor(metric.total), array_type),
 #         )
 
 

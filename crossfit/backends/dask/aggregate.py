@@ -1,19 +1,24 @@
 from functools import partial
-from typing import Sequence
+from typing import Sequence, Union
 
 from dask.delayed import Delayed
 from dask.highlevelgraph import HighLevelGraph
 import dask.dataframe as dd
 
 from crossfit.calculate.aggregate import Aggregator
+from crossfit.metrics.base import CrossMetric
 
 
 def aggregate(
     ddf: dd.DataFrame,
-    aggregator: Aggregator,
+    to_aggregate: Union[Aggregator, CrossMetric],
     groupby: Sequence[str] = (),
     per_col=False,
 ):
+    if isinstance(to_aggregate, CrossMetric):
+        aggregator = to_aggregate.to_aggregator()
+    else:
+        aggregator = to_aggregate
     map_func = partial(aggregator, groupby=groupby, per_col=per_col)
 
     def reduce_func(vals):

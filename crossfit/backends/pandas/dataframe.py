@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Callable, List
 
-from crossfit.core.dataframe.core import CrossFrame
-from crossfit.core.dataframe.dispatch import frame_dispatch
+from crossfit.data.dataframe.core import CrossFrame
+from crossfit.data.dataframe.dispatch import frame_dispatch
 
 
 class PandasDataFrame(CrossFrame):
