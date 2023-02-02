@@ -30,10 +30,10 @@ class BinaryMetrics(cf.Aggregator):
         # Somehow a keras metric is not allowed to return a dict
         #   See: https://github.com/keras-team/keras/issues/16665
         return {
-            "accuracy": state.accuracy,
-            "precision": state.precision,
-            "recall": state.recall,
-            "f1": state.f1,
+            # "accuracy": state.accuracy,
+            # "precision": state.precision,
+            # "recall": state.recall,
+            # "f1": state.f1,
             "auc": state.auc,
         }
 
