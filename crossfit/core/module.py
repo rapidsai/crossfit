@@ -1,4 +1,3 @@
-import abc
 from typing import Dict
 from dataclasses import field, MISSING, Field
 
@@ -102,20 +101,7 @@ class CrossModule:
         return self.combine(other)
 
 
-class CrossMetric(CrossModule, abc.ABC):
-    @abc.abstractmethod
-    def prepare(self, *args, **kwargs):
-        raise NotImplementedError()
 
-    @property
-    def result(self):
-        if self._setup:
-            return self.present()
-
-        return None
-
-    def __call__(self, *args, **kwargs):
-        return self + self.prepare(*args, **kwargs)
 
 
 def _sum(left, right):

@@ -2,7 +2,7 @@ import types
 from typing import Sequence
 from functools import reduce, wraps, partial
 
-from crossfit.dataframe.dispatch import frame_dispatch
+from crossfit.core.dataframe.dispatch import frame_dispatch
 
 
 def pre_processing(func):
