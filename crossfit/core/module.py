@@ -53,7 +53,7 @@ class CrossModule:
             if name in kwargs:
                 setattr(self, name, kwargs[name])
             else:
-                if field.default_factory is not MISSING:
+                if state_field.default_factory is not MISSING:
                     setattr(self, name, state_field.default_factory())
                 else:
                     setattr(self, name, state_field.default)
@@ -80,8 +80,8 @@ class CrossModule:
 
             if "combine" in state_field.metadata:
                 merged_fields[state_field.name] = state_field.metadata["combine"](
-                    getattr(self, field.name),
-                    getattr(other, field.name),
+                    getattr(self, state_field.name),
+                    getattr(other, state_field.name),
                 )
             # TODO: Fix this
             elif issubclass(_type, CrossModule):
