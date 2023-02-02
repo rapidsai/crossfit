@@ -1,6 +1,5 @@
 # import abc
 from dataclasses import fields, asdict
-
 # import functools
 from typing import TypeVar, Generic
 
@@ -17,6 +16,50 @@ from crossfit.metrics.base import CrossMetric
 
 TFMetricType = TypeVar("TFMetricType", bound=tf.keras.metrics.Metric)
 AggregatorType = TypeVar("AggregatorType", bound=Aggregator)
+CrossMetricType = TypeVar("CrossMetricType", bound=CrossMetric)
+
+
+class CrossMetricKeras(tf.keras.metrics.Metric, Generic[CrossMetricType]):
+    def __init__(self, cross_metric: CrossMetricType, name=None, **kwargs):
+        name = name or cross_metric.__class__.__name__
+        super().__init__(name=name, **kwargs)
+        self.cross_metric = cross_metric
+        
+    def build(self, input_shape):
+        for field in self.cross_metric.fields():
+            setattr(self, field.name, self.add_weight(field.name, initializer="zeros"))
+        return super().build(input_shape)
+    
+    def prepare(self, y_true, y_pred, sample_weight=None):
+        with crossarray:
+            self.build(y_true.shape)
+            batch = self.cross_metric(y_true, y_pred, sample_weight=sample_weight)
+            current_state = {
+                field.name: tf.convert_to_tensor(getattr(self, field.name))
+                for field in self.cross_metric.fields()
+            }
+
+            updated_state = batch.combine(self.cross_metric.with_state(**current_state))
+            for key, val in asdict(updated_state).items():
+                variable = getattr(self, key)
+                variable.assign(tf.cast(val, variable.dtype))
+
+    def update_state(self, y_true, y_pred, sample_weight=None):
+        self.prepare(y_true, y_pred, sample_weight)
+    
+    def result(self):
+        state_dict = {}
+
+        for field in fields(self.aggregator.state):
+            state_dict[field.name] = getattr(self, field.name)
+
+        state = self.cross_metric.with_state(**state_dict)
+        outputs = state.result
+
+        if isinstance(outputs, dict) and len(outputs) == 1:
+            return list(outputs.values())[0]
+
+        return outputs
 
 
 class AggregatorMetric(tf.keras.metrics.Metric, Generic[AggregatorType]):
@@ -62,9 +105,9 @@ class AggregatorMetric(tf.keras.metrics.Metric, Generic[AggregatorType]):
         return outputs
 
 
-def to_tf_metric(aggregator: AggregatorType) -> AggregatorMetric[AggregatorType]:
+def to_tf_metric(aggregator: AggregatorType) -> tf.keras.metrics.Metric:
     if isinstance(aggregator, CrossMetric):
-        aggregator = aggregator.to_aggregator()
+        return CrossMetricKeras(aggregator)
     return AggregatorMetric(aggregator)
 
 

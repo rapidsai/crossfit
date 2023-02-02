@@ -10,6 +10,6 @@ def test_dask_aggregation(df, npartitions=2):
     dd = pytest.importorskip("dask.dataframe")
 
     ddf = dd.from_pandas(df, npartitions=npartitions)
-    test = aggregate(ddf, Range(), per_col=True)
+    test = aggregate(ddf, Range(axis=0), per_col=True)
 
     assert all(isinstance(x, Range) for x in test.values())

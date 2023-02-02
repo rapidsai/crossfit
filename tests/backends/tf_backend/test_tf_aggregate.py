@@ -1,5 +1,5 @@
 import tensorflow as tf
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import accuracy_score
 
 import crossfit as cf
 
@@ -7,7 +7,7 @@ import crossfit as cf
 from crossfit.backends.tf.metrics import to_tf_metric
 
 
-auc = cf.create_mean_metric(roc_auc_score)
+accuracy = cf.create_mean_metric(accuracy_score)
 
 # class BinaryMetrics(cf.Aggregator):
 #     state = BinaryClassificationState
@@ -41,13 +41,12 @@ auc = cf.create_mean_metric(roc_auc_score)
 
 
 def test_to_tf_metric():
-    aggregator = auc
-    metric = to_tf_metric(aggregator)
+    metric = to_tf_metric(accuracy)
 
     # generate some random tensors
     preds = tf.random.uniform((10,))
     targets = tf.random.uniform((10,), maxval=2, dtype=tf.int32)
-    metric.prepare(targets, preds)
+    metric.prepare(targets, preds > 0.5)
 
     results = metric(targets, preds)
     assert isinstance(results, tf.Tensor)

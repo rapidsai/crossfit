@@ -35,7 +35,7 @@ def test_tf_crossnp():
 
 
 def test_tf_crossnp_nested():
-    cross_nested = np.crossarray(nested)
+    cross_nested = crossarray(nested)
     tf_out = cross_nested(tf.constant(arr1), tf.constant(arr2))
     np_out = cross_nested(
         np.array(arr1, dtype=np.int32), np.array(arr2, dtype=np.int32)

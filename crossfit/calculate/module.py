@@ -1,5 +1,6 @@
-from typing import Dict
+from typing import Dict, List
 from dataclasses import field, MISSING, Field
+from copy import deepcopy
 
 
 from typing_utils import get_origin
@@ -17,6 +18,7 @@ def state(
     metadata=None,
 ):
     metadata = metadata or {}
+    metadata["state"] = True
     if combine is not None:
         if combine in (sum, "sum"):
             combine = _sum
@@ -48,7 +50,11 @@ def state(
 
 class CrossModule:
     def setup(self, **kwargs):
-        for name, state_field in self.fields().items():
+        self.update_state(**kwargs)
+        self._setup = True
+    
+    def update_state(self, **kwargs):
+        for name, state_field in self.field_dict().items():
             if name in kwargs:
                 setattr(self, name, kwargs[name])
             else:
@@ -56,10 +62,14 @@ class CrossModule:
                     setattr(self, name, state_field.default_factory())
                 else:
                     setattr(self, name, state_field.default)
-        self._setup = True
+                    
+        return self
+    
+    def with_state(self, **kwargs):
+        return deepcopy(self).update_state(**kwargs)
 
     @classmethod
-    def fields(cls) -> Dict[str, Field]:
+    def field_dict(cls) -> Dict[str, Field]:
         output = {}
         for name in dir(cls):
             if not name.startswith("_"):
@@ -69,11 +79,15 @@ class CrossModule:
                     part.name = name
 
         return output
+    
+    @classmethod
+    def fields(cls) -> List[Field]:
+        return list(cls.field_dict().values())
 
     def combine(self, other):
         merged_fields = {}
 
-        for state_field in self.fields().values():
+        for state_field in self.fields():
             _type = get_origin(state_field.type)
             _type = _type or state_field.type
 
@@ -95,7 +109,7 @@ class CrossModule:
                     + "please implement a combiner function: `def combine(self, other)`"
                 )
 
-        return self.__class__(**merged_fields)
+        return deepcopy(self).update_state(**merged_fields)
 
     def __add__(self, other):
         return self.combine(other)

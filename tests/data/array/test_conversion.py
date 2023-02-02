@@ -2,13 +2,13 @@ import pytest
 
 import numpy as np
 
-from crossfit.data import numpy as cnp, convert_array
+from crossfit.data import convert_array
 
 
 def test_convert_no_op():
     array = np.array([1, 2, 3])
 
-    assert cnp.all(array == cnp.convert(array, np.ndarray))
+    assert np.all(array == convert_array(array, np.ndarray))
 
 
 @pytest.mark.parametrize("to_type", convert_array.supports[np.ndarray])
@@ -20,4 +20,4 @@ def test_convert_roundtrip(to_type):
     orig = convert_array(converted, np.ndarray)
     assert type(orig) == np.ndarray
 
-    assert cnp.all(from_array == orig)
+    assert np.all(from_array == orig)

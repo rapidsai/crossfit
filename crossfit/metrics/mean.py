@@ -32,11 +32,7 @@ class Mean(CrossMetric):
 
 
 def create_mean_metric(calculation):
-    @ft.wraps(calculation)
-    def wrapper(*args, **kwargs):
-        return Mean(pre=calculation)(*args, **kwargs)
-
-    return wrapper
+    return ft.wraps(calculation)(Mean(pre=calculation))
 
 
 def get_length(*args, **kwargs):
