@@ -43,7 +43,7 @@ def test_crossnp_type_of_target(array_type):
     ],
 )
 @pytest.mark.parametrize("array_type", tensor_types)
-@pytest.skip
+@pytest.mark.skip
 def test_crossnp_sklearn_regression(metric, array_type):
     metric = crossarray(getattr(metrics, metric))
     backend = np_backend_dispatch.get_backend(array_type)
@@ -61,7 +61,7 @@ def test_crossnp_sklearn_regression(metric, array_type):
     "metric",
     [metrics.accuracy_score, metrics.precision_score, metrics.recall_score],
 )
-@pytest.skip
+@pytest.mark.skip
 @pytest.mark.parametrize("array_type", tensor_types)
 def test_crossnp_sklearn_clf(metric, array_type):
     backend = np_backend_dispatch.get_backend(array_type)

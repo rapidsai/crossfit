@@ -7,7 +7,7 @@ from sklearn.metrics import accuracy_score
 from crossfit.backends.tf import from_tf_metric
 
 
-@pytest.skip("TODO: fix this test on GH-actions")
+@pytest.mark.skip("TODO: fix this test on GH-actions")
 def test_tf_accuracy():
     y_true = np.random.randint(2, size=1000)
     y_pred = np.random.rand(1000)
