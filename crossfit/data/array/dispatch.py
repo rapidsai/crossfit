@@ -19,12 +19,13 @@ except (ImportError, TypeError):
 
 class NPBackendDispatch(Dispatch):
     def __call__(self, np_func, arg, *args, **kwargs):
+        jit = kwargs.pop("__jit", False)
         try:
             backend = self.dispatch(type(arg))
         except TypeError:
             return np_func(arg, *args, **kwargs)
 
-        return backend(np_func, arg, *args, **kwargs)
+        return backend(np_func, arg, *args, __jit=jit, **kwargs)
 
     def get_backend(self, array_type):
         return self.dispatch(array_type)
@@ -38,9 +39,10 @@ np_backend_dispatch = NPBackendDispatch(name="np_backend_dispatch")
 
 
 class NPFunctionDispatch(Dispatch):
-    def __init__(self, function, name=None):
+    def __init__(self, function, jit=False, name=None):
         super().__init__(name=name)
         self.function = function
+        self.jit = jit
 
     def __call__(self, arg, *args, **kwargs):
         if self.function == np.dtype:
@@ -52,7 +54,7 @@ class NPFunctionDispatch(Dispatch):
         if self.supports(arg):
             return super().__call__(arg, *args, **kwargs)
 
-        return np_backend_dispatch(self.function, arg, *args, **kwargs)
+        return np_backend_dispatch(self.function, arg, *args, __jit=self.jit, **kwargs)
 
     def supports(self, arg) -> bool:
         try:
@@ -63,8 +65,8 @@ class NPFunctionDispatch(Dispatch):
             return False
 
 
-def with_dispatch(func):
-    dispatch = NPFunctionDispatch(func, name=func.__name__)
+def with_dispatch(func, jit=False):
+    dispatch = NPFunctionDispatch(func, name=func.__name__, jit=jit)
 
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
@@ -88,7 +90,10 @@ class NPBackend:
 
     """
 
-    def __init__(self, np_like_module: types.ModuleType):
+    def __init__(
+        self,
+        np_like_module: types.ModuleType,
+    ):
         """Initialize the class with a numpy-like module.
 
         Parameters
@@ -130,9 +135,10 @@ class NPBackend:
             The result of calling the function.
 
         """
+        jit = kwargs.pop("__jit", False)
         fn_name = np_func.__name__
 
-        return getattr(self, fn_name)(*args, **kwargs)
+        return self.get(fn_name, jit=jit)(*args, **kwargs)
 
     def __getattr__(self, name) -> types.FunctionType:
         """Get the attribute by name.
@@ -162,6 +168,10 @@ class NPBackend:
         fn = getattr(self.np, name)
 
         return fn
+
+    def get(self, name, jit=False):
+        del jit
+        return getattr(self, name)
 
     def __contains__(self, np_func) -> bool:
         """Check if the numpy-like function exists in the backend.
@@ -206,6 +216,9 @@ class DispatchedNumpy:
     no_dispatch = {"errstate", "may_share_memory", "finfo"}
 
     def __getattr__(self, name):
+        return self.get(name)
+
+    def get(self, name, jit_compile=False, overwrite=False):
         if name.startswith("__"):
             return super().__getattr__(name)
 
@@ -216,8 +229,8 @@ class DispatchedNumpy:
         if name in self.no_dispatch:
             return np_fn
 
-        if name not in self.fns:
-            self.fns[name] = with_dispatch(np_fn)
+        if name not in self.fns or overwrite:
+            self.fns[name] = with_dispatch(np_fn, jit=jit_compile)
 
         return self.fns[name]
 
@@ -292,7 +305,7 @@ class CrossArray:
             np.__dict__.clear()
             np.__dict__.update(self.np_dict)
 
-    def __call__(self, func: FuncType, jit_compile=False) -> FuncType:
+    def __call__(self, func: FuncType, jit=False, overwrite=False) -> FuncType:
         """Make `func` work with various backends that implement the numpy-API.
 
         A few different scenarios are supported:
@@ -313,7 +326,7 @@ class CrossArray:
 
         """
         if isinstance(func, np.ufunc) or func.__module__ == "numpy":
-            return getattr(numpy, func.__name__)
+            return numpy.get(func.__name__, jit_compile=jit, overwrite=overwrite)
 
         @functools.wraps(func)
         def wrapper(*args, **kwargs):

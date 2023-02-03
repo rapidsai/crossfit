@@ -1,3 +1,5 @@
+import pytest
+
 import tensorflow as tf
 import numpy as np
 
@@ -17,12 +19,14 @@ def nested(x, y):
     return max_test(x, y) + test_utils.min_test(x, y)
 
 
-@crossarray
-def test_tf_backend():
-    tf_min = np.minimum(tf.constant(arr1), tf.constant(arr2))
-    np_min = np.minimum(np.array(arr1, dtype=np.int32), np.array(arr2, dtype=np.int32))
+@pytest.mark.parametrize("jit", [True, False])
+def test_tf_backend(jit):
+    minimum = crossarray(np.minimum, jit=jit)
+    tf_min = minimum(tf.constant(arr1), tf.constant(arr2))
+    np_min = minimum(np.array(arr1, dtype=np.int32), np.array(arr2, dtype=np.int32))
 
-    assert np.all(tf_min == convert_array(np_min, tf.Tensor))
+    with crossarray:
+        assert np.all(tf_min == convert_array(np_min, tf.Tensor))
 
 
 def test_tf_crossnp():

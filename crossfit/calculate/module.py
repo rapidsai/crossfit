@@ -52,7 +52,7 @@ class CrossModule:
     def setup(self, **kwargs):
         self.update_state(**kwargs)
         self._setup = True
-    
+
     def update_state(self, **kwargs):
         for name, state_field in self.field_dict().items():
             if name in kwargs:
@@ -62,9 +62,9 @@ class CrossModule:
                     setattr(self, name, state_field.default_factory())
                 else:
                     setattr(self, name, state_field.default)
-                    
+
         return self
-    
+
     def with_state(self, **kwargs):
         return deepcopy(self).update_state(**kwargs)
 
@@ -79,10 +79,18 @@ class CrossModule:
                     part.name = name
 
         return output
-    
+
     @classmethod
     def fields(cls) -> List[Field]:
         return list(cls.field_dict().values())
+
+    @property
+    def state_dict(self):
+        output = {}
+        for f in self.fields():
+            output[f.name] = getattr(self, f.name)
+
+        return output
 
     def combine(self, other):
         merged_fields = {}

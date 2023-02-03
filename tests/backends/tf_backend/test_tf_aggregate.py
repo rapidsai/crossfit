@@ -1,13 +1,16 @@
-import tensorflow as tf
-from sklearn.metrics import accuracy_score
+import pytest
 
+import numpy as np
+import tensorflow as tf
 import crossfit as cf
 
 # from crossfit.ml.classification import BinaryClassificationState
 from crossfit.backends.tf.metrics import to_tf_metric
 
 
-accuracy = cf.create_mean_metric(accuracy_score)
+def accuracy_score(y_true, y_pred, sample_weight=None):
+    return np.mean(y_true == y_pred)
+
 
 # class BinaryMetrics(cf.Aggregator):
 #     state = BinaryClassificationState
@@ -40,13 +43,14 @@ accuracy = cf.create_mean_metric(accuracy_score)
 #         }
 
 
-def test_to_tf_metric():
+@pytest.mark.parametrize("jit_compile", [True, False])
+def test_to_tf_metric(jit_compile):
+    accuracy = cf.create_mean_metric(accuracy_score)
     metric = to_tf_metric(accuracy)
 
     # generate some random tensors
     preds = tf.random.uniform((10,))
     targets = tf.random.uniform((10,), maxval=2, dtype=tf.int32)
-    metric.prepare(targets, preds > 0.5)
 
-    results = metric(targets, preds)
+    results = metric(targets, preds > 0.5)
     assert isinstance(results, tf.Tensor)

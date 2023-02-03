@@ -36,7 +36,7 @@ class Aggregator:
         return data
 
     def call_per_col(self, data, to_call):
-        return {col: to_call(data.select_column(col)) for col in data.columns}
+        return {col: to_call(data.column(col)) for col in data.columns}
 
     def call_grouped(self, data, groupby, to_call):
         state = {}

@@ -1,7 +1,8 @@
 # import abc
 from dataclasses import fields, asdict
+
 # import functools
-from typing import TypeVar, Generic
+from typing import TypeVar, Generic, Union
 
 # from typing import Optional, TypeVar, Generic, Type, overload
 
@@ -20,37 +21,48 @@ CrossMetricType = TypeVar("CrossMetricType", bound=CrossMetric)
 
 
 class CrossMetricKeras(tf.keras.metrics.Metric, Generic[CrossMetricType]):
-    def __init__(self, cross_metric: CrossMetricType, name=None, **kwargs):
+    def __init__(
+        self, cross_metric: CrossMetricType, name=None, jit_compile=False, **kwargs
+    ):
         name = name or cross_metric.__class__.__name__
         super().__init__(name=name, **kwargs)
         self.cross_metric = cross_metric
-        
-    def build(self, input_shape):
+        self.compute = self.cross_metric
+        if jit_compile:
+            self.compute = tf.function(self.compute, jit_compile=True)
+
+        # TODO: Should this be in build?
         for field in self.cross_metric.fields():
             setattr(self, field.name, self.add_weight(field.name, initializer="zeros"))
-        return super().build(input_shape)
-    
+
+    # def build(self, input_shape):
+    #     for field in self.cross_metric.fields():
+    #         setattr(self, field.name, self.add_weight(field.name, initializer="zeros"))
+    #     return super().build(input_shape)
+
     def prepare(self, y_true, y_pred, sample_weight=None):
         with crossarray:
-            self.build(y_true.shape)
-            batch = self.cross_metric(y_true, y_pred, sample_weight=sample_weight)
+            if y_pred.dtype == tf.bool:
+                y_pred = tf.cast(y_pred, y_true.dtype)
+            batch = self.compute(y_true, y_pred, sample_weight=sample_weight)
             current_state = {
                 field.name: tf.convert_to_tensor(getattr(self, field.name))
                 for field in self.cross_metric.fields()
             }
 
             updated_state = batch.combine(self.cross_metric.with_state(**current_state))
-            for key, val in asdict(updated_state).items():
+
+            for key, val in updated_state.state_dict.items():
                 variable = getattr(self, key)
                 variable.assign(tf.cast(val, variable.dtype))
 
     def update_state(self, y_true, y_pred, sample_weight=None):
         self.prepare(y_true, y_pred, sample_weight)
-    
+
     def result(self):
         state_dict = {}
 
-        for field in fields(self.aggregator.state):
+        for field in self.cross_metric.fields():
             state_dict[field.name] = getattr(self, field.name)
 
         state = self.cross_metric.with_state(**state_dict)
@@ -105,10 +117,12 @@ class AggregatorMetric(tf.keras.metrics.Metric, Generic[AggregatorType]):
         return outputs
 
 
-def to_tf_metric(aggregator: AggregatorType) -> tf.keras.metrics.Metric:
-    if isinstance(aggregator, CrossMetric):
-        return CrossMetricKeras(aggregator)
-    return AggregatorMetric(aggregator)
+def to_tf_metric(
+    to_convert: Union[CrossMetric, Aggregator], jit_compile=False
+) -> tf.keras.metrics.Metric:
+    if isinstance(to_convert, CrossMetric):
+        return CrossMetricKeras(to_convert, jit_compile=jit_compile)
+    return AggregatorMetric(to_convert)
 
 
 # class TFMetric(Generic[TFMetricType, StateType], ComparisonMetric[StateType], abc.ABC):

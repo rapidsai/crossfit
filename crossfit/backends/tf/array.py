@@ -16,6 +16,7 @@ try:
     class TFBackend(NPBackend):
         def __init__(self):
             super().__init__(tnp)
+            self._jitted = set()
 
         def __getattr__(self, name):
             if not hasattr(self.np, name):
@@ -29,6 +30,28 @@ try:
                 setattr(self, name, compiled)
 
                 return compiled
+
+            return fn
+
+        def get(self, name, jit=False):
+            fn = getattr(self, name)
+
+            if jit and name not in self._jitted:
+                if isinstance(jit, dict):
+                    if "tf" in jit:
+                        jit = jit["tf"]
+                    elif "tensorflow" in jit:
+                        jit = jit["tensorflow"]
+
+                    assert callable(jit), "jit must be callable"
+                    compiled = jit(fn)
+                elif type(jit) is bool:
+                    compiled = tf.function(fn, jit_compile=True)
+                else:
+                    raise ValueError("jit must be a bool or dict")
+
+                setattr(self, name, compiled)
+                self._jitted.add(name)
 
             return fn
 
