@@ -66,6 +66,9 @@ try:
         def unique_values(self, x):
             return self.unique(x)
 
+        def astype(self, dtype):
+            return tf.cast(self, tf_utils.parse_dtype(dtype))
+
         def concat(self, arrays, *, axis=None):
             _arrays = []
 
