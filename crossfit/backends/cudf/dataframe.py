@@ -22,8 +22,8 @@ def register_cupy_backend():
         import cupy
 
         @frame_dispatch.register(cupy.ndarray)
-        def _cupy_to_cudf(data, index=None, column_name="data"):
-            return CudfDataFrame(cudf.DataFrame({column_name: data}, index=index))
+        def _cupy_to_cudf(data, name="data"):
+            return CudfDataFrame(cudf.DataFrame({name: data}))
 
     except ImportError:
         pass
@@ -38,7 +38,5 @@ def register_cudf_backend():
         return CudfDataFrame(data)
 
     @frame_dispatch.register(cudf.Series)
-    def _cudf_series(data, index=None, column_name="data"):
-        if index is None:
-            index = data.index
-        return CudfDataFrame(cudf.DataFrame({column_name: data}, index=index))
+    def _cudf_series(data, name="data"):
+        return CudfDataFrame(cudf.DataFrame({name: data}, index=data.index))

@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from typing import Callable, List
 
-from crossfit.data.dataframe.core import CrossFrame
+from crossfit.data.dataframe.core import CrossFrame, ArrayBundle
 from crossfit.data.dataframe.dispatch import frame_dispatch
 
 
-class PandasDataFrame(CrossFrame):
+class PandasDataFrame(ArrayBundle):
     @classmethod
     def _lib(cls):
         """Private method to return the backend library
@@ -19,6 +19,9 @@ class PandasDataFrame(CrossFrame):
         import pandas as pd
 
         return pd
+
+    def __len__(self):
+        return len(self.data)
 
     @classmethod
     def concat(
@@ -36,7 +39,7 @@ class PandasDataFrame(CrossFrame):
         )
 
     @classmethod
-    def from_dict(cls, data: dict, index=None):
+    def from_dict(cls, data: dict):
         df = cls._lib().DataFrame()
         for k, v in data.items():
             if hasattr(v, "shape"):
@@ -44,8 +47,6 @@ class PandasDataFrame(CrossFrame):
                 df[k] = v if v.shape else v.reshape((1,))
             else:
                 df[k] = v
-        if index is not None:
-            df = df.set_index(cls._lib().Index(index))
         return frame_dispatch(df)
 
     def to_dict(self):
@@ -57,12 +58,17 @@ class PandasDataFrame(CrossFrame):
     def columns(self):
         return list(self.data.columns)
 
-    def select_column(self, column: str | int):
+    def assign(self, **kwargs):
+        return frame_dispatch(self.data.assign(**kwargs))
+
+    def column(self, column: str | int):
         return self.data[column]
 
-    def project_columns(self, columns: list | tuple | str | int):
+    def project(self, columns: list | tuple | str | int):
         if isinstance(columns, (int, str)):
             columns = [columns]  # Make sure we get a DataFrame
+        if not set(columns).issubset(set(self.columns)):
+            raise ValueError(f"Invalid projection: {columns}")
         return frame_dispatch(self.data[columns])
 
     def groupby_apply(self, by: list, func: Callable):
@@ -91,8 +97,8 @@ def register_numpy_backend():
         import numpy as np
 
         @frame_dispatch.register(np.ndarray)
-        def _numpy_to_pandas(data, index=None, column_name="data"):
-            return PandasDataFrame(pd.DataFrame({column_name: data}, index=index))
+        def _numpy_to_pandas(data, name="data"):
+            return PandasDataFrame(pd.DataFrame({name: data}))
 
     except ImportError:
         pass
@@ -107,7 +113,5 @@ def register_pandas_backend():
         return PandasDataFrame(data)
 
     @frame_dispatch.register(pd.Series)
-    def _pd_series(data, index=None, column_name="data"):
-        if index is None:
-            index = data.index
-        return PandasDataFrame(pd.DataFrame({column_name: data}, index=index))
+    def _pd_series(data, name="data"):
+        return PandasDataFrame(pd.DataFrame({name: data}, index=data.index))
