@@ -186,6 +186,12 @@ try:
 
             return result
 
+        def astype(self, dtype, **kwargs):
+            return tf.cast(self, tf_utils.parse_dtype(dtype))
+
+        def tolist(self):
+            return self.numpy().tolist()
+
     tf_backend = TFBackend()
     np_backend_dispatch.register(tf.Tensor)(tf_backend)
 
@@ -206,7 +212,7 @@ try:
     setattr(tf.Tensor, "__array_namespace__", tf_array_namespace)
     for fn in [astype, tolist, any]:
         setattr(tf.Tensor, fn.__name__, fn)
-        setattr(TFBackend, fn.__name__, fn)
+        # setattr(TFBackend, fn.__name__, fn)
 
     eq = tf.Tensor.__eq__
 
