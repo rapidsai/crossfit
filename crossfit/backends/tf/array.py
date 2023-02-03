@@ -186,7 +186,7 @@ try:
 
             return result
 
-        def astype(self, dtype, **kwargs):
+        def astype(self, dtype, *args, **kwargs):
             return tf.cast(self, tf_utils.parse_dtype(dtype))
 
         def tolist(self):
@@ -200,7 +200,7 @@ try:
     def tf_array_namespace(self):
         return tf_backend
 
-    def astype(self, dtype, **kwargs):
+    def astype(self, dtype, *args, **kwargs):
         return tf.cast(self, tf_utils.parse_dtype(dtype))
 
     def tolist(self):
