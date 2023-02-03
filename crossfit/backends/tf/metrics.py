@@ -1,19 +1,13 @@
-# import abc
+import abc
 from dataclasses import fields, asdict
-
-# import functools
-from typing import TypeVar, Generic, Union
-
-# from typing import Optional, TypeVar, Generic, Type, overload
+from typing import Optional, TypeVar, Generic, Union
 
 import tensorflow as tf
 
 from crossfit.calculate.aggregate import Aggregator
-from crossfit.data import crossarray
+from crossfit.data import crossarray, convert_array
 from crossfit.metrics.base import CrossMetric
-
-# from crossfit.core.metric import ComparisonMetric, StateType, Array
-# from crossfit.stats.continuous.common import AverageState
+from crossfit.metrics.mean import Mean
 
 TFMetricType = TypeVar("TFMetricType", bound=tf.keras.metrics.Metric)
 AggregatorType = TypeVar("AggregatorType", bound=Aggregator)
@@ -117,6 +111,42 @@ class AggregatorMetric(tf.keras.metrics.Metric, Generic[AggregatorType]):
         return outputs
 
 
+class CrossTFMetricAggregator(
+    Aggregator, Generic[TFMetricType, CrossMetricType], abc.ABC
+):
+    @abc.abstractmethod
+    def tf_metric(self) -> TFMetricType:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def to_cross_metric(
+        self,
+        metric: TFMetricType,
+        array_type,
+    ) -> CrossMetricType:
+        raise NotImplementedError()
+
+    def prepare(self, y_true, y_pred, sample_weight=None) -> CrossMetricType:
+        tf_metric = self.tf_metric()
+
+        tf_true = convert_array(y_true, tf.Tensor)
+        tf_pred = convert_array(y_pred, tf.Tensor)
+        sample_weight = self.parse_sample_weight(sample_weight)
+
+        if tf_pred.dtype == tf.bool:
+            tf_pred = tf.cast(tf_pred, tf_true.dtype)
+
+        tf_metric.update_state(tf_true, tf_pred, sample_weight)
+
+        return self.to_cross_metric(tf_metric, array_type=type(y_true))
+
+    def parse_sample_weight(self, sample_weight) -> Optional[tf.Tensor]:
+        if sample_weight is None:
+            return None
+
+        return convert_array(sample_weight, tf.Tensor)
+
+
 def to_tf_metric(
     to_convert: Union[CrossMetric, Aggregator], jit_compile=False
 ) -> tf.keras.metrics.Metric:
@@ -125,124 +155,29 @@ def to_tf_metric(
     return AggregatorMetric(to_convert)
 
 
-# class TFMetric(Generic[TFMetricType, StateType], ComparisonMetric[StateType], abc.ABC):
-#     @abc.abstractmethod
-#     def metric(self) -> TFMetricType:
-#         raise NotImplementedError()
+class CrossTFMeanMetric(CrossTFMetricAggregator[TFMetricType, Mean]):
+    def __init__(self, tf_metric: TFMetricType, **kwargs):
+        self._tf_metric = tf_metric
+        super().__init__(**kwargs)
 
-#     @abc.abstractmethod
-#     def present_metric(
-#         self,
-#         metric: TFMetricType,
-#         array_type: Type[Array],
-#     ) -> StateType:
-#         raise NotImplementedError()
+    def tf_metric(self) -> tf.keras.metrics.Mean:
+        return self._tf_metric
 
-#     def prepare(
-#         self,
-#         data: Array,
-#         comparison: Array,
-#         sample_weight: Array = None,
-#     ) -> StateType:
-#         metric = self.metric()
-#         metric.update_state(
-#             convert_array(data, tf.Tensor),
-#             convert_array(comparison, tf.Tensor),
-#             sample_weight=self.parse_sample_weight(sample_weight),
-#         )
+    def to_cross_metric(
+        self,
+        metric: tf.keras.metrics.Mean,
+        array_type,
+    ) -> Mean:
+        return Mean(
+            count=convert_array(tf.convert_to_tensor(metric.count), array_type),
+            sum=convert_array(tf.convert_to_tensor(metric.total), array_type),
+        )
 
-#         return self.present_metric(metric, array_type=type(data))
-
-#     def parse_sample_weight(
-#         self, sample_weight: Optional[Array]
-#     ) -> Optional[tf.Tensor]:
-#         if sample_weight is None:
-#             return None
-
-#         return convert_array(sample_weight, tf.Tensor)
+    def present(self, state):
+        return state.result
 
 
-# class TFMeanMetric(
-#     Generic[TFMetricType], TFMetric[TFMetricType, AverageState], abc.ABC
-# ):
-#     def prepare(
-#         self,
-#         data: Array,
-#         comparison: Array,
-#         sample_weight: Array = None,
-#     ) -> AverageState:
-#         return super().prepare(data, comparison, sample_weight=sample_weight)
-
-#     def present_metric(
-#         self,
-#         metric: tf.keras.metrics.Metric,
-#         array_type: Type[Array],
-#     ) -> AverageState:
-#         return AverageState(
-#             count=convert_array(tf.convert_to_tensor(metric.count), array_type),
-#             sum=convert_array(tf.convert_to_tensor(metric.total), array_type),
-#         )
-
-
-# @overload
-# def mean_metric(metric: Type[tf.keras.metrics.Metric]):
-#     ...
-
-
-# @overload
-# def mean_metric(metric: tf.keras.metrics.Metric):
-#     ...
-
-
-# def mean_metric(metric):
-#     if isinstance(metric, type):
-#         return _mean_metric_decorator(metric)
-
-#     class DynamicMetric(TFMeanMetric):
-#         def metric(self) -> tf.keras.metrics.Metric:
-#             return metric
-
-#     DynamicMetric.__name__ = metric.__class__.__name__
-
-#     return DynamicMetric()
-
-
-# def _mean_metric_decorator(metric: Type[TFMetricType]):
-#     @functools.wraps(metric)
-#     def metric_wrapper(*args, **kwargs):
-#         tf_metric = metric(*args, **kwargs)
-
-#         return mean_metric(tf_metric)
-
-#     return metric_wrapper
-
-
-# TFMeanRelativeError = mean_metric(tf.keras.metrics.MeanRelativeError)
-# TFAccuracy = mean_metric(tf.keras.metrics.Accuracy)
-# TFBinaryAccuracy = mean_metric(tf.keras.metrics.BinaryAccuracy)
-# TFCategoricalAccuracy = mean_metric(tf.keras.metrics.CategoricalAccuracy)
-# TFSparseCategoricalAccuracy = mean_metric(tf.keras.metrics.SparseCategoricalAccuracy)
-# TFTopKCategoricalAccuracy = mean_metric(tf.keras.metrics.TopKCategoricalAccuracy)
-# TFSparseTopKCategoricalAccuracy = mean_metric(
-#     tf.keras.metrics.SparseTopKCategoricalAccuracy
-# )
-# TFCosineSimilarity = mean_metric(tf.keras.metrics.CosineSimilarity)
-# TFMeanAbsoluteError = mean_metric(tf.keras.metrics.MeanAbsoluteError)
-# TFMeanAbsolutePercentageError = mean_metric(
-#     tf.keras.metrics.MeanAbsolutePercentageError
-# )
-# TFMeanSquaredError = mean_metric(tf.keras.metrics.MeanSquaredError)
-# TFMeanSquaredLogarithmicError = mean_metric(
-#     tf.keras.metrics.MeanSquaredLogarithmicError
-# )
-# TFHinge = mean_metric(tf.keras.metrics.Hinge)
-# TFSquaredHinge = mean_metric(tf.keras.metrics.SquaredHinge)
-# TFCategoricalHinge = mean_metric(tf.keras.metrics.CategoricalHinge)
-# TFRootMeanSquaredError = mean_metric(tf.keras.metrics.RootMeanSquaredError)
-# TFLogCoshError = mean_metric(tf.keras.metrics.LogCoshError)
-# TFPoisson = mean_metric(tf.keras.metrics.Poisson)
-# TFKLDivergence = mean_metric(tf.keras.metrics.KLDivergence)
-# TFCategoricalCrossentropy = mean_metric(tf.keras.metrics.CategoricalCrossentropy)
-# TFSparseCategoricalCrossentropy = mean_metric(
-#     tf.keras.metrics.SparseCategoricalCrossentropy
-# )
+def from_tf_metric(
+    metric: tf.keras.metrics.Metric, cross_metric_cls=CrossTFMeanMetric
+) -> CrossTFMeanMetric:
+    return cross_metric_cls(metric)

@@ -1,18 +1,15 @@
-# import numpy as np
-# import pandas as pd
+import numpy as np
+import tensorflow as tf
+from sklearn.metrics import accuracy_score
 
-# from crossfit.core.calculate import calculate
-# from crossfit.ml.classification import BinaryMetrics
-# from crossfit.ml.metrics import tf_metrics as tfm
+from crossfit.backends.tf import from_tf_metric
 
 
-# def test_tf_accuracy():
-#     y_true = np.random.randint(2, size=1000)
-#     y_pred = np.random.rand(1000)
+def test_tf_accuracy():
+    y_true = np.random.randint(2, size=1000)
+    y_pred = np.random.rand(1000)
 
-#     state = tfm.TFAccuracy()(y_pred > 0.5, y_true)
-#     np.testing.assert_almost_equal(
-#         state.result, BinaryMetrics().prepare(y_pred, y_true).accuracy
-#     )
-#     state_df = calculate(tfm.TFAccuracy(), y_true, y_pred)
-#     assert isinstance(state_df.result(), pd.DataFrame)
+    acc = from_tf_metric(tf.keras.metrics.Accuracy())
+
+    state = acc.prepare(y_true, y_pred > 0.5)
+    np.testing.assert_almost_equal(state.result, accuracy_score(y_true, y_pred > 0.5))
