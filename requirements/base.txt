@@ -2,7 +2,7 @@ astunparse
 pandas
 numpy
 dask
-scikit-learn
+scikit-learn>=1.2.0
 tensorflow_metadata
 typing_extensions
 typing_utils
