@@ -25,7 +25,7 @@ jobs:
         cache-dependency-path: '**/setup.py'
     - name: Install dependencies
       run: |
-        pip install -e '.[all]'
+        pip install -e '.[dev]'
     - name: Run tests
       run: |
         pytest --cov="crossfit"
