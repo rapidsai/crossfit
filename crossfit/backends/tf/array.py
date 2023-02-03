@@ -66,7 +66,7 @@ try:
         def unique_values(self, x):
             return self.unique(x)
 
-        def astype(self, dtype):
+        def astype(self, dtype, copy=False):
             return tf.cast(self, tf_utils.parse_dtype(dtype))
 
         def concat(self, arrays, *, axis=None):
