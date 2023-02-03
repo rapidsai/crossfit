@@ -66,9 +66,6 @@ try:
         def unique_values(self, x):
             return self.unique(x)
 
-        def astype(self, dtype, copy=False):
-            return tf.cast(self, tf_utils.parse_dtype(dtype))
-
         def concat(self, arrays, *, axis=None):
             _arrays = []
 
@@ -197,19 +194,19 @@ try:
     def tf_array_namespace(self):
         return tf_backend
 
-    def tf_astype(self, dtype):
+    def astype(self, dtype, **kwargs):
         return tf.cast(self, tf_utils.parse_dtype(dtype))
 
-    def tf_tolist(self):
+    def tolist(self):
         return self.numpy().tolist()
 
-    def tf_any(self):
+    def any(self):
         return tf.experimental.numpy.any(self)
 
     setattr(tf.Tensor, "__array_namespace__", tf_array_namespace)
-    setattr(tf.Tensor, "astype", tf_astype)
-    setattr(tf.Tensor, "tolist", tf_tolist)
-    setattr(tf.Tensor, "any", tf_any)
+    for fn in [astype, tolist, any]:
+        setattr(tf.Tensor, fn.__name__, fn)
+        setattr(TFBackend, fn.__name__, fn)
 
     eq = tf.Tensor.__eq__
 
