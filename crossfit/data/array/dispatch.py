@@ -13,7 +13,7 @@ try:
     import sklearn
 
     sklearn.set_config(array_api_dispatch=True)
-except (ImportError, TypeError):
+except ImportError:
     pass
 
 
