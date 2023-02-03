@@ -1,6 +1,7 @@
 import logging
 
-from crossfit.data import conversion, np_backend_dispatch, NPBackend
+from crossfit.data.array import conversion
+from crossfit.data.array.dispatch import np_backend_dispatch, NPBackend
 
 
 @np_backend_dispatch.register_lazy("cudf")

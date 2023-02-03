@@ -1,8 +1,7 @@
 import logging
 
-from crossfit.data import conversion, np_backend_dispatch, NPBackend
-
-jit_compile = False
+from crossfit.data.array import conversion
+from crossfit.data.array.dispatch import np_backend_dispatch, NPBackend, crossarray
 
 
 try:
@@ -18,40 +17,37 @@ try:
             super().__init__(tnp)
             self._jitted = set()
 
-        def __getattr__(self, name):
-            if not hasattr(self.np, name):
-                raise NotImplementedError(
-                    f"Function {name} not implemented for {self.np}"
-                )
-            fn = getattr(self.np, name)
+        def jit_compile(self, fn, is_numpy=False, **kwargs):
+            if is_numpy:
+                full_name = fn.__name__
+            else:
+                full_name = f"{fn.__module__}_{fn.__name__}"
 
-            if jit_compile:
-                compiled = tf.function(fn, jit_compile=True)
-                setattr(self, name, compiled)
+            if full_name in self._jitted:
+                return getattr(self, full_name)
 
-                return compiled
+            if "tensorflow" in kwargs:
+                jit = kwargs["tensorflow"]
+            elif "tf" in kwargs:
+                jit = kwargs["tf"]
+            else:
 
-            return fn
+                def jit(fn):
+                    return tf.function(fn, jit_compile=True)
+
+            with crossarray:
+                compiled = jit(fn)
+
+            setattr(self, full_name, compiled)
+            self._jitted.add(full_name)
+
+            return compiled
 
         def get(self, name, jit=False):
             fn = getattr(self, name)
 
-            if jit and name not in self._jitted:
-                if isinstance(jit, dict):
-                    if "tf" in jit:
-                        jit = jit["tf"]
-                    elif "tensorflow" in jit:
-                        jit = jit["tensorflow"]
-
-                    assert callable(jit), "jit must be callable"
-                    compiled = jit(fn)
-                elif type(jit) is bool:
-                    compiled = tf.function(fn, jit_compile=True)
-                else:
-                    raise ValueError("jit must be a bool or dict")
-
-                setattr(self, name, compiled)
-                self._jitted.add(name)
+            if jit:
+                return self.jit_compile(fn, jit=jit, is_numpy=True)
 
             return fn
 

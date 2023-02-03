@@ -27,6 +27,17 @@ class NPBackendDispatch(Dispatch):
 
         return backend(np_func, arg, *args, __jit=jit, **kwargs)
 
+    def maybe_jit(self, fn, arg, jit=True):
+        try:
+            backend = self.dispatch(type(arg))
+        except TypeError:
+            return fn
+
+        if hasattr(backend, "jit_compile"):
+            return backend.jit_compile(fn, jit=jit)
+
+        return fn
+
     def get_backend(self, array_type):
         return self.dispatch(array_type)
 
@@ -63,6 +74,20 @@ class NPFunctionDispatch(Dispatch):
             return True
         except TypeError:
             return False
+
+
+class CustomFunctionDispath(NPFunctionDispatch):
+    def __call__(self, arg, *args, **kwargs):
+        if self.supports(arg):
+            return super().__call__(arg, *args, **kwargs)
+
+        jit_kwargs = {}
+        if isinstance(self.jit, dict):
+            jit_kwargs = self.jit
+
+        fn = np_backend_dispatch.maybe_jit(self.function, arg, **jit_kwargs)
+
+        return fn(arg, *args, **kwargs)
 
 
 def with_dispatch(func, jit=False):
@@ -328,10 +353,14 @@ class CrossArray:
         if isinstance(func, np.ufunc) or func.__module__ == "numpy":
             return numpy.get(func.__name__, jit_compile=jit, overwrite=overwrite)
 
+        to_call = func
+        if jit:
+            to_call = CustomFunctionDispath(to_call)
+
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             with self:
-                return func(*args, **kwargs)
+                return to_call(*args, **kwargs)
 
         return wrapper
 

@@ -38,8 +38,11 @@ def test_tf_crossnp():
         assert np.all((tf_out == convert_array(np_out, tf.Tensor)).numpy())
 
 
-def test_tf_crossnp_nested():
-    cross_nested = crossarray(nested)
+# TODO: Fix jit compilation of nested functions in TF
+#   We might have to bring back the ast approach for that?
+@pytest.mark.parametrize("jit", [False])
+def test_tf_crossnp_nested(jit):
+    cross_nested = crossarray(nested, jit=jit)
     tf_out = cross_nested(tf.constant(arr1), tf.constant(arr2))
     np_out = cross_nested(
         np.array(arr1, dtype=np.int32), np.array(arr2, dtype=np.int32)
