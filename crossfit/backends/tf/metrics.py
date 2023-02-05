@@ -7,7 +7,7 @@ import tensorflow as tf
 from crossfit.calculate.aggregate import Aggregator
 from crossfit.data import crossarray, convert_array
 from crossfit.metrics.base import CrossMetric
-from crossfit.metrics.mean import Mean
+from crossfit.metrics import Mean
 
 TFMetricType = TypeVar("TFMetricType", bound=tf.keras.metrics.Metric)
 AggregatorType = TypeVar("AggregatorType", bound=Aggregator)
@@ -119,11 +119,7 @@ class CrossTFMetricAggregator(
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def to_cross_metric(
-        self,
-        metric: TFMetricType,
-        array_type,
-    ) -> CrossMetricType:
+    def to_cross_metric(self, metric: TFMetricType, y_true, y_pred) -> CrossMetricType:
         raise NotImplementedError()
 
     def prepare(self, y_true, y_pred, sample_weight=None) -> CrossMetricType:
@@ -138,7 +134,7 @@ class CrossTFMetricAggregator(
 
         tf_metric.update_state(tf_true, tf_pred, sample_weight)
 
-        return self.to_cross_metric(tf_metric, array_type=type(y_true))
+        return self.to_cross_metric(tf_metric, y_true=y_true, y_pred=y_pred)
 
     def parse_sample_weight(self, sample_weight) -> Optional[tf.Tensor]:
         if sample_weight is None:
@@ -163,21 +159,26 @@ class CrossTFMeanMetric(CrossTFMetricAggregator[TFMetricType, Mean]):
     def tf_metric(self) -> tf.keras.metrics.Mean:
         return self._tf_metric
 
-    def to_cross_metric(
-        self,
-        metric: tf.keras.metrics.Mean,
-        array_type,
-    ) -> Mean:
-        return Mean(
-            count=convert_array(tf.convert_to_tensor(metric.count), array_type),
-            sum=convert_array(tf.convert_to_tensor(metric.total), array_type),
-        )
+    def to_cross_metric(self, metric: tf.keras.metrics.Mean, y_true, y_pred) -> Mean:
+        del y_pred
+        array_type = type(y_true)
+
+        if hasattr(metric, "count") and hasattr(metric, "total"):
+            return Mean(
+                count=convert_array(tf.convert_to_tensor(metric.count), array_type),
+                sum=convert_array(tf.convert_to_tensor(metric.total), array_type),
+            )
+
+        count = y_true.shape[0]
+        summed = convert_array(metric.result(), array_type) * count
+
+        return Mean(count=count, sum=summed)
 
     def present(self, state):
         return state.result
 
 
 def from_tf_metric(
-    metric: tf.keras.metrics.Metric, cross_metric_cls=CrossTFMeanMetric
+    metric: tf.keras.metrics.Metric, cross_metric_cls=CrossTFMeanMetric, **kwargs
 ) -> CrossTFMeanMetric:
-    return cross_metric_cls(metric)
+    return cross_metric_cls(metric, **kwargs)

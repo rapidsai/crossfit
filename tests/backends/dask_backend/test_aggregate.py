@@ -3,7 +3,7 @@ import dask.dataframe as dd
 from crossfit.calculate.aggregate import Aggregator, metric_key
 from crossfit.backends.dask.aggregate import aggregate
 from crossfit.metrics.continuous.range import Range
-from crossfit.metrics.mean import Mean
+from crossfit.metrics import Mean
 
 from tests.utils import is_leaf_node_instance_of, sample_df
 

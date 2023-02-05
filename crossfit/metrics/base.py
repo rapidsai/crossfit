@@ -27,9 +27,9 @@ class CrossMetric(CrossModule, abc.ABC):
 
         return None
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, data, *args, **kwargs):
         with crossarray:
-            return self + self.prepare(*args, **kwargs)
+            return self + self.prepare(data, *args, **kwargs)
 
 
 __all__ = ["CrossMetric", "state"]

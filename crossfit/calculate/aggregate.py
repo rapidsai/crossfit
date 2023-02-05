@@ -7,11 +7,15 @@ from crossfit.data.dataframe.core import FrameBackend
 
 def pre_processing(func):
     @wraps(func)
-    def wrapper(self, data):
+    def wrapper(self, data, *args, **kwargs):
         if self.pre:
-            data = self.pre(data)
+            data = self.pre(data, *args, **kwargs)
 
-        return func(data)
+            # # TODO: This is a hack, fix this
+            if isinstance(data, tuple):
+                return func(*data, **kwargs)
+
+        return func(data, *args, **kwargs)
 
     return wrapper
 
@@ -120,20 +124,42 @@ class Aggregator:
             import pandas as pd
 
             new = defaultdict(dict)
-            for k, v in self.present(state, to_frame=False).items():
-                if isinstance(v, dict):
-                    new[(k.grouping, k.group, k.column)].update(
-                        {
-                            ((k.name + "." + _k) if _k != k.name else k.name): _v
-                            for _k, _v in v.items()
-                        }
-                    )
-                else:
-                    new[(k.grouping, k.group, k.column)].update({k.name: v})
-            index = pd.MultiIndex.from_tuples(
-                new.keys(), names=("grouping", "group", "column")
-            )
-            return pd.DataFrame.from_records(list(new.values()), index=index)
+            present_dict = self.present(state, to_frame=False)
+            keys = list(present_dict.keys())
+
+            if isinstance(keys[0], str):
+                return pd.DataFrame(present_dict)
+
+            groupings = {"&".join(k.grouping) if k.grouping else None for k in keys}
+            columns = {k.column for k in keys}
+
+            if columns:
+                for k, v in present_dict.items():
+                    if isinstance(v, dict):
+                        new[(k.grouping, k.group, k.column)].update(
+                            {
+                                ((k.name + "." + _k) if _k != k.name else k.name): _v
+                                for _k, _v in v.items()
+                            }
+                        )
+                    else:
+                        new[(k.grouping, k.group, k.column)].update({k.name: v})
+                index = pd.MultiIndex.from_tuples(
+                    new.keys(), names=("grouping", "group", "column")
+                )
+                return pd.DataFrame.from_records(list(new.values()), index=index)
+            else:
+                new = defaultdict(dict)
+                # TODO: Handle multiple groupings
+                grouping = groupings[0]
+
+                for k, v in present_dict.items():
+                    if len(v) == 1:
+                        v = v[0]
+                    new["&".join(k.group)].update({k.name: v})
+
+                data = [{grouping: key, **val} for key, val in new.items()]
+                return pd.DataFrame(data).set_index(grouping)
         if isinstance(state, dict):
             return present_state_dict(state)
         return state
@@ -155,7 +181,7 @@ def present_state_dict(state, key=None):
     result = {}
     for k in state.keys():
 
-        if isinstance(k, MetricKey):
+        if isinstance(k, MetricKey) or key is None:
             _k = k
         else:
             assert isinstance(key, MetricKey)

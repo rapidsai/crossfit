@@ -2,10 +2,10 @@ import pytest
 
 import numpy as np
 import tensorflow as tf
-import crossfit as cf
 
 # from crossfit.ml.classification import BinaryClassificationState
 from crossfit.backends.tf.metrics import to_tf_metric
+from crossfit.metrics import create_mean_metric
 
 
 def accuracy_score(y_true, y_pred, sample_weight=None):
@@ -45,7 +45,7 @@ def accuracy_score(y_true, y_pred, sample_weight=None):
 
 @pytest.mark.parametrize("jit_compile", [True, False])
 def test_to_tf_metric(jit_compile):
-    accuracy = cf.create_mean_metric(accuracy_score)
+    accuracy = create_mean_metric(accuracy_score)
     metric = to_tf_metric(accuracy)
 
     # generate some random tensors
