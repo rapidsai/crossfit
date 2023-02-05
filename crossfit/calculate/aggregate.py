@@ -1,8 +1,8 @@
 import types
-from typing import Sequence
-from functools import reduce, wraps, partial
+from collections import defaultdict, namedtuple
+from functools import wraps
 
-from crossfit.data.dataframe.dispatch import frame_dispatch
+from crossfit.data.dataframe.core import CrossFrame
 
 
 def pre_processing(func):
@@ -16,36 +16,78 @@ def pre_processing(func):
     return wrapper
 
 
+MetricKey = namedtuple("MetricKey", "grouping group column name")
+
+
+def metric_key(name, column=None, grouping=None, group=None):
+    return MetricKey(grouping, group, column, name)
+
+
 class Aggregator:
-    def __init__(self, *aggs, pre=None, post=None):
-        if aggs:
-            if all(isinstance(agg, dict) for agg in aggs):
-                aggs = reduce(lambda a, b: dict(a, **b), aggs)
-            else:
-                aggs = {agg.__name__: agg for agg in aggs}
+    def __init__(
+        self,
+        aggs=None,
+        pre=None,
+        post_group=None,
+        post=None,
+        groupby=None,
+        per_column=False,
+    ):
+        if aggs and not isinstance(aggs, dict):
+            aggs = {type(aggs).__name__: aggs}
         self.aggs = aggs
         self.pre = pre
+        self.post_group = post_group
         self.post = post
+        if isinstance(groupby, (str, int, tuple)):
+            groupby = [groupby]
+        self.groupby = groupby
+        self.per_column = per_column
 
-    def prepare(self, data):
+    def _prepare(self, data, *args, **kwargs):
         if self.aggs:
-            if len(self.aggs) == 1:
-                return next(iter(self.aggs.values()))(data)
-            return {name: agg(data) for name, agg in self.aggs.items()}
-
+            return {name: agg(data, *args, **kwargs) for name, agg in self.aggs.items()}
         return data
 
-    def call_per_col(self, data, to_call):
-        return {col: to_call(data.column(col)) for col in data.columns}
+    def prepare(self, data, *args, **kwargs):
+        if isinstance(data, CrossFrame):
+            return self._prepare_frame(data, **kwargs)
+        return self._prepare(data, *args, **kwargs)
 
-    def call_grouped(self, data, groupby, to_call):
+    def _prepare_frame(self, data, **kwargs):
+        if not isinstance(data, CrossFrame):
+            raise ValueError()
+        if not self.aggs:
+            raise NotImplementedError()
         state = {}
-        groups = data.groupby_partition(groupby)
+        groups = data.groupby_partition(self.groupby) if self.groupby else {None: data}
         for slice_key, group_df in groups.items():
-            if not isinstance(slice_key, tuple):
-                slice_key = (slice_key,)
-            state[slice_key] = to_call(group_df)
-
+            grouping = None
+            if self.groupby:
+                if not isinstance(slice_key, tuple):
+                    slice_key = (slice_key,)
+                grouping = tuple(self.groupby)
+            if self.post_group:
+                group_df = self.post_group(group_df)
+            columns = group_df.columns if self.per_column else [None]
+            for column in columns:
+                group_df_col = group_df
+                if isinstance(group_df, CrossFrame) and column is not None:
+                    group_df_col = group_df[column]
+                if not isinstance(group_df, list):
+                    group_df_col = [group_df_col]
+                for name, result in self._prepare(
+                    *group_df_col,
+                    **kwargs,
+                ).items():
+                    state[
+                        metric_key(
+                            name,
+                            grouping=grouping,
+                            group=slice_key,
+                            column=column,
+                        )
+                    ] = result
         return state
 
     def __getattribute__(self, name: str):
@@ -72,29 +114,71 @@ class Aggregator:
 
         return reduced
 
-    def present(self, state):
+    def present(self, state, to_frame=True):
+        if to_frame:
+            # TODO: Clean this up and generalize from pandas
+            import pandas as pd
+
+            new = defaultdict(dict)
+            for k, v in self.present(state, to_frame=False).items():
+                if isinstance(v, dict):
+                    new[(k.grouping, k.group, k.column)].update(
+                        {
+                            ((k.name + "." + _k) if _k != k.name else k.name): _v
+                            for _k, _v in v.items()
+                        }
+                    )
+                else:
+                    new[(k.grouping, k.group, k.column)].update({k.name: v})
+            index = pd.MultiIndex.from_tuples(
+                new.keys(), names=("grouping", "group", "column")
+            )
+            return pd.DataFrame.from_records(list(new.values()), index=index)
+        if isinstance(state, dict):
+            return present_state_dict(state)
         return state
 
     def __call__(
-        self, data, *args, groupby: Sequence[str] = (), per_col=False, **kwargs
+        self,
+        data,
+        *args,
+        **kwargs,
     ):
-        # TODO: Remove this in favor of detecting the type of data
-        try:
-            data = frame_dispatch(data)
-        except TypeError:
-            pass
-        prepare = partial(self.prepare, *args, **kwargs)
-
-        if per_col:
-            prepare = partial(self.call_per_col, to_call=prepare)
-
-        if groupby:
-            return self.call_grouped(data, groupby, prepare)
-
-        return prepare(data)
+        return self.prepare(data, *args, **kwargs)
 
     def join(self, *other: "Aggregator"):
         ...
+
+
+def present_state_dict(state, key=None):
+
+    result = {}
+    for k in state.keys():
+
+        if isinstance(k, MetricKey):
+            _k = k
+        else:
+            assert isinstance(key, MetricKey)
+            assert isinstance(k, str)
+            _k = metric_key(
+                key.name + "." + k,
+                column=key.column,
+                grouping=key.grouping,
+                group=key.group,
+            )
+
+        if hasattr(state[k], "present"):
+            metric_result = state[k].present()
+            if isinstance(metric_result, dict):
+                result.update(present_state_dict(metric_result, key=_k))
+            else:
+                result[_k] = metric_result
+        elif isinstance(state[k], dict):
+            result.update(present_state_dict(state[k], key=_k))
+        else:
+            result[_k] = state[k]
+
+    return result
 
 
 def reduce_state_dicts(dict1, dict2):

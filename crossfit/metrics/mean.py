@@ -12,7 +12,7 @@ class Mean(CrossMetric):
         self._pre = pre
         self.setup(**kwargs)
 
-    def prepare(self, *args, **kwargs):
+    def prepare(self, *args, axis=0, **kwargs):
         if self._pre:
             prepped = self._pre(*args, **kwargs)
             if isinstance(prepped, Mean):
@@ -21,7 +21,7 @@ class Mean(CrossMetric):
 
             return Mean(count=length, sum=prepped * length)
 
-        return self.from_array(*args, **kwargs)
+        return self.from_array(*args, axis=axis, **kwargs)
 
     @classmethod
     def from_array(self, array, *, axis: int) -> "Mean":

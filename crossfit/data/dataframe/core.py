@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Callable, List
 
+from crossfit.data.array.dispatch import crossarray
 from crossfit.data.dataframe.dispatch import frame_dispatch
 
 
@@ -197,11 +198,12 @@ class ArrayBundle(CrossFrame):
         return frame_dispatch({k: v for k, v in self.data.items() if k in columns})
 
     def apply(self, func: Callable, columns: list or None = None, **kwargs):
-        if columns is None:
-            columns = self.columns
-        return frame_dispatch(
-            {k: func(v, **kwargs) for k, v in self.data.items() if k in columns}
-        )
+        with crossarray:
+            if columns is None:
+                columns = self.columns
+            return frame_dispatch(
+                {k: func(v, **kwargs) for k, v in self.data.items() if k in columns}
+            )
 
     def groupby_apply(self, by: list, func: Callable):
         raise NotImplementedError()
