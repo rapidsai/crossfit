@@ -102,7 +102,7 @@ def with_dispatch(func, jit=False):
     return wrapper
 
 
-class NPBackend:
+class ArrayBackend:
     """Class to provide a compatible interface for functions in a numpy-like module.
 
     This class is meant to be used with numpy-like modules (such as `cupy` or `numpyro`)
@@ -368,4 +368,10 @@ class CrossArray:
 crossarray = CrossArray()
 
 
-__all__ = ["NPBackend", "with_dispatch", "np_backend_dispatch", "numpy", "crossarray"]
+__all__ = [
+    "ArrayBackend",
+    "with_dispatch",
+    "np_backend_dispatch",
+    "numpy",
+    "crossarray",
+]

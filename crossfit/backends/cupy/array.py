@@ -1,14 +1,14 @@
 import logging
 
 from crossfit.data.array import conversion
-from crossfit.data.array.dispatch import np_backend_dispatch, NPBackend
+from crossfit.data.array.dispatch import np_backend_dispatch, ArrayBackend
 
 
 @np_backend_dispatch.register_lazy("cupy")
 def register_cupy_backend():
     import cupy as cp
 
-    class CupyBackend(NPBackend):
+    class CupyBackend(ArrayBackend):
         def __init__(self):
             super().__init__(cp)
 

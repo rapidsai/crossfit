@@ -5,7 +5,7 @@ from dask.highlevelgraph import HighLevelGraph
 import dask.dataframe as dd
 
 from crossfit.calculate.aggregate import Aggregator
-from crossfit.data.dataframe.dispatch import frame_dispatch
+from crossfit.data.dataframe.dispatch import CrossFrame
 
 
 def aggregate(
@@ -23,7 +23,7 @@ def aggregate(
         vals = list(vals)
         return aggregator.reduce(*vals)
 
-    bag = ddf.to_bag(format="frame").map_partitions(frame_dispatch)
+    bag = ddf.to_bag(format="frame").map_partitions(CrossFrame)
     if ddf.npartitions == 1:
         reduced = bag.map_partitions(map_func)
         name = f"result-{reduced.name}"

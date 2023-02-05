@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Callable, List
 
-from crossfit.data.dataframe.core import CrossFrame, ArrayBundle
-from crossfit.data.dataframe.dispatch import frame_dispatch
+from crossfit.data.dataframe.core import FrameBackend, ArrayBundle
+from crossfit.data.dataframe.dispatch import CrossFrame
 
 
 class PandasDataFrame(ArrayBundle):
@@ -26,11 +26,11 @@ class PandasDataFrame(ArrayBundle):
     @classmethod
     def concat(
         cls,
-        frames: List[CrossFrame],
+        frames: List[FrameBackend],
         ignore_index: bool = False,
         axis: int = 0,
     ):
-        return frame_dispatch(
+        return CrossFrame(
             cls._lib().concat(
                 [frame.data for frame in frames],
                 ignore_index=ignore_index,
@@ -47,7 +47,7 @@ class PandasDataFrame(ArrayBundle):
                 df[k] = v if v.shape else v.reshape((1,))
             else:
                 df[k] = v
-        return frame_dispatch(df)
+        return CrossFrame(df)
 
     def to_dict(self):
         # Clear index information
@@ -59,7 +59,7 @@ class PandasDataFrame(ArrayBundle):
         return list(self.data.columns)
 
     def assign(self, **kwargs):
-        return frame_dispatch(self.data.assign(**kwargs))
+        return CrossFrame(self.data.assign(**kwargs))
 
     def column(self, column: str | int):
         return self.data[column]
@@ -69,34 +69,32 @@ class PandasDataFrame(ArrayBundle):
             columns = [columns]  # Make sure we get a DataFrame
         if not set(columns).issubset(set(self.columns)):
             raise ValueError(f"Invalid projection: {columns}")
-        return frame_dispatch(self.data[columns])
+        return CrossFrame(self.data[columns])
 
     def groupby_apply(self, by: list, func: Callable):
         grouped = self.data.groupby(by)
         result = grouped.apply(func)
         result.index = self._lib().Index(grouped.groups)
-        return frame_dispatch(result)
+        return CrossFrame(result)
 
     def groupby_partition(self, by: list) -> dict:
         grouped = self.data.groupby(by)
         return {
-            slice_key: frame_dispatch(grouped.obj.loc[slice])
+            slice_key: CrossFrame(grouped.obj.loc[slice])
             for slice_key, slice in dict(grouped.groups).items()
         }
 
     def pivot(self, index=None, columns=None, values=None):
-        return frame_dispatch(
-            self.data.pivot(index=index, columns=columns, values=values)
-        )
+        return CrossFrame(self.data.pivot(index=index, columns=columns, values=values))
 
 
-@frame_dispatch.register_lazy("numpy")
+@CrossFrame.register_lazy("numpy")
 def register_numpy_backend():
     try:
         import pandas as pd
         import numpy as np
 
-        @frame_dispatch.register(np.ndarray)
+        @CrossFrame.register(np.ndarray)
         def _numpy_to_pandas(data, name="data"):
             return PandasDataFrame(pd.DataFrame({name: data}))
 
@@ -104,14 +102,14 @@ def register_numpy_backend():
         pass
 
 
-@frame_dispatch.register_lazy("pandas")
+@CrossFrame.register_lazy("pandas")
 def register_pandas_backend():
     import pandas as pd
 
-    @frame_dispatch.register(pd.DataFrame)
+    @CrossFrame.register(pd.DataFrame)
     def _pd_frame(data):
         return PandasDataFrame(data)
 
-    @frame_dispatch.register(pd.Series)
+    @CrossFrame.register(pd.Series)
     def _pd_series(data, name="data"):
         return PandasDataFrame(pd.DataFrame({name: data}, index=data.index))

@@ -1,14 +1,14 @@
 import logging
 
 from crossfit.data.array import conversion
-from crossfit.data.array.dispatch import np_backend_dispatch, NPBackend
+from crossfit.data.array.dispatch import np_backend_dispatch, ArrayBackend
 
 
 @np_backend_dispatch.register_lazy("cudf")
 def register_cudf_backend():
     import cudf
 
-    class CudfBackend(NPBackend):
+    class CudfBackend(ArrayBackend):
         def __init__(self):
             super().__init__(cudf)
 

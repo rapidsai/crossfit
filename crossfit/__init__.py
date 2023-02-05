@@ -1,6 +1,7 @@
 from crossfit.data.array.dispatch import crossarray
 from crossfit.data.array.conversion import convert_array
-from crossfit.data.dataframe.core import CrossFrame
+from crossfit.data.dataframe.core import FrameBackend
+from crossfit.data.dataframe.dispatch import CrossFrame
 from crossfit.calculate.aggregate import Aggregator
 from crossfit.calculate.module import CrossModule, state
 from crossfit.metrics.base import CrossMetric
@@ -13,6 +14,7 @@ __all__ = [
     "convert_array",
     "backends",
     "Aggregator",
+    "FrameBackend",
     "CrossFrame",
     "CrossModule",
     "CrossMetric",

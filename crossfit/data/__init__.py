@@ -1,14 +1,14 @@
 from crossfit.data.array.dispatch import (
     crossarray,
     numpy,
-    NPBackend,
+    ArrayBackend,
     np_backend_dispatch,
 )
 from crossfit.data.array import conversion
 from crossfit.data.array.conversion import convert_array
 
-from crossfit.data.dataframe.dispatch import frame_dispatch
-from crossfit.data.dataframe.core import CrossFrame
+from crossfit.data.dataframe.dispatch import CrossFrame
+from crossfit.data.dataframe.core import FrameBackend
 
 
 __all__ = [
@@ -16,8 +16,8 @@ __all__ = [
     "numpy",
     "conversion",
     "convert_array",
-    "NPBackend",
+    "ArrayBackend",
     "np_backend_dispatch",
-    "frame_dispatch",
     "CrossFrame",
+    "FrameBackend",
 ]

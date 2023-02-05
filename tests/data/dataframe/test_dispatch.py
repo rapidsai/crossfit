@@ -4,7 +4,7 @@ import numpy as np
 
 from crossfit.backends.pandas.dataframe import PandasDataFrame
 from crossfit.data.dataframe.core import ArrayBundle
-from crossfit.data.dataframe.dispatch import frame_dispatch
+from crossfit.data.dataframe.dispatch import CrossFrame
 
 
 def test_pandas_frame():
@@ -18,7 +18,7 @@ def test_pandas_frame():
         "c": arr3,
     }
 
-    frame = frame_dispatch(data)
+    frame = CrossFrame(data)
     assert isinstance(frame, PandasDataFrame)
 
     frame2 = frame.concat([frame, frame])
@@ -42,7 +42,7 @@ def test_array_bundle():
 
     # Mixed column backends will
     # produce a ArrayBundle
-    frame = frame_dispatch(data)
+    frame = CrossFrame(data)
     assert isinstance(frame, ArrayBundle)
 
     # Projecting numpy-based columns will

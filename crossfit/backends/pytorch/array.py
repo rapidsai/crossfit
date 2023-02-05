@@ -1,12 +1,12 @@
 import logging
 
 from crossfit.data.array import conversion
-from crossfit.data.array.dispatch import np_backend_dispatch, NPBackend
+from crossfit.data.array.dispatch import np_backend_dispatch, ArrayBackend
 
 try:
     import torch
 
-    class TorchBackend(NPBackend):
+    class TorchBackend(ArrayBackend):
         def __init__(self):
             super().__init__(torch)
 

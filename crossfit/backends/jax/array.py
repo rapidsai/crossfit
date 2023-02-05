@@ -3,7 +3,7 @@ import logging
 import numpy as np
 
 from crossfit.data.array import conversion
-from crossfit.data.array.dispatch import np_backend_dispatch, NPBackend
+from crossfit.data.array.dispatch import np_backend_dispatch, ArrayBackend
 
 
 try:
@@ -11,7 +11,7 @@ try:
     import jax.numpy as jnp
     from jax import dlpack
 
-    class JaxBackend(NPBackend):
+    class JaxBackend(ArrayBackend):
         def __init__(self):
             super().__init__(jnp)
 

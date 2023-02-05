@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import Callable, List
 
 from crossfit.data.array.dispatch import crossarray
-from crossfit.data.dataframe.dispatch import frame_dispatch
+from crossfit.data.dataframe.dispatch import CrossFrame
 
 
-class CrossFrame:
+class FrameBackend:
     def __init__(self, data):
         self.__data = data
 
@@ -37,7 +37,7 @@ class CrossFrame:
     @classmethod
     def concat(
         cls,
-        frames: List[CrossFrame],
+        frames: List[FrameBackend],
         ignore_index: bool = False,
         axis: int = 0,
     ):
@@ -120,14 +120,14 @@ class CrossFrame:
         raise NotImplementedError()
 
 
-# Make sure frame_dispatch(CrossFrame) -> CrossFrame
-@frame_dispatch.register(CrossFrame)
+# Make sure frame_dispatch(FrameBackend) -> FrameBackend
+@CrossFrame.register(CrossFrame)
 def _(data):
     return data
 
 
 # Fall-back `ArrayBundle` definition
-class ArrayBundle(CrossFrame):
+class ArrayBundle(FrameBackend):
     def __len__(self):
         if not hasattr(self, "_len"):
             _len = None
@@ -145,7 +145,7 @@ class ArrayBundle(CrossFrame):
     @classmethod
     def concat(
         cls,
-        frames: List[CrossFrame],
+        frames: List[FrameBackend],
         ignore_index: bool = False,
         axis: int = 0,
     ):
@@ -185,7 +185,7 @@ class ArrayBundle(CrossFrame):
                     f"expected length {len(self)}"
                 )
         data.update(**kwargs)
-        return frame_dispatch(data)
+        return CrossFrame(data)
 
     def column(self, column: str | int):
         return self.data[column]
@@ -195,13 +195,13 @@ class ArrayBundle(CrossFrame):
             columns = [columns]
         if not set(columns).issubset(set(self.columns)):
             raise ValueError(f"Invalid projection: {columns}")
-        return frame_dispatch({k: v for k, v in self.data.items() if k in columns})
+        return CrossFrame({k: v for k, v in self.data.items() if k in columns})
 
     def apply(self, func: Callable, columns: list or None = None, **kwargs):
         with crossarray:
             if columns is None:
                 columns = self.columns
-            return frame_dispatch(
+            return CrossFrame(
                 {k: func(v, **kwargs) for k, v in self.data.items() if k in columns}
             )
 
@@ -216,37 +216,37 @@ class ArrayBundle(CrossFrame):
 
 
 # Map Tensorflow data to ArrayBundle
-@frame_dispatch.register_lazy("tensorflow")
+@CrossFrame.register_lazy("tensorflow")
 def register_tf_from_dlpack():
     import tensorflow as tf
 
-    @frame_dispatch.register(tf.Tensor)
+    @CrossFrame.register(tf.Tensor)
     def _tf_to_bundle(data, name="data"):
         return ArrayBundle({name: data})
 
 
 # Map PyTorch data to ArrayBundle
-@frame_dispatch.register_lazy("torch")
+@CrossFrame.register_lazy("torch")
 def register_torch_from_dlpack():
     import torch
 
-    @frame_dispatch.register(torch.Tensor)
+    @CrossFrame.register(torch.Tensor)
     def _torch_to_bundle(data, name="data"):
         return ArrayBundle({name: data})
 
 
 # Map dict to ArrayBundle
-@frame_dispatch.register(dict)
+@CrossFrame.register(dict)
 def _dict_frame(data):
     backends = set()
     for v in data.values():
         backends.add(type(v).__module__.split(".")[0])
     if len(backends) == 1:
-        return frame_dispatch(next(iter(data.values()))).from_dict(data)
+        return CrossFrame(next(iter(data.values()))).from_dict(data)
     return ArrayBundle(data)
 
 
 # Map ArrayBundle to ArrayBundle
-@frame_dispatch.register(ArrayBundle)
+@CrossFrame.register(ArrayBundle)
 def _ab_frame(data):
     return data

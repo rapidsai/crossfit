@@ -1,4 +1,4 @@
-from crossfit.data.dataframe.dispatch import frame_dispatch
+from crossfit.data.dataframe.dispatch import CrossFrame
 from crossfit.backends.pandas.dataframe import PandasDataFrame
 
 
@@ -15,13 +15,13 @@ class CudfDataFrame(PandasDataFrame):
         return cudf
 
 
-@frame_dispatch.register_lazy("cupy")
+@CrossFrame.register_lazy("cupy")
 def register_cupy_backend():
     try:
         import cudf
         import cupy
 
-        @frame_dispatch.register(cupy.ndarray)
+        @CrossFrame.register(cupy.ndarray)
         def _cupy_to_cudf(data, name="data"):
             return CudfDataFrame(cudf.DataFrame({name: data}))
 
@@ -29,14 +29,14 @@ def register_cupy_backend():
         pass
 
 
-@frame_dispatch.register_lazy("cudf")
+@CrossFrame.register_lazy("cudf")
 def register_cudf_backend():
     import cudf
 
-    @frame_dispatch.register(cudf.DataFrame)
+    @CrossFrame.register(cudf.DataFrame)
     def _cudf_dataframe(data):
         return CudfDataFrame(data)
 
-    @frame_dispatch.register(cudf.Series)
+    @CrossFrame.register(cudf.Series)
     def _cudf_series(data, name="data"):
         return CudfDataFrame(cudf.DataFrame({name: data}, index=data.index))

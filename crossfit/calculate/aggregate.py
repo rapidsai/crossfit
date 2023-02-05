@@ -2,7 +2,7 @@ import types
 from collections import defaultdict, namedtuple
 from functools import wraps
 
-from crossfit.data.dataframe.core import CrossFrame
+from crossfit.data.dataframe.core import FrameBackend
 
 
 def pre_processing(func):
@@ -50,12 +50,12 @@ class Aggregator:
         return data
 
     def prepare(self, data, *args, **kwargs):
-        if isinstance(data, CrossFrame):
+        if isinstance(data, FrameBackend):
             return self._prepare_frame(data, **kwargs)
         return self._prepare(data, *args, **kwargs)
 
     def _prepare_frame(self, data, **kwargs):
-        if not isinstance(data, CrossFrame):
+        if not isinstance(data, FrameBackend):
             raise ValueError()
         if not self.aggs:
             raise NotImplementedError()
@@ -72,7 +72,7 @@ class Aggregator:
             columns = group_df.columns if self.per_column else [None]
             for column in columns:
                 group_df_col = group_df
-                if isinstance(group_df, CrossFrame) and column is not None:
+                if isinstance(group_df, FrameBackend) and column is not None:
                     group_df_col = group_df[column]
                 if not isinstance(group_df, list):
                     group_df_col = [group_df_col]
