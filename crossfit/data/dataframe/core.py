@@ -119,6 +119,13 @@ class FrameBackend:
         """
         raise NotImplementedError()
 
+    def set_index(self, index):
+        """Set the index of the CrossFrame
+
+        Must return a new ``CrossFrame`` instance.
+        """
+        raise NotImplementedError()
+
 
 # Make sure frame_dispatch(FrameBackend) -> FrameBackend
 @CrossFrame.register(CrossFrame)
@@ -212,6 +219,9 @@ class ArrayBundle(FrameBackend):
         raise NotImplementedError()
 
     def pivot(self, index=None, columns=None, values=None):
+        raise NotImplementedError()
+
+    def set_index(self, index):
         raise NotImplementedError()
 
 

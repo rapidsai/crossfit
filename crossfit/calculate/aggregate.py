@@ -36,6 +36,7 @@ class Aggregator:
         post=None,
         groupby=None,
         per_column=False,
+        axis=0,
     ):
         if aggs and not isinstance(aggs, dict):
             aggs = {type(aggs).__name__: aggs}
@@ -47,6 +48,7 @@ class Aggregator:
             groupby = [groupby]
         self.groupby = groupby
         self.per_column = per_column
+        self.axis = axis
 
     def _prepare(self, data, *args, **kwargs):
         if self.aggs:
@@ -73,7 +75,16 @@ class Aggregator:
                 grouping = tuple(self.groupby)
             if self.post_group:
                 group_df = self.post_group(group_df)
-            columns = group_df.columns if self.per_column else [None]
+
+            if self.per_column:
+                # TODO: Not sure if this is the best way to do this
+                if callable(self.per_column):
+                    columns = self.per_column(group_df)
+                else:
+                    columns = group_df.columns
+            else:
+                columns = [None]
+
             for column in columns:
                 group_df_col = group_df
                 if isinstance(group_df, FrameBackend) and column is not None:
@@ -133,21 +144,40 @@ class Aggregator:
             groupings = {"&".join(k.grouping) if k.grouping else None for k in keys}
             columns = {k.column for k in keys}
 
-            if columns:
+            if columns and groupings != {None}:
                 for k, v in present_dict.items():
+                    grouping = (
+                        "&".join(k.grouping)
+                        if isinstance(k.grouping, tuple)
+                        else k.grouping
+                    )
+                    if isinstance(k.group, tuple):
+                        if len(k.group) > 1:
+                            group = "&".join([str(i) for i in k.group])
+                        else:
+                            group = k.group[0]
+                    else:
+                        group = k.group
                     if isinstance(v, dict):
-                        new[(k.grouping, k.group, k.column)].update(
+                        new[(grouping, group, k.column)].update(
                             {
                                 ((k.name + "." + _k) if _k != k.name else k.name): _v
                                 for _k, _v in v.items()
                             }
                         )
                     else:
-                        new[(k.grouping, k.group, k.column)].update({k.name: v})
+                        new[(grouping, group, k.column)].update({k.name: v})
                 index = pd.MultiIndex.from_tuples(
                     new.keys(), names=("grouping", "group", "column")
                 )
                 return pd.DataFrame.from_records(list(new.values()), index=index)
+            elif columns:
+                new = defaultdict(dict)
+                for k, v in present_dict.items():
+                    new[k.column].update({k.name: v})
+                data = [{"column": key, **val} for key, val in new.items()]
+
+                return pd.DataFrame(data).set_index("column")
             else:
                 new = defaultdict(dict)
                 # TODO: Handle multiple groupings

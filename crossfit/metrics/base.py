@@ -1,4 +1,7 @@
 import abc
+import functools as ft
+
+import numpy as np
 
 from crossfit.calculate.module import CrossModule, state
 from crossfit.data import crossarray
@@ -32,4 +35,14 @@ class CrossMetric(CrossModule, abc.ABC):
             return self + self.prepare(data, *args, **kwargs)
 
 
-__all__ = ["CrossMetric", "state"]
+class CrossAxisMetric(CrossMetric, abc.ABC):
+    def __init__(self, axis: int, **kwargs):
+        self.axis = axis
+        self.setup(**kwargs)
+
+
+min_state = ft.partial(state, init=np.iinfo(np.int32).min, combine=np.minimum)
+max_state = ft.partial(state, init=np.iinfo(np.int32).max, combine=np.maximum)
+
+
+__all__ = ["CrossMetric", "CrossAxisMetric", "state", "min_state", "max_state"]

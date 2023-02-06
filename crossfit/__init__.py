@@ -4,7 +4,7 @@ from crossfit.data.dataframe.core import FrameBackend
 from crossfit.data.dataframe.dispatch import CrossFrame
 from crossfit.calculate.aggregate import Aggregator
 from crossfit.calculate.module import CrossModule, state
-from crossfit.metrics.base import CrossMetric
+from crossfit.metrics.base import CrossMetric, CrossAxisMetric, min_state, max_state
 from crossfit import backends
 
 
@@ -17,5 +17,8 @@ __all__ = [
     "CrossFrame",
     "CrossModule",
     "CrossMetric",
+    "CrossAxisMetric",
     "state",
+    "min_state",
+    "max_state",
 ]

@@ -1,16 +1,19 @@
 import numpy as np
 
-from crossfit.metrics.base import CrossMetric, state
+from crossfit.metrics.base import CrossAxisMetric, state
 
 
-class Moments(CrossMetric):
+class Moments(CrossAxisMetric):
     count = state(init=0, combine=sum)
     mean = state(init=0, combine=np.mean)
     var = state(init=0, combine=np.var)
 
-    def prepare(self, array, *, axis) -> "Moments":
+    def prepare(self, array) -> "Moments":
         return Moments(
-            count=len(array), mean=array.mean(axis=axis), var=array.var(axis=axis)
+            axis=self.axis,
+            count=len(array),
+            mean=array.mean(axis=self.axis),
+            var=array.var(axis=self.axis),
         )
 
     def combine(self, other) -> "Moments":
@@ -24,7 +27,11 @@ class Moments(CrossMetric):
         new_var = M2 / max(tot_count - 1, 1)
         new_count = tot_count
 
-        return Moments(count=new_count, mean=new_mean, var=new_var)
+        return Moments(axis=self.axis, count=new_count, mean=new_mean, var=new_var)
+
+    @property
+    def std(self):
+        return np.sqrt(self.var)
 
     def present(self):
-        return {"mean": self.mean, "var": self.var}
+        return {"mean": self.mean, "var": self.var, "std": self.std}

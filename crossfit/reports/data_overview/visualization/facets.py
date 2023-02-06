@@ -3,8 +3,6 @@ import os
 
 from tensorflow_metadata.proto.v0 import statistics_pb2
 
-from crossfit.calculate.frame import MetricFrame
-
 
 STATS_FILE_NAME = "stats.pb"
 
@@ -16,78 +14,61 @@ def _maybe_to_pandas(data):
     return data
 
 
-def visualize(
-    con_mf: MetricFrame, cat_mf: MetricFrame, name="data"
-) -> "FacetsOverview":
+def visualize(con_df=None, cat_df=None, name="data") -> "FacetsOverview":
     output = statistics_pb2.DatasetFeatureStatisticsList()
     datasets = {}
 
-    if con_mf is not None:
-        # Always convert to pandas (for now)
-        con_result = _maybe_to_pandas(con_mf.result(pivot=False))
-        dataset_name = con_mf.group_names
-        if dataset_name is None:
-            dataset_name = name
-        con_result["__dataset__"] = _maybe_to_pandas(dataset_name)
+    if con_df is not None:
+        if hasattr(con_df.index, "name") and con_df.index.name == "column":
+            con_df.columns = con_df.columns.str.replace("ContinuousMetrics.", "")
 
-        for row_name, row in con_result.iterrows():
-            if row["__dataset__"] not in datasets:
-                datasets[row["__dataset__"]] = statistics_pb2.DatasetFeatureStatistics(
-                    name=row["__dataset__"], num_examples=int(row["common.count"])
-                )
-
-            feature = datasets[row["__dataset__"]].features.add()
-            feature.name = row["col"] if "col" in row else row_name
-            common_stats = _create_common_stats(row)
-            feature.num_stats.CopyFrom(
-                statistics_pb2.NumericStatistics(
-                    min=row["range.min"],
-                    max=row["range.max"],
-                    # histograms=[hist],    # TODO: Add histogram
-                    common_stats=common_stats,
-                    # TODO: Add median
-                    mean=row["moments.mean"],
-                    std_dev=row["moments.std"],
-                    # num_zeros=dask_stats[col]["num_zeroes"].item(),
-                )
+            datasets[name] = statistics_pb2.DatasetFeatureStatistics(
+                name=name, num_examples=int(con_df["common_stats.count"].iloc[0])
             )
 
-    if cat_mf is not None:
-        # Always convert to pandas (for now)
-        cat_result = _maybe_to_pandas(cat_mf.result(pivot=False))
-        dataset_name = cat_mf.group_names
-        if dataset_name is None:
-            dataset_name = name
-        cat_result["__dataset__"] = _maybe_to_pandas(dataset_name)
+            for row_name, row in con_df.iterrows():
+                feature = datasets[name].features.add()
+                feature.name = row_name
+                feature.num_stats.CopyFrom(_create_numeric_statistics(row))
+        else:
+            for row_name, row in con_df.iterrows():
+                row.index = row.index.str.replace("ContinuousMetrics.", "")
+                data_name = f"{row_name[0]}={row_name[1]}"
 
-        for row_name, row in cat_result.iterrows():
-            if row["__dataset__"] not in datasets:
-                datasets[row["__dataset__"]] = statistics_pb2.DatasetFeatureStatistics(
-                    name=row["__dataset__"], num_examples=int(row["common.count"])
+                datasets[data_name] = statistics_pb2.DatasetFeatureStatistics(
+                    name=data_name, num_examples=int(row["common_stats.count"])
                 )
 
-            feature = datasets[row["__dataset__"]].features.add()
-            feature.name = row["col"] if "col" in row else row_name
-            common_stats = _create_common_stats(row)
-            feature.string_stats.CopyFrom(
-                statistics_pb2.StringStatistics(
-                    common_stats=common_stats,
-                    unique=row["num_unique"],
-                    avg_length=row["str_len"],
-                )
-            )
+                feature = datasets[data_name].features.add()
+                feature.name = row_name[-1]
+                feature.num_stats.CopyFrom(_create_numeric_statistics(row))
 
-            ranks = feature.string_stats.rank_histogram
-            for k, (val, freq) in enumerate(zip(row["top_values"], row["top_counts"])):
-                f = feature.string_stats.top_values.add()
-                f.value = val
-                f.frequency = freq
-                b = ranks.buckets.add()
-                b.CopyFrom(
-                    statistics_pb2.RankHistogram.Bucket(
-                        low_rank=k, high_rank=k, label=val, sample_count=freq
+    if cat_df is not None:
+        if hasattr(cat_df.index, "name") and cat_df.index.name == "column":
+            cat_df.columns = cat_df.columns.str.replace("CategoricalMetrics.", "")
+
+            if name not in datasets:
+                datasets[name] = statistics_pb2.DatasetFeatureStatistics(
+                    name=name, num_examples=int(cat_df["common_stats.count"].iloc[0])
+                )
+
+            for row_name, row in cat_df.iterrows():
+                feature = datasets[name].features.add()
+                feature.name = row_name
+                feature.string_stats.CopyFrom(_create_string_statistics(row))
+        else:
+            for row_name, row in cat_df.iterrows():
+                row.index = row.index.str.replace("CategoricalMetrics.", "")
+                data_name = f"{row_name[0]}={row_name[1]}"
+
+                if data_name not in datasets:
+                    datasets[data_name] = statistics_pb2.DatasetFeatureStatistics(
+                        name=data_name, num_examples=int(row["common_stats.count"])
                     )
-                )
+
+                feature = datasets[data_name].features.add()
+                feature.name = row_name[-1]
+                feature.string_stats.CopyFrom(_create_string_statistics(row))
 
     for dataset in datasets.values():
         d = output.datasets.add()
@@ -158,9 +139,50 @@ class FacetsOverview:
 
 def _create_common_stats(row) -> statistics_pb2.CommonStatistics:
     return statistics_pb2.CommonStatistics(
-        num_non_missing=int(row["common.count"]),
-        num_missing=int(row["common.num_missing"]),
+        num_non_missing=int(row["common_stats.count"]),
+        num_missing=int(row["common_stats.num_missing"]),
         min_num_values=1,
         max_num_values=1,
         avg_num_values=1,
     )
+
+
+def _create_numeric_statistics(row) -> statistics_pb2.NumericStatistics:
+    common_stats = _create_common_stats(row)
+    return statistics_pb2.NumericStatistics(
+        min=row["range.min"],
+        max=row["range.max"],
+        # histograms=[hist],    # TODO: Add histogram
+        common_stats=common_stats,
+        # TODO: Add median
+        mean=row["moments.mean"],
+        std_dev=row["moments.std"],
+        # num_zeros=dask_stats[col]["num_zeroes"].item(),
+    )
+
+
+def _create_string_statistics(row) -> statistics_pb2.StringStatistics:
+    common_stats = _create_common_stats(row)
+    string_stats = statistics_pb2.StringStatistics(
+        common_stats=common_stats,
+        unique=row["value_counts.num_unique"],
+        avg_length=row["mean_str_len"],
+    )
+
+    top_k = zip(
+        list(row["value_counts.top_values"]),
+        list(row["value_counts.top_counts"]),
+    )
+    ranks = string_stats.rank_histogram
+    for k, (val, freq) in enumerate(top_k):
+        f = string_stats.top_values.add()
+        f.value = val
+        f.frequency = freq
+        b = ranks.buckets.add()
+        b.CopyFrom(
+            statistics_pb2.RankHistogram.Bucket(
+                low_rank=k, high_rank=k, label=val, sample_count=freq
+            )
+        )
+
+    return string_stats

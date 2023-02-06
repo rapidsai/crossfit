@@ -1,15 +1,11 @@
 import numpy as np
 
-from crossfit.metrics.base import CrossMetric, state
+from crossfit.metrics.base import CrossAxisMetric, state
 
 
-class Range(CrossMetric):
+class Range(CrossAxisMetric):
     min = state(init=0, combine=np.minimum)
     max = state(init=0, combine=np.maximum)
-
-    def __init__(self, axis, **kwargs):
-        self.axis = axis
-        self.setup(**kwargs)
 
     def prepare(self, array) -> "Range":
         return Range(

@@ -46,7 +46,7 @@ def test_dask_aggregation_grouped(df, npartitions=2):
         groupby=["a"],
     )
     test = aggregate(ddf, agg, to_frame=True)
-    assert test.at[(("a",), (1,), "b"), "range.min"] == 0
+    assert test.at[("a", 1, "b"), "range.min"] == 0
 
     # Complicated to_frame=True case
     agg1 = Aggregator(Range(axis=0), per_column=True, groupby=["a"])
@@ -54,5 +54,5 @@ def test_dask_aggregation_grouped(df, npartitions=2):
     agg3 = Aggregator(Mean(axis=0), per_column=True, post_group=lambda x: x[["b"]])
     agg = Aggregator({"range": agg1, "mean": agg2, "mean-all": agg3})
     test = aggregate(ddf, agg, to_frame=True)
-    assert test.at[(("a",), (2,), "b"), "Mean"] == 3000.0
-    assert test.at[(("a",), (2,), "b"), "Range.max"] == 4999.0
+    assert test.at[("a", 2, "b"), "Mean"] == 3000.0
+    assert test.at[("a", 2, "b"), "Range.max"] == 4999.0

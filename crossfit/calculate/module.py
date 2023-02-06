@@ -55,7 +55,7 @@ class CrossModule:
 
     def update_state(self, **kwargs):
         for name, state_field in self.field_dict().items():
-            if name in kwargs:
+            if name in kwargs and kwargs[name] is not None:
                 setattr(self, name, kwargs[name])
             else:
                 if state_field.default_factory is not MISSING:

@@ -87,6 +87,9 @@ class PandasDataFrame(ArrayBundle):
     def pivot(self, index=None, columns=None, values=None):
         return CrossFrame(self.data.pivot(index=index, columns=columns, values=values))
 
+    def set_index(self, index):
+        return CrossFrame(self.data.set_index(index))
+
 
 @CrossFrame.register_lazy("numpy")
 def register_numpy_backend():
