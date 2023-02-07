@@ -41,11 +41,27 @@ class FrameBackend:
         ignore_index: bool = False,
         axis: int = 0,
     ):
-        """concatenate a list of ``CrossFrame`` obects
+        """concatenate a list of ``CrossFrame`` objects
 
         Must return a new ``CrossFrame`` instance.
         """
-        return ArrayBundle(frames, ignore_index=ignore_index, axis=axis)
+        return ArrayBundle.concat(frames, ignore_index=ignore_index, axis=axis)
+
+    def aggregate(self, agg: Callable, to_frame=False, **kwargs):
+        """Apply an Aggregator
+
+        Return a dict of CrossMetric objects, or a frame-like
+        object (if ``to_frame=True``)
+        """
+        from crossfit.calculate.aggregate import Aggregator
+
+        if not isinstance(agg, Aggregator):
+            raise TypeError()
+
+        result = agg.prepare(self, **kwargs)
+        if to_frame:
+            return agg.present(result, to_frame=True)
+        return result
 
     # Abstract Methods
     # Sub-classes must define these methods
@@ -95,32 +111,8 @@ class FrameBackend:
         """
         raise NotImplementedError()
 
-    def apply(self, func: Callable, columns: list or None = None, **kwargs):
-        """Apply a function to all data
-
-        Must return a new ``CrossFrame`` instance.
-        """
-        raise NotImplementedError()
-
-    def groupby_apply(self, by: list, func: Callable, columns: list or None = None):
-        """Execute a groupby-apply operation
-
-        NOTE: This method is not yet used, but should be faster
-        than looping over the result of ``groupby_partition``
-
-        Must return a new ``CrossFrame`` instance.
-        """
-        raise NotImplementedError()
-
-    def pivot(self, index=None, columns=None, values=None):
-        """Return reshaped CrossFrame
-
-        Must return a new ``CrossFrame`` instance.
-        """
-        raise NotImplementedError()
-
-    def set_index(self, index):
-        """Set the index of the CrossFrame
+    def apply(self, func: Callable, **kwargs):
+        """Apply a function to all column independently
 
         Must return a new ``CrossFrame`` instance.
         """
@@ -204,24 +196,11 @@ class ArrayBundle(FrameBackend):
             raise ValueError(f"Invalid projection: {columns}")
         return CrossFrame({k: v for k, v in self.data.items() if k in columns})
 
-    def apply(self, func: Callable, columns: list or None = None, **kwargs):
+    def apply(self, func: Callable, **kwargs):
         with crossarray:
-            if columns is None:
-                columns = self.columns
-            return CrossFrame(
-                {k: func(v, **kwargs) for k, v in self.data.items() if k in columns}
-            )
-
-    def groupby_apply(self, by: list, func: Callable):
-        raise NotImplementedError()
+            return CrossFrame({k: func(v, **kwargs) for k, v in self.data.items()})
 
     def groupby_partition(self, by: list) -> dict:
-        raise NotImplementedError()
-
-    def pivot(self, index=None, columns=None, values=None):
-        raise NotImplementedError()
-
-    def set_index(self, index):
         raise NotImplementedError()
 
 

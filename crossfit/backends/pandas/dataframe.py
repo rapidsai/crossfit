@@ -71,11 +71,8 @@ class PandasDataFrame(ArrayBundle):
             raise ValueError(f"Invalid projection: {columns}")
         return CrossFrame(self.data[columns])
 
-    def groupby_apply(self, by: list, func: Callable):
-        grouped = self.data.groupby(by)
-        result = grouped.apply(func)
-        result.index = self._lib().Index(grouped.groups)
-        return CrossFrame(result)
+    def apply(self, func: Callable, **kwargs):
+        return CrossFrame(self.data.apply(func, **kwargs))
 
     def groupby_partition(self, by: list) -> dict:
         grouped = self.data.groupby(by)
@@ -83,12 +80,6 @@ class PandasDataFrame(ArrayBundle):
             slice_key: CrossFrame(grouped.obj.loc[slice])
             for slice_key, slice in dict(grouped.groups).items()
         }
-
-    def pivot(self, index=None, columns=None, values=None):
-        return CrossFrame(self.data.pivot(index=index, columns=columns, values=values))
-
-    def set_index(self, index):
-        return CrossFrame(self.data.set_index(index))
 
 
 @CrossFrame.register_lazy("numpy")
