@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from typing import Callable, List
 
-from crossfit.data.dataframe.core import FrameBackend, ArrayBundle
+from crossfit.data.array.conversion import convert_array
+from crossfit.data.dataframe.core import FrameBackend
 from crossfit.data.dataframe.dispatch import CrossFrame
 
 
-class PandasDataFrame(ArrayBundle):
+class PandasDataFrame(FrameBackend):
     @classmethod
     def _lib(cls):
         """Private method to return the backend library
@@ -23,17 +24,26 @@ class PandasDataFrame(ArrayBundle):
     def __len__(self):
         return len(self.data)
 
+    @property
+    def dtypes(self) -> dict:
+        return self.data.dtypes.to_dict()
+
     @classmethod
-    def concat(
-        cls,
-        frames: List[FrameBackend],
-        ignore_index: bool = False,
-        axis: int = 0,
-    ):
-        return CrossFrame(
+    def concat(cls, frames: List[FrameBackend], axis: int = 0):
+
+        # Validate frames
+        if not isinstance(frames, list):
+            raise TypeError(f"Expected list, got {type(frames)}")
+        if len(frames) == 0:
+            raise TypeError(f"Expected non-empty list, got {frames}")
+        for frame in frames:
+            if type(frame) != cls:
+                raise TypeError(f"All frames should be type {cls}, got {type(frame)}")
+
+        return cls(
             cls._lib().concat(
                 [frame.data for frame in frames],
-                ignore_index=ignore_index,
+                ignore_index=True if axis == 0 else False,
                 axis=axis,
             )
         )
@@ -41,13 +51,20 @@ class PandasDataFrame(ArrayBundle):
     @classmethod
     def from_dict(cls, data: dict):
         df = cls._lib().DataFrame()
+
+        def _ensure_ser(col):
+            typ = cls._lib().Series
+            if isinstance(col, typ):
+                return col
+            return convert_array(col, typ)
+
         for k, v in data.items():
             if hasattr(v, "shape"):
                 # Make sure scalars are reshaped
-                df[k] = v if v.shape else v.reshape((1,))
+                df[k] = _ensure_ser(v if v.shape else v.reshape((1,)))
             else:
-                df[k] = v
-        return CrossFrame(df)
+                df[k] = _ensure_ser(v)
+        return cls(df)
 
     def to_dict(self):
         # Clear index information
@@ -59,7 +76,7 @@ class PandasDataFrame(ArrayBundle):
         return list(self.data.columns)
 
     def assign(self, **kwargs):
-        return CrossFrame(self.data.assign(**kwargs))
+        return self.__class__(self.data.assign(**kwargs))
 
     def column(self, column: str | int):
         return self.data[column]
@@ -69,17 +86,19 @@ class PandasDataFrame(ArrayBundle):
             columns = [columns]  # Make sure we get a DataFrame
         if not set(columns).issubset(set(self.columns)):
             raise ValueError(f"Invalid projection: {columns}")
-        return CrossFrame(self.data[columns])
+        return self.__class__(self.data[columns])
 
-    def apply(self, func: Callable, **kwargs):
-        return CrossFrame(self.data.apply(func, **kwargs))
+    def apply(self, func: Callable, *args, **kwargs):
+        return self.__class__(self.data.apply(func, *args, **kwargs))
 
-    def groupby_partition(self, by: list) -> dict:
-        grouped = self.data.groupby(by)
-        return {
-            slice_key: CrossFrame(grouped.obj.loc[slice])
-            for slice_key, slice in dict(grouped.groups).items()
-        }
+    def take(self, indices, axis=0):
+        return self.__class__(self.data.take(indices, axis=axis))
+
+    def groupby_indices(self, by: list) -> dict:
+        if isinstance(by, (str, int, tuple)):
+            by = [by]
+        _df = self.data.set_index(self._lib().RangeIndex(len(self.data)))
+        return dict(_df.groupby(by).groups)
 
 
 @CrossFrame.register_lazy("numpy")

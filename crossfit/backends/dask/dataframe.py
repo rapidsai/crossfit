@@ -18,6 +18,10 @@ def register_dask_backend():
         def persist(self, **kwargs):
             return CrossFrame(self.data.persist(**kwargs))
 
+        @property
+        def dtypes(self) -> dict:
+            return self.data.dtypes.to_dict()
+
         @classmethod
         def concat(
             cls,
@@ -38,10 +42,10 @@ def register_dask_backend():
             raise NotImplementedError("Please avoid calling `len` on Dask-based data.")
 
         @classmethod
-        def from_dict(cls, *args, **kwargs):
+        def from_dict(cls, *args):
             raise NotImplementedError()
 
-        def to_dict(self, **kwargs):
+        def to_dict(self):
             raise NotImplementedError()
 
         @property
@@ -68,7 +72,20 @@ def register_dask_backend():
             return CrossFrame(self.data.map_partitions(_apply))
 
         def groupby_partition(self, *args, **kwargs):
-            raise NotImplementedError()
+            raise NotImplementedError(
+                "groupby_partition not implemented for DaskDataFrame"
+            )
+
+        def take(self, indices):
+            raise NotImplementedError("take not implemented for DaskDataFrame")
+
+        def groupby_indices(self, *args, **kwargs):
+            raise NotImplementedError(
+                "groupby_indices not implemented for DaskDataFrame"
+            )
+
+        def cast(self, *args):
+            raise NotImplementedError("cast not implemented for DaskDataFrame")
 
     @CrossFrame.register(dd.DataFrame)
     def _dask_frame(data):

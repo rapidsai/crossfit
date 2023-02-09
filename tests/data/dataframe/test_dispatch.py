@@ -18,8 +18,9 @@ def test_pandas_frame():
         "c": arr3,
     }
 
-    frame = CrossFrame(data)
+    frame = CrossFrame(data).cast()
     assert isinstance(frame, PandasDataFrame)
+    assert isinstance(CrossFrame(data).cast(backend=ArrayBundle), ArrayBundle)
 
     frame2 = frame.concat([frame, frame])
     frame3 = frame2.assign(d=np.zeros(20))
@@ -47,10 +48,20 @@ def test_array_bundle():
 
     # Projecting numpy-based columns will
     # produce a PandasDataFrame
-    assert isinstance(frame[["b", "c"]], PandasDataFrame)
+    assert isinstance(frame.project(["b", "c"]).cast(), PandasDataFrame)
+    assert isinstance(frame[["b", "c"]], ArrayBundle)
 
+    # Test CrossFrame.apply
     frame2 = frame.concat([frame, frame])
     frame3 = frame2.assign(d=np.zeros(20))
     frame4 = frame3[["a", "d"]].apply(lambda x: x + 1)
-
     np.all(frame3["b"] == frame4["d"])
+
+    # Test CrossFrame.groupby_partition.
+    # will work with ArrayBundle, as long as
+    # "grouped" columns can be promoted to
+    # Pandas or cuDF
+    partitions = frame3.groupby_partition("c")
+    np.all(partitions["dog"]["c"] == "dog")
+    np.all(partitions["cat"]["c"] == "cat")
+    np.all(partitions["dog"]["a"] > partitions["cat"]["a"])
