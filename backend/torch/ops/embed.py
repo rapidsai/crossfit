@@ -9,7 +9,7 @@ from cudf.core.subword_tokenizer import _cast_to_appropriate_type
 from tqdm import tqdm
 
 from crossfit.backend.cudf.series import create_list_series_from_2d_ar
-from crossfit.ops.base import Op
+from crossfit.op.base import Op
 
 
 class Embedder(Op):

@@ -4,7 +4,7 @@ import cudf
 from cudf.core.subword_tokenizer import SubwordTokenizer, _cast_to_appropriate_type
 from cudf.utils.hash_vocab_utils import hash_vocab
 from transformers import AutoTokenizer, AutoConfig
-from crossfit.ops.base import Op
+from crossfit.op.base import Op
 from crossfit.backend.cudf.series import create_list_series_from_2d_ar
 
 

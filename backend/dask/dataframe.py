@@ -31,7 +31,7 @@ def register_dask_backend():
             return CrossFrame(dd.DataFrame.concat(frames, ignore_index=ignore_index, axis=axis))
 
         def aggregate(self, agg, **kwargs):
-            from crossfit.backends.dask.aggregate import aggregate as dask_aggregate
+            from crossfit.backend.dask.aggregate import aggregate as dask_aggregate
 
             return dask_aggregate(self.data, agg, **kwargs)
 

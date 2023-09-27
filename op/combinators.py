@@ -1,4 +1,4 @@
-from crossfit.ops.base import Op
+from crossfit.op.base import Op
 
 
 class Sequential(Op):
