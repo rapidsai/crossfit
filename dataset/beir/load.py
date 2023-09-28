@@ -1,5 +1,7 @@
 import os
 
+import dask_cudf
+
 from crossfit.dataset.home import CF_HOME
 from crossfit.dataset.base import IRDataset
 from crossfit.dataset.beir.raw import download_raw
@@ -10,8 +12,6 @@ def load_dataset(
     out_dir=None,
     blocksize=2**30,
     overwrite=False,
-    # batch_size: int = 1024,
-    part_size="300MB",
 ) -> IRDataset:
     raw_path = download_raw(name, out_dir=out_dir, overwrite=False)
 
@@ -20,3 +20,72 @@ def load_dataset(
 
     if os.path.exists(processed_dir):
         return IRDataset.from_dir(processed_dir)
+
+    # Check if the output directory already exists
+    if os.path.exists(processed_dir):
+        if overwrite:
+            print("Processed directory {} already exists. Overwriting.".format(processed_dir))
+            shutil.rmtree(processed_dir)  # Remove the existing directory
+        else:
+            print(
+                "Processed directory {} already exists. Skipping processing.".format(processed_dir)
+            )
+
+            path = os.path.join(processed_dir, "qrels")
+
+    os.makedirs(processed_dir, exist_ok=True)
+
+    print("Converting queries...")
+    queries_dir = os.path.join(processed_dir, "queries")
+    queries_ddf = dask_cudf.read_json(
+        os.path.join(raw_path, "queries.jsonl"),
+        lines=True,
+        blocksize=blocksize,
+        dtype={"_id": "string", "text": "string"},
+    )[["_id", "text"]]
+    queries_ddf = queries_ddf.set_index("_id")
+    queries_ddf.to_parquet(queries_dir)
+
+    print("Converting corpus...")
+    corpus_dir = os.path.join(processed_dir, "corpus")
+    corpus_ddf = dask_cudf.read_json(
+        os.path.join(raw_path, "corpus.jsonl"),
+        lines=True,
+        blocksize=blocksize,
+        dtype={"_id": "string", "title": "string", "text": "string"},
+    )[["_id", "title", "text"]]
+    corpus_ddf = corpus_ddf.set_index("_id")
+    corpus_ddf.to_parquet(corpus_dir)
+
+    qrels_dir = os.path.join(processed_dir, "qrels")
+    qrels_files = [f for f in os.listdir(os.path.join(raw_path, "qrels")) if f.endswith(".tsv")]
+    qrels_dtypes = {"query-id": "str", "corpus-id": "str", "score": "int32"}
+    dataset_dirs = {"query": queries_dir, "item": corpus_dir}
+    name_mapping = {"train": "train", "dev": "val", "test": "test"}
+    for qrels_file in qrels_files:
+        print(f"Processing {qrels_file}...")
+        qrels_ddf = dask_cudf.read_csv(
+            os.path.join(raw_path, "qrels", qrels_file),
+            sep="\t",
+            dtype=qrels_dtypes,
+        )[["query-id", "corpus-id", "score"]]
+        qrels_ddf = (
+            qrels_ddf.merge(
+                queries_ddf,
+                left_on="query-id",
+                right_index=True,
+                how="left",
+            )
+            .rename(columns={"text": "query"})
+            .merge(
+                corpus_ddf,
+                left_on="corpus-id",
+                right_index=True,
+                how="left",
+            )
+        )[["query-id", "corpus-id", "title", "query", "text", "score"]]
+        qrels_path = os.path.join(qrels_dir, qrels_file.replace(".tsv", ""))
+        dataset_dirs[name_mapping[qrels_file.split(".")[0]]] = qrels_path
+        qrels_ddf.to_parquet(qrels_path)
+
+    return IRDataset.from_dir(qrels_dir)

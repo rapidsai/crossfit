@@ -85,7 +85,7 @@ class Embedder(Op):
                     pass  # Skip this batch
 
         out = cudf.DataFrame()
-        out["_id"] = sentences["_id"]
+        out.index = sentences.index
         all_embeddings = torch.vstack(all_embeddings_ls)
         embedding = cp.asarray(all_embeddings)
         out["embeddings"] = create_list_series_from_2d_ar(embedding, out.index)
@@ -95,7 +95,7 @@ class Embedder(Op):
         return out
 
     def meta(self):
-        return {"_id": "object", "embeddings": "float32"}
+        return {"embeddings": "float32"}
 
 
 def estimate_memory(cfg, max_num_tokens, batch_size):

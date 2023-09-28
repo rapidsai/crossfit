@@ -80,8 +80,12 @@ class IRDataset(MultiDataset):
 
     @property
     def query_ddf(self):
+        if not self.query_path:
+            raise ValueError("No query dataset found.")
         return dask_cudf.read_parquet(self.query_path)
 
     @property
     def item_ddf(self):
+        if not self.item_path:
+            raise ValueError("No item dataset found.")
         return dask_cudf.read_parquet(self.item_path)

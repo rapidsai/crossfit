@@ -52,8 +52,7 @@ class Tokenizer(Op):
 
     def call(self, data):
         output = cudf.DataFrame()
-        # output.index = data.index
-        output["_id"] = data["_id"]
+        output.index = data.index
 
         if self.cols is None:
             if not isinstance(data, cudf.Series):
@@ -85,7 +84,7 @@ class Tokenizer(Op):
                 for suffix, dtype in tokenized.items()
             }
 
-        return {"_id": "object", **tokenized}
+        return tokenized
 
     def _construct_name(self, col_name, suffix):
         if len(self.cols) == 1:
