@@ -1,4 +1,5 @@
 import os
+import shutil
 
 import dask_cudf
 
@@ -18,9 +19,6 @@ def load_dataset(
     out_dir = out_dir or CF_HOME
     processed_dir = os.path.join(out_dir, "processed", name)
 
-    if os.path.exists(processed_dir):
-        return IRDataset.from_dir(processed_dir)
-
     # Check if the output directory already exists
     if os.path.exists(processed_dir):
         if overwrite:
@@ -31,7 +29,7 @@ def load_dataset(
                 "Processed directory {} already exists. Skipping processing.".format(processed_dir)
             )
 
-            path = os.path.join(processed_dir, "qrels")
+            return IRDataset.from_dir(processed_dir)
 
     os.makedirs(processed_dir, exist_ok=True)
 
@@ -43,7 +41,8 @@ def load_dataset(
         blocksize=blocksize,
         dtype={"_id": "string", "text": "string"},
     )[["_id", "text"]]
-    queries_ddf = queries_ddf.set_index("_id")
+
+    # queries_ddf = queries_ddf.set_index("_id")
     queries_ddf.to_parquet(queries_dir)
 
     print("Converting corpus...")
@@ -54,7 +53,7 @@ def load_dataset(
         blocksize=blocksize,
         dtype={"_id": "string", "title": "string", "text": "string"},
     )[["_id", "title", "text"]]
-    corpus_ddf = corpus_ddf.set_index("_id")
+    # corpus_ddf = corpus_ddf.set_index("_id")
     corpus_ddf.to_parquet(corpus_dir)
 
     qrels_dir = os.path.join(processed_dir, "qrels")
@@ -73,14 +72,16 @@ def load_dataset(
             qrels_ddf.merge(
                 queries_ddf,
                 left_on="query-id",
-                right_index=True,
+                right_on="_id",
+                # right_index=True,
                 how="left",
             )
             .rename(columns={"text": "query"})
             .merge(
                 corpus_ddf,
                 left_on="corpus-id",
-                right_index=True,
+                right_on="_id",
+                # right_index=True,
                 how="left",
             )
         )[["query-id", "corpus-id", "title", "query", "text", "score"]]
@@ -88,4 +89,4 @@ def load_dataset(
         dataset_dirs[name_mapping[qrels_file.split(".")[0]]] = qrels_path
         qrels_ddf.to_parquet(qrels_path)
 
-    return IRDataset.from_dir(qrels_dir)
+    return IRDataset.from_dir(processed_dir)

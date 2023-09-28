@@ -43,4 +43,5 @@ def aggregate(
     result = Delayed(name, graph).compute(**(compute_kwargs or {}))
     if to_frame:
         return aggregator.present(result, to_frame=True)
+
     return result

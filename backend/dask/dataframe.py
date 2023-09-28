@@ -36,7 +36,8 @@ def register_dask_backend():
             return dask_aggregate(self.data, agg, **kwargs)
 
         def __len__(self):
-            raise NotImplementedError("Please avoid calling `len` on Dask-based data.")
+            return self.data.shape[0]
+            # raise NotImplementedError("Please avoid calling `len` on Dask-based data.")
 
         @classmethod
         def from_dict(cls, *args):
@@ -80,6 +81,9 @@ def register_dask_backend():
         def cast(self, *args):
             raise NotImplementedError("cast not implemented for DaskDataFrame")
 
+    from dask_cuda.proxy_object import ProxyObject
+
     @CrossFrame.register(dd.DataFrame)
+    @CrossFrame.register(ProxyObject)
     def _dask_frame(data):
         return DaskDataFrame(data)

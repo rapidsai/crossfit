@@ -17,7 +17,7 @@ def set_torch_to_use_rmm():
     torch.cuda.memory.change_current_allocator(rmm_torch_allocator)
 
 
-def setup_dask_cluster(rmm_pool_size="14GB", CUDA_VISIBLE_DEVICES="0,1"):
+def setup_dask_cluster(rmm_pool_size="14GB", CUDA_VISIBLE_DEVICES="0,1", jit_unspill=True):
     """
     This function sets up a dask cluster across n GPUs.
     It also ensures maximum memory efficiency for the GPU by:
@@ -38,7 +38,7 @@ def setup_dask_cluster(rmm_pool_size="14GB", CUDA_VISIBLE_DEVICES="0,1"):
         CUDA_VISIBLE_DEVICES=CUDA_VISIBLE_DEVICES,
         # log_spilling=True,
         # device_memory_limit=0.7,
-        jit_unspill=True,
+        jit_unspill=jit_unspill,
     )
     client = Client(cluster)
     client.run(set_torch_to_use_rmm)

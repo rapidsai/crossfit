@@ -2,7 +2,9 @@ import types
 from collections import defaultdict, namedtuple
 from functools import wraps
 
+import numpy as np
 from crossfit.data.dataframe.core import FrameBackend
+from crossfit.data.array.conversion import convert_array
 
 
 def pre_processing(func):
@@ -139,7 +141,8 @@ class Aggregator:
             keys = list(present_dict.keys())
 
             if isinstance(keys[0], str):
-                return pd.DataFrame(present_dict)
+                # return pd.DataFrame(present_dict)
+                return pd.DataFrame.from_dict(present_dict, orient="index").T
 
             groupings = {"&".join(k.grouping) if k.grouping else None for k in keys}
             columns = {k.column for k in keys}
@@ -225,6 +228,9 @@ def present_state_dict(state, key=None):
             result.update(present_state_dict(state[k], key=_k))
         else:
             result[_k] = state[k]
+
+    # TODO: Does this need to be here?
+    result = {k: convert_array(v, np.ndarray) for k, v in result.items()}
 
     return result
 

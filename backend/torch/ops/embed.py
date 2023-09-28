@@ -88,14 +88,15 @@ class Embedder(Op):
         out.index = sentences.index
         all_embeddings = torch.vstack(all_embeddings_ls)
         embedding = cp.asarray(all_embeddings)
-        out["embeddings"] = create_list_series_from_2d_ar(embedding, out.index)
+        out["_id"] = sentences.reset_index()["_id"]
+        out["embedding"] = create_list_series_from_2d_ar(embedding, out.index)
 
         gc.collect()
 
         return out
 
     def meta(self):
-        return {"embeddings": "float32"}
+        return {"_id": "object", "embedding": "float32"}
 
 
 def estimate_memory(cfg, max_num_tokens, batch_size):

@@ -9,9 +9,13 @@ from crossfit.data.dataframe.core import FrameBackend
 from crossfit.data.dataframe.dispatch import CrossFrame
 
 from crossfit.dataset.load import load_dataset
+from crossfit.dataset.base import MultiDataset, IRDataset
 
 from crossfit import op
 from crossfit.op import *  # noqa
+
+from crossfit import metric
+from crossfit.metric import *  # noqa
 
 
 __all__ = [
@@ -22,6 +26,9 @@ __all__ = [
     "convert_array",
     "FrameBackend",
     "load_dataset",
+    "MultiDataset",
+    "IRDataset",
     "op",
+    "metric",
     "setup_dask_cluster",
 ]
