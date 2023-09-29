@@ -1,3 +1,4 @@
+from crossfit import backend
 from crossfit.backend.dask.cluster import setup_dask_cluster
 
 from crossfit.calculate.aggregate import Aggregator
@@ -20,6 +21,7 @@ from crossfit.metric import *  # noqa
 
 __all__ = [
     "Aggregator",
+    "backend",
     "CrossModule",
     "CrossFrame",
     "crossarray",

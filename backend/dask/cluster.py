@@ -43,7 +43,8 @@ def setup_dask_cluster(rmm_pool_size="14GB", CUDA_VISIBLE_DEVICES="0,1", jit_uns
     client = Client(cluster)
     client.run(set_torch_to_use_rmm)
     client.run(increase_gc_threshold)
-    client.run(enable_spilling)
+    if jit_unspill:
+        client.run(enable_spilling)
 
     return client
 

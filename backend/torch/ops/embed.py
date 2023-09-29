@@ -36,21 +36,20 @@ class Embedder(Op):
 
     def call(self, data, partition_info=None):
         all_embeddings_ls = []
-        sentences = data
-        num_rows = len(sentences)
-        seq_len = len(sentences["input_ids"][sentences.index[0]])
+        num_rows = len(data)
+        seq_len = len(data["input_ids"][data.index[0]])
         tokenized_d = {
-            "input_ids": sentences["input_ids"].list.leaves.values.reshape(-1, seq_len),
-            "attention_mask": sentences["attention_mask"].list.leaves.values.reshape(-1, seq_len),
+            "input_ids": data["input_ids"].list.leaves.values.reshape(-1, seq_len),
+            "attention_mask": data["attention_mask"].list.leaves.values.reshape(-1, seq_len),
         }
 
-        del sentences["input_ids"]
-        del sentences["attention_mask"]
+        del data["input_ids"]
+        del data["attention_mask"]
 
         num_tokens = (tokenized_d["input_ids"] != 0).sum(axis=1)
-        sentences["num_tokens"] = num_tokens
-        sorted_indices = sentences["num_tokens"].argsort()
-        sentences = sentences.sort_values(by="num_tokens")
+        data["num_tokens"] = num_tokens
+        sorted_indices = data["num_tokens"].argsort()
+        data = data.sort_values(by="num_tokens")
         tokenized_d = {
             key: _cast_to_appropriate_type(val[sorted_indices], "pt")
             for key, val in tokenized_d.items()
@@ -65,7 +64,7 @@ class Embedder(Op):
         free_memory = int(self.max_mem.split("GB")[0])
         free_memory = free_memory / 2  # Add safety margin
 
-        _tokens = sentences["num_tokens"].reset_index(drop=True)
+        _tokens = data["num_tokens"].reset_index(drop=True)
         splits = find_optimal_splits(_tokens, self.batch_size, self.cfg, free_memory)
 
         current = 0
@@ -85,10 +84,9 @@ class Embedder(Op):
                     pass  # Skip this batch
 
         out = cudf.DataFrame()
-        out.index = sentences.index
+        out.index = data.index
         all_embeddings = torch.vstack(all_embeddings_ls)
         embedding = cp.asarray(all_embeddings)
-        out["_id"] = sentences.reset_index()["_id"]
         out["embedding"] = create_list_series_from_2d_ar(embedding, out.index)
 
         gc.collect()
@@ -96,7 +94,7 @@ class Embedder(Op):
         return out
 
     def meta(self):
-        return {"_id": "object", "embedding": "float32"}
+        return {"embedding": "float32"}
 
 
 def estimate_memory(cfg, max_num_tokens, batch_size):

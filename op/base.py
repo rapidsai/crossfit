@@ -6,13 +6,10 @@ import dask.dataframe as dd
 
 
 class Op:
-    def __init__(
-        self,
-        pre=None,
-        cols=False,
-    ):
+    def __init__(self, pre=None, cols=False, keep_cols=None):
         self.pre = pre
         self.cols = cols
+        self.keep_cols = keep_cols or []
         self.id = str(uuid.uuid4())
 
     def setup(self):
@@ -22,9 +19,12 @@ class Op:
         return None
 
     def setup_worker(self):
-        worker = get_worker() or self
+        try:
+            worker = get_worker()
+        except ValueError:
+            worker = self
 
-        self.worker_name = getattr(worker, "name", "local")
+        self.worker_name = getattr(worker, "name", 0)
         init_name = f"setup_done_{self.id}"
 
         if not hasattr(worker, init_name):
@@ -32,7 +32,15 @@ class Op:
             setattr(worker, init_name, True)
 
     def call_dask(self, data):
-        return data.map_partitions(self, meta=self.meta())
+        output = data.map_partitions(self, meta=self.meta())
+
+        columns = list(output.columns)
+        for col in self.keep_cols:
+            output[col] = data[col]
+
+        output = output[self.keep_cols + columns]
+
+        return output
 
     def __call__(self, data, partition_info=None):
         if isinstance(data, dd.DataFrame):

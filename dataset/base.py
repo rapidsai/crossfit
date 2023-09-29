@@ -1,8 +1,6 @@
 from typing import Optional, Union
 import os
-import functools as ft
 
-import cudf
 import dask_cudf
 from dataclasses import dataclass
 from cuml.dask.neighbors import NearestNeighbors
@@ -79,18 +77,16 @@ class IRData(Dataset):
 
         ddf = self.ddf()
 
-        grouped = (
-            ddf[["query-id", "corpus-id", "score"]]
-            .groupby("query-id")
+        observed = (
+            ddf[["query-index", "corpus-index", "score"]]
+            .groupby("query-index")
             .agg(list, split_out=ddf.npartitions, shuffle=True)
         )
 
-        predictions = predictions.set_index("query-id")
+        predictions = predictions.set_index("query-index")
         merged = predictions.merge(
-            grouped, left_index=True, right_index=True, how="left", suffixes=("-pred", "-obs")
+            observed, left_index=True, right_index=True, how="left", suffixes=("-pred", "-obs")
         )
-
-        # merged = predictions.join(grouped, lsuffix="-pred", rsuffix="-obs")
 
         return merged.reset_index()
 
@@ -120,17 +116,19 @@ class EmbeddingData(Dataset):
         _ddf = self.ddf() if data is None else data
         dim = len(_ddf.head()["embedding"].iloc[0])
 
-        def to_map(part):
+        def to_map(part, dim):
             df = cudf.DataFrame(
                 part["embedding"].list.leaves.values.reshape(-1, dim).astype("float32")
             )
-            df.index = part.index
 
             return df
 
         meta = {i: "float32" for i in range(int(dim))}
-        # meta["_id"] = "object"
-        return _ddf.map_partitions(to_map, meta=meta)
+        output = _ddf.map_partitions(to_map, dim=dim, meta=meta)
+
+        output.index = _ddf["index"]
+
+        return output
 
 
 class EmbeddingDatataset(FromDirMixin):
@@ -149,42 +147,3 @@ class EmbeddingDatataset(FromDirMixin):
             Dataset(predictions) if isinstance(predictions, str) else predictions
         )
         self.data = data
-
-    def item_knn(self, n_neighbors=50, client=None, **kwargs) -> NearestNeighbors:
-        knn = NearestNeighbors(n_neighbors=n_neighbors, client=client, **kwargs)
-        print("Building ANN-index for items...")
-        knn.fit(self.item.per_dim_ddf())
-
-        return knn
-
-    def query_kneighbors(self, knn_index=None, n_neighbors=50, client=None):
-        knn_index = knn_index or self.item_knn(n_neighbors=n_neighbors, client=client)
-
-        print("Querying ANN-index for queries...")
-        query_ddf = self.query.ddf()
-        distances, indices = knn_index.kneighbors(self.query.per_dim_ddf(query_ddf))
-
-        index = query_ddf.index
-        distances.index = index
-        indices.index = index
-
-        def join_map(part, num_cols):
-            distances = part.values[:, :num_cols].astype("float32")
-            indices = part.values[:, num_cols:].astype("int32")
-
-            df = cudf.DataFrame()
-            df.index = part.index
-            df["corpus-id"] = create_list_series_from_2d_ar(indices, df.index)
-            df["score"] = create_list_series_from_2d_ar(distances, df.index)
-
-            return df
-
-        joined = distances.join(indices, lsuffix="d", rsuffix="i")
-        joined = joined.map_partitions(
-            ft.partial(join_map, num_cols=len(distances.columns)),
-            meta={"corpus-id": "object", "score": "float32"},
-        )
-
-        joined["query-id"] = query_ddf["_id"]
-
-        return joined

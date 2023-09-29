@@ -1,6 +1,7 @@
 import os
 import shutil
 
+import cudf
 import dask_cudf
 
 from crossfit.dataset.home import CF_HOME
@@ -43,6 +44,7 @@ def load_dataset(
     )[["_id", "text"]]
 
     # queries_ddf = queries_ddf.set_index("_id")
+    queries_ddf = queries_ddf.reset_index()
     queries_ddf.to_parquet(queries_dir)
 
     print("Converting corpus...")
@@ -54,6 +56,7 @@ def load_dataset(
         dtype={"_id": "string", "title": "string", "text": "string"},
     )[["_id", "title", "text"]]
     # corpus_ddf = corpus_ddf.set_index("_id")
+    corpus_ddf = corpus_ddf.reset_index()
     corpus_ddf.to_parquet(corpus_dir)
 
     qrels_dir = os.path.join(processed_dir, "qrels")
@@ -76,7 +79,7 @@ def load_dataset(
                 # right_index=True,
                 how="left",
             )
-            .rename(columns={"text": "query"})
+            .rename(columns={"text": "query", "index": "query-index"})
             .merge(
                 corpus_ddf,
                 left_on="corpus-id",
@@ -84,7 +87,19 @@ def load_dataset(
                 # right_index=True,
                 how="left",
             )
-        )[["query-id", "corpus-id", "title", "query", "text", "score"]]
+            .rename(columns={"index": "corpus-index"})
+        )[
+            [
+                "query-id",
+                "corpus-id",
+                "query-index",
+                "corpus-index",
+                "title",
+                "query",
+                "text",
+                "score",
+            ]
+        ]
         qrels_path = os.path.join(qrels_dir, qrels_file.replace(".tsv", ""))
         dataset_dirs[name_mapping[qrels_file.split(".")[0]]] = qrels_path
         qrels_ddf.to_parquet(qrels_path)

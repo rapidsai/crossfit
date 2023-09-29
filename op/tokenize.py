@@ -52,7 +52,8 @@ class Tokenizer(Op):
 
     def call(self, data):
         output = cudf.DataFrame()
-        output.index = data.index
+        # output["index"] = data["index"]
+        # output["_id"] = data["_id"]
 
         if self.cols is None:
             if not isinstance(data, cudf.Series):
@@ -75,7 +76,12 @@ class Tokenizer(Op):
         return output
 
     def meta(self):
-        tokenized = {"input_ids": "int32", "attention_mask": "int32"}
+        tokenized = {
+            # "index": "int64",
+            # "_id": "object",
+            "input_ids": "int32",
+            "attention_mask": "int32",
+        }
 
         if len(self.cols) > 1:
             tokenized = {
