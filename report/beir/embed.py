@@ -64,7 +64,7 @@ def embed(
     return output
 
 
-def item_knn(items, n_neighbors=50, client=None, **kwargs) -> NearestNeighbors:
+def item_knn(items, n_neighbors=100, client=None, **kwargs) -> NearestNeighbors:
     knn = NearestNeighbors(n_neighbors=n_neighbors, client=client, **kwargs)
     print("Building ANN-index for items...")
 
