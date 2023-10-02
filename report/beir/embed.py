@@ -7,7 +7,7 @@ import cudf
 
 from crossfit.backend.cudf.series import create_list_series_from_2d_ar
 from crossfit.dataset.home import CF_HOME
-from crossfit.dataset.base import IRDataset, EmbeddingDatataset, IRData, Dataset
+from crossfit.dataset.base import IRDataset, EmbeddingDatataset, Dataset
 from crossfit.dataset.load import load_dataset
 from crossfit import op
 
@@ -36,12 +36,12 @@ def embed(
 
     dfs = []
     for dtype in ["query", "item"]:
-        print(f"Embedding {dataset_name} {dtype}...")
         df = getattr(dataset, dtype).ddf()
-
         partitions = max(int(len(df) / partition_num), 1)
         if not partitions % 2 == 0:
             partitions += 1
+
+        print(f"Embedding {dataset_name} {dtype} ({partitions} parts)...")
 
         pipe = op.Sequential(
             op.Tokenizer(model_name, cols=["text"]),
@@ -67,7 +67,10 @@ def embed(
 def item_knn(items, n_neighbors=50, client=None, **kwargs) -> NearestNeighbors:
     knn = NearestNeighbors(n_neighbors=n_neighbors, client=client, **kwargs)
     print("Building ANN-index for items...")
-    knn.fit(items.per_dim_ddf())
+
+    item_ddf = items.ddf()
+    item_ddf_per_dim = per_dim_ddf(item_ddf.set_index("index"))
+    knn.fit(item_ddf_per_dim)
 
     return knn
 
@@ -77,15 +80,21 @@ def query_kneighbors(embeddings, knn_index=None, n_neighbors=50, client=None):
 
     print("Querying ANN-index for queries...")
     query_ddf = embeddings.query.ddf()
-    distances, indices = knn_index.kneighbors(embeddings.query.per_dim_ddf(query_ddf))
+    _query_ddf = query_ddf.set_index("index")
+    query_ddf_per_dim = per_dim_ddf(_query_ddf)
 
-    index = query_ddf["index"]
-    distances.index = index
-    indices.index = index
+    distances, indices = knn_index.kneighbors(query_ddf_per_dim)
 
-    def join_map(part, num_cols):
-        distances = part.values[:, :num_cols].astype("float32")
-        indices = part.values[:, num_cols:].astype("int32")
+    distances.index = _query_ddf.index
+    indices.index = _query_ddf.index
+
+    df = distances
+    for i in range(len(indices.columns)):
+        df[f"i_{i}"] = indices[i]
+
+    def join_map(part, n_neighbors: int):
+        distances = part.values[:, :n_neighbors].astype("float32")
+        indices = part.values[:, n_neighbors:].astype("int32")
 
         df = cudf.DataFrame()
         df.index = part.index
@@ -94,35 +103,26 @@ def query_kneighbors(embeddings, knn_index=None, n_neighbors=50, client=None):
 
         return df
 
-    joined = distances.join(indices, lsuffix="d", rsuffix="i")
-    joined = joined.map_partitions(
-        ft.partial(join_map, num_cols=len(distances.columns)),
+    output = df.map_partitions(
+        ft.partial(join_map, n_neighbors=n_neighbors),
         meta={"corpus-index": "object", "score": "float32"},
     )
 
-    joined["query-id"] = query_ddf["_id"]
-    joined["query-index"] = index
+    output["query-id"] = _query_ddf["_id"]
+    output["query-index"] = _query_ddf.index
 
-    return joined
+    return output
 
 
-def evaluate(
-    dataset_name: str,
-    model_name: str,
-    partition_num: int = 50_000,
-    split="test",
-    overwrite=False,
-    out_dir=None,
-    client=None,
-):
-    embeddings = embed(
-        dataset_name,
-        model_name=model_name,
-        partition_num=partition_num,
-        overwrite=overwrite,
-        out_dir=out_dir,
-        client=client,
-    )
+def per_dim_ddf(data):
+    dim = len(data.head()["embedding"].iloc[0])
 
-    data: IRData = getattr(embeddings.data, split)
-    joined = data.join_predictions(embeddings.predictions)
+    def to_map(part, dim):
+        df = cudf.DataFrame(part["embedding"].list.leaves.values.reshape(-1, dim).astype("float32"))
+
+        return df
+
+    meta = {i: "float32" for i in range(int(dim))}
+    output = data.map_partitions(to_map, dim=dim, meta=meta)
+
+    return output

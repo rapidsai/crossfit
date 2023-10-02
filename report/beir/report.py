@@ -4,11 +4,11 @@ import math
 import cudf
 import cupy as cp
 from numba import cuda
-import dask
+import dask_cudf
 from cuml.preprocessing import LabelEncoder
 
-from crossfit.data.dataframe.dispatch import CrossFrame
-from crossfit.dataset.base import EmbeddingDatataset, IRData
+from crossfit.backend.dask.aggregate import aggregate
+from crossfit.dataset.base import EmbeddingDatataset
 from crossfit.report.beir.embed import embed
 from crossfit.calculate.aggregate import Aggregator
 from crossfit.metric.continuous.mean import Mean
@@ -164,16 +164,44 @@ class BeirMetricAggregator(Aggregator):
         return sparse_matrix
 
 
+def join_predictions(data, predictions):
+    print("Joining predictions...")
+
+    if hasattr(predictions, "ddf"):
+        predictions = predictions.ddf()
+
+    if hasattr(predictions, "ddf"):
+        data = data.ddf()
+
+    observed = (
+        data[["query-index", "corpus-index", "score", "split"]]
+        .groupby("query-index")
+        .agg(
+            {"corpus-index": list, "score": list, "split": "first"},
+            split_out=data.npartitions,
+            shuffle=True,
+        )
+    )
+
+    predictions = predictions.set_index("query-index")
+    merged = observed.merge(
+        predictions, left_index=True, right_index=True, how="left", suffixes=("-obs", "-pred")
+    ).rename(columns={"split-obs": "split"})
+
+    output = merged.reset_index()
+
+    return output
+
+
 def beir_report(
     dataset_name: str,
     model_name: str,
     partition_num: int = 50_000,
     ks=[1, 3, 5, 10],
-    split="test",
     overwrite=False,
     out_dir=None,
     client=None,
-    groupby=None,
+    groupby=["split"],
 ):
     embeddings: EmbeddingDatataset = embed(
         dataset_name,
@@ -185,15 +213,30 @@ def beir_report(
         dense_search=True,
     )
 
-    if not hasattr(embeddings.data, split):
-        raise ValueError(f"Dataset {dataset_name} does not have split {split}")
+    observations = []
+    for split in ["train", "val", "test"]:
+        split_data = getattr(embeddings.data, split)
 
-    data: IRData = getattr(embeddings.data, split)
-    joined = data.join_predictions(embeddings.predictions).repartition(10)
+        if split_data is None:
+            continue
 
-    results = joined.compute()
+        ddf = split_data.ddf()
+        ddf["split"] = split
 
-    # aggregator = BeirMetricAggregator(ks)
-    # results = CrossFrame(joined).aggregate(aggregator, to_frame=True)
+        observations.append(ddf)
+
+    data = dask_cudf.concat(observations)
+    joined = join_predictions(data, embeddings.predictions)
+
+    # partitions = max(int(len(joined) / partition_num / 10), 1)
+    # if not partitions % 2 == 0:
+    #     partitions += 1
+
+    joined = joined.repartition(20)
+
+    aggregator = BeirMetricAggregator(ks)
+    aggregator = Aggregator(aggregator, groupby=groupby, name="")
+
+    results = aggregate(joined, aggregator, to_frame=True)
 
     return results

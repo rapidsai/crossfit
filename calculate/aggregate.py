@@ -39,9 +39,11 @@ class Aggregator:
         groupby=None,
         per_column=False,
         axis=0,
+        name=None,
     ):
         if aggs and not isinstance(aggs, dict):
-            aggs = {type(aggs).__name__: aggs}
+            name = name if name is not None else type(aggs).__name__
+            aggs = {name: aggs}
         self.aggs = aggs
         self.pre = pre
         self.post_group = post_group
@@ -167,7 +169,13 @@ class Aggregator:
                     else:
                         new[(grouping, group, k.column)].update({k.name: v})
                 index = pd.MultiIndex.from_tuples(new.keys(), names=("grouping", "group", "column"))
-                return pd.DataFrame.from_records(list(new.values()), index=index)
+                output = pd.DataFrame.from_records(list(new.values()), index=index)
+
+                if columns == {None}:
+                    output.index = output.index.droplevel("column")
+
+                return output
+
             elif columns:
                 new = defaultdict(dict)
                 for k, v in present_dict.items():
@@ -209,10 +217,19 @@ def present_state_dict(state, key=None):
         if isinstance(k, MetricKey) or key is None:
             _k = k
         else:
+            # TODO: Why is this needed?
+            if not isinstance(key, MetricKey) and isinstance(key, tuple):
+                key = MetricKey(*key)
             assert isinstance(key, MetricKey)
             assert isinstance(k, str)
+
+            if key.name:
+                name = key.name + "." + k
+            else:
+                name = k
+
             _k = metric_key(
-                key.name + "." + k,
+                name,
                 column=key.column,
                 grouping=key.grouping,
                 group=key.group,
@@ -230,7 +247,7 @@ def present_state_dict(state, key=None):
             result[_k] = state[k]
 
     # TODO: Does this need to be here?
-    result = {k: convert_array(v, np.ndarray) for k, v in result.items()}
+    # result = {k: convert_array(v, np.ndarray) for k, v in result.items()}
 
     return result
 
