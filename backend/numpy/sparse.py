@@ -21,6 +21,10 @@ class NPSparseMatrixBackend(SparseMatrixBackend):
         super().__init__(idx_ptr.copy(), col_idx.copy(), data.copy(), shape)
 
     @classmethod
+    def supports(cls):
+        return [list, np.ndarray, sp.csr_matrix, sp.coo_matrix]
+
+    @classmethod
     def from_values(cls, data, keep_zeros=False):
         if isinstance(data, list):
             if len(data) == 0 or np.ndim(data[0]) == 0:

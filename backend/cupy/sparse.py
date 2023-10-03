@@ -20,6 +20,12 @@ class CPSparseMatrixBackend(SparseMatrixBackend):
         super().__init__(idx_ptr.copy(), col_idx.copy(), data.copy(), shape)
 
     @classmethod
+    def supports(cls):
+        import cupyx.scipy.sparse as sp
+
+        return [cp.ndarray, sp.csr_matrix, sp.coo_matrix]
+
+    @classmethod
     def from_values(cls, data, keep_zeros=False):
         if isinstance(data, list):
             if len(data) == 0 or cp.ndim(data[0]) == 0:
@@ -160,11 +166,21 @@ class CPSparseMatrixBackend(SparseMatrixBackend):
         return self.todense_masked((self.shape[0], k))
 
     def getnnz(self, axis=None):
-        return self.tocsr().getnnz(axis=axis)
+        csr_mat = self.tocsr()
+
+        if axis is None:
+            return csr_mat.getnnz()
+        elif axis == 0:
+            # Count non-zero elements along axis 0 (columns)
+            return cp.diff(csr_mat.indptr).sum(axis=axis)
+        elif axis == 1:
+            # Count non-zero elements along axis 1 (rows)
+            return cp.diff(csr_mat.indptr)
+        else:
+            raise ValueError("Invalid axis, expected None, 0 or 1")
 
 
 @CrossSparse.register(cp.ndarray)
-@CrossSparse.register(list)
 def _cupy_sparse(data):
     return CPSparseMatrixBackend
 

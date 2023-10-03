@@ -8,10 +8,11 @@ from crossfit.data.array.dispatch import crossarray
 
 class Labels:
     def __init__(self, labels):
-        if self.binary:
-            with crossarray:
-                if not np.all(np.isin(labels.data, [0, 1])):
-                    raise ValueError("Matrix may only contain 0 and 1 entries.")
+        # if self.binary:
+        #     with crossarray:
+        #         if not np.all(np.isin(labels.data, [0, 1])):
+        #             raise ValueError("Matrix may only contain 0 and 1 entries.")
+
         # nonfinite_entries = ~np.isfinite(matrix.data)
         # if np.any(nonfinite_entries):
         #     raise ValueError("Input contains NaN or Inf entries")
@@ -40,18 +41,6 @@ class Labels:
     @property
     def labels(self) -> SparseMatrixProtocol:
         return self._labels
-
-
-class InvalidValuesWarning(UserWarning):
-    pass
-
-
-class BinaryLabels(Labels):
-    """
-    Represents binary ground truth data (e.g., 1 indicating relevance).
-    """
-
-    binary = True
 
     @classmethod
     def from_positive_indices(cls, indices):
@@ -104,8 +93,8 @@ class BinaryLabels(Labels):
         return self._labels.tolil()
 
     def get_n_positives(self, n_rankings):
-        n_label_rows = self._labels.shape[0]
-        n_pos = self._labels.getnnz(axis=1)
+        n_label_rows = self.labels.shape[0]
+        n_pos = self.labels.getnnz(axis=1)
         if n_label_rows == 1:
             with crossarray:
                 n_pos = np.tile(n_pos, n_rankings)
@@ -114,6 +103,18 @@ class BinaryLabels(Labels):
 
     def __str__(self):
         return str(self.indices_to_list())
+
+
+class InvalidValuesWarning(UserWarning):
+    pass
+
+
+class BinaryLabels(Labels):
+    """
+    Represents binary ground truth data (e.g., 1 indicating relevance).
+    """
+
+    binary = True
 
 
 class NumericLabels(BinaryLabels):

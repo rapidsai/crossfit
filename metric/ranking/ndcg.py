@@ -2,6 +2,7 @@ import numpy as np
 
 from crossfit.metric.ranking.base import RankingMetric, Labels, Rankings
 from crossfit.data.array.masked import MaskedArray
+from crossfit.data.array.conversion import convert_array
 
 
 class DCG(RankingMetric):
@@ -58,6 +59,7 @@ class DCG(RankingMetric):
         n_pos = y_true.get_n_positives(y_pred_labels.shape[0])
         labels = y_pred_labels[:, : self._k].filled(0)
         ranks = np.arange(1, labels.shape[1] + 1, dtype=float).reshape(1, -1)
+        ranks = convert_array(ranks, type(y_pred_labels.data))
 
         scores = np.sum(self._rel_scale(labels) / self._log_fct(ranks + 1), axis=-1)
         scores[n_pos == 0] = np.NaN
