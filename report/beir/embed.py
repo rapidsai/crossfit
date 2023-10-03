@@ -21,11 +21,15 @@ def embed(
     out_dir=None,
     dense_search=True,
     client=None,
+    tiny_sample=False,
 ) -> EmbeddingDatataset:
-    dataset: IRDataset = load_dataset("beir/" + dataset_name, overwrite=overwrite)
+    dataset: IRDataset = load_dataset(
+        "beir/" + dataset_name, overwrite=overwrite, tiny_sample=tiny_sample
+    )
 
     out_dir = out_dir or CF_HOME
-    emb_dir = os.path.join(out_dir, "processed", "beir", dataset_name, "emb", model_name)
+    processed_name = "processed-test" if tiny_sample else "processed"
+    emb_dir = os.path.join(out_dir, processed_name, "beir", dataset_name, "emb", model_name)
 
     if os.path.exists(os.path.join(emb_dir, "predictions")):
         if overwrite:
