@@ -2,7 +2,7 @@ import numpy as np
 
 from crossfit.data.array.masked import MaskedArray
 from crossfit.metric.continuous.mean import Mean
-from crossfit.data.sparse.ranking import BinaryLabels, Labels, Rankings
+from crossfit.data.sparse.ranking import SparseBinaryLabels, SparseLabels, SparseRankings
 
 
 class RankingMetric(Mean):
@@ -11,7 +11,7 @@ class RankingMetric(Mean):
     ):
         ...
 
-    def score(self, y_true: Labels, y_pred: Rankings):
+    def score(self, y_true: SparseLabels, y_pred: SparseRankings):
         """
         Individual scores for each ranking.
 
@@ -34,9 +34,9 @@ class RankingMetric(Mean):
         ValueError
                 if `n_bootstrap_samples`, `confidence` or `nan_handling` contain invalid values.
         """
-        if not isinstance(y_true, Labels):
+        if not isinstance(y_true, SparseLabels):
             raise TypeError("y_true must be of type Labels")
-        if not isinstance(y_pred, Rankings):
+        if not isinstance(y_pred, SparseRankings):
             raise TypeError("y_pred must be of type Rankings")
 
         y_pred_labels = y_true.get_labels_for(y_pred, self._k)
@@ -151,8 +151,8 @@ class BinaryRankingMetric(RankingMetric):
             raise ValueError("Cutoff k needs to be integer > 0")
         self._k = k
 
-    def score(self, y_true: BinaryLabels, y_pred: MaskedArray):
-        if not isinstance(y_true, BinaryLabels):
+    def score(self, y_true: SparseBinaryLabels, y_pred: MaskedArray):
+        if not isinstance(y_true, SparseBinaryLabels):
             raise TypeError(
                 f"y_true must be of type BinaryLabels but is of instance {type(y_true)}"
             )

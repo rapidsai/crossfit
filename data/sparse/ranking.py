@@ -6,7 +6,7 @@ from crossfit.data.sparse.dispatch import CrossSparse, SparseMatrixProtocol
 from crossfit.data.array.dispatch import crossarray
 
 
-class Labels:
+class SparseLabels:
     def __init__(self, labels):
         # if self.binary:
         #     with crossarray:
@@ -20,7 +20,7 @@ class Labels:
 
         self._labels: SparseMatrixProtocol = labels
 
-    def get_labels_for(self, ranking: "Rankings", k=None) -> MaskedArray:
+    def get_labels_for(self, ranking: "SparseRankings", k=None) -> MaskedArray:
         n_label_rows = self._labels.shape[0]
         n_ranking_rows = len(ranking)
 
@@ -36,7 +36,7 @@ class Labels:
         return MaskedArray(retrieved, indices.mask)
 
     def as_rankings(self):
-        return Rankings.from_scores(self._labels.tocsr(copy=True), warn_empty=False)
+        return SparseRankings.from_scores(self._labels.tocsr(copy=True), warn_empty=False)
 
     @property
     def labels(self) -> SparseMatrixProtocol:
@@ -101,6 +101,21 @@ class Labels:
 
         return n_pos
 
+    def to_pytrec_qrel(self):
+        sparse_matrix = self.labels.tocsr()
+
+        qrel = {}
+        for i in range(self.labels.shape[0]):
+            query_id = f"q{i+1}"
+            qrel[query_id] = {}
+
+            row = sparse_matrix[i]
+            for j, score in zip(row.indices, row.data):
+                doc_id = f"d{j+1}"
+                qrel[query_id][doc_id] = int(score)
+
+        return qrel
+
     def __str__(self):
         return str(self.indices_to_list())
 
@@ -109,7 +124,7 @@ class InvalidValuesWarning(UserWarning):
     pass
 
 
-class BinaryLabels(Labels):
+class SparseBinaryLabels(SparseLabels):
     """
     Represents binary ground truth data (e.g., 1 indicating relevance).
     """
@@ -117,7 +132,7 @@ class BinaryLabels(Labels):
     binary = True
 
 
-class NumericLabels(BinaryLabels):
+class SparseNumericLabels(SparseBinaryLabels):
     """
     Represents numeric ground truth data (e.g., relevance labels from 1-5).
     """
@@ -125,7 +140,7 @@ class NumericLabels(BinaryLabels):
     binary = False
 
 
-class Rankings:
+class SparseRankings:
     """
     Represents (predicted) rankings to be evaluated.
     """
@@ -219,8 +234,23 @@ class Rankings:
     def to_list(self):
         return self.indices.tolil()
 
+    def to_pytrec_run(self):
+        run = {}
 
-class DenseRankings(Rankings):
+        sparse_matrix = self.indices.tocsr()
+        for i in range(sparse_matrix.shape[0]):
+            query_id = f"q{i+1}"
+            run[query_id] = {}
+
+            row = sparse_matrix[i]
+            for j, score in zip(row.indices, row.data):
+                doc_id = f"d{j+1}"
+                run[query_id][doc_id] = float(score)
+
+        return run
+
+
+class DenseRankings(SparseRankings):
     """
     Data structure where rankings have the same length (approximately).
     """

@@ -1,13 +1,13 @@
 import numpy as np
 
-from crossfit.metric.ranking.base import BinaryLabels
+from crossfit.metric.ranking.base import SparseBinaryLabels
 from crossfit.metric.ranking.precision import Precision
 from crossfit.metric.ranking.recall import Recall
 from crossfit.data.array.masked import MaskedArray
 
 
 class F1(Precision, Recall):
-    def score(self, y_true: BinaryLabels, y_pred_labels: MaskedArray):
+    def score(self, y_true: SparseBinaryLabels, y_pred_labels: MaskedArray):
         r"""
         Computes F1 [MN]_ as harmonic mean of Precision@k and Recall@k.
         More formally, the F1 score of each ranking *y* in `y_pred` is defined as

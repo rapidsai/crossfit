@@ -14,7 +14,7 @@ from crossfit.dataset.base import EmbeddingDatataset
 from crossfit.report.beir.embed import embed
 from crossfit.calculate.aggregate import Aggregator
 from crossfit.metric.continuous.mean import Mean
-from crossfit.metric.ranking import NDCG, Precision, Recall, BinaryLabels, Rankings
+from crossfit.metric.ranking import NDCG, Precision, Recall, SparseBinaryLabels, SparseRankings
 
 
 class BeirMetricAggregator(Aggregator):
@@ -38,8 +38,8 @@ class BeirMetricAggregator(Aggregator):
         pred_csr = self.create_csr_matrix(df["corpus-index-pred"], df["score-pred"], encoder)
 
         # TODO: Fix dispatch
-        labels = BinaryLabels(CrossSparse.from_matrix(obs_csr))
-        rankings = Rankings(CrossSparse.from_matrix(pred_csr))
+        labels = SparseBinaryLabels(CrossSparse.from_matrix(obs_csr))
+        rankings = SparseRankings(CrossSparse.from_matrix(pred_csr))
 
         outputs = {}
         with crossarray:
@@ -187,12 +187,6 @@ def beir_report(
 
     data = dask_cudf.concat(observations)
     joined = join_predictions(data, embeddings.predictions)
-
-    # partitions = max(int(len(joined) / partition_num / 10), 1)
-    # if not partitions % 2 == 0:
-    #     partitions += 1
-
-    # joined = joined.repartition(20)
 
     aggregator = BeirMetricAggregator(ks)
     aggregator = Aggregator(aggregator, groupby=groupby, name="")

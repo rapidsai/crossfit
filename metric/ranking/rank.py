@@ -1,6 +1,6 @@
 import numpy as np
 
-from crossfit.metric.ranking.base import BinaryRankingMetric, BinaryLabels
+from crossfit.metric.ranking.base import BinaryRankingMetric, SparseBinaryLabels
 from crossfit.data.array.masked import MaskedArray
 
 
@@ -17,7 +17,7 @@ class ReciprocalRank(BinaryRankingMetric):
             if `k` is not integer > 0.
     """
 
-    def _score(self, y_true: BinaryLabels, y_pred_labels: MaskedArray):
+    def _score(self, y_true: SparseBinaryLabels, y_pred_labels: MaskedArray):
         n_pos = y_true.get_n_positives(y_pred_labels.shape[0])
         labels = y_pred_labels[:, : self._k].filled(0)
         ranks = np.arange(1, labels.shape[1] + 1, dtype=float).reshape(1, -1)
@@ -94,7 +94,7 @@ class MeanRanks(BinaryRankingMetric):
     def __init__(self):
         self._k = None
 
-    def _score(self, y_true: BinaryLabels, y_pred_labels: MaskedArray):
+    def _score(self, y_true: SparseBinaryLabels, y_pred_labels: MaskedArray):
         n_pos = y_true.get_n_positives(y_pred_labels.shape[0])
         labels = y_pred_labels.filled(0)
         ranks = np.arange(1, labels.shape[1] + 1, dtype=float).reshape(1, -1)
@@ -165,7 +165,7 @@ class FirstRelevantRank(BinaryRankingMetric):
     def __init__(self):
         self._k = None
 
-    def _score(self, y_true: BinaryLabels, y_pred_labels: MaskedArray):
+    def _score(self, y_true: SparseBinaryLabels, y_pred_labels: MaskedArray):
         n_pos = y_true.get_n_positives(y_pred_labels.shape[0])
         labels = y_pred_labels.filled(0)
         ranks = np.arange(1, labels.shape[1] + 1, dtype=float).reshape(1, -1)

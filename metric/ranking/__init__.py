@@ -4,7 +4,12 @@ from crossfit.metric.ranking.ndcg import DCG, NDCG
 from crossfit.metric.ranking.precision import Precision, AP
 from crossfit.metric.ranking.rank import FirstRelevantRank, MeanRanks, ReciprocalRank
 from crossfit.metric.ranking.recall import Recall
-from crossfit.data.sparse.ranking import Labels, BinaryLabels, NumericLabels, Rankings
+from crossfit.data.sparse.ranking import (
+    SparseLabels,
+    SparseBinaryLabels,
+    SparseNumericLabels,
+    SparseRankings,
+)
 
 
 __all__ = [
@@ -18,8 +23,8 @@ __all__ = [
     "Precision",
     "ReciprocalRank",
     "Recall",
-    "Labels",
-    "BinaryLabels",
-    "NumericLabels",
-    "Rankings",
+    "SparseLabels",
+    "SparseBinaryLabels",
+    "SparseNumericLabels",
+    "SparseRankings",
 ]
