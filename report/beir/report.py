@@ -1,4 +1,5 @@
 from typing import List
+from crossfit.report.base import Report
 
 import cudf
 import cupy as cp
@@ -25,6 +26,7 @@ class BeirMetricAggregator(Aggregator):
         post=None,
         groupby=None,
         metrics=[NDCG, Precision, Recall],
+        # metrics=[Precision],
     ):
         super().__init__(None, pre=pre, post_group=post_group, post=post, groupby=groupby)
         self.ks = ks
@@ -113,6 +115,44 @@ def join_predictions(data, predictions):
     return output
 
 
+class BeirReport(Report):
+    def __init__(self, result_df):
+        self.result_df = result_df
+
+    def visualize(self, name="data"):
+        raise NotImplementedError()
+
+    def console(self):
+        from rich.console import Console
+        from rich.table import Table
+
+        console = Console()
+
+        console.print(self.result_df)
+
+        for i in range(len(self.result_df)):
+            console.rule(f": ".join(self.result_df.index[i]))
+            grouped_columns = {}
+            for col in self.result_df.columns:
+                metric_type = col.split("@")[0] if "@" in col else col
+                grouped_columns.setdefault(metric_type, []).append(col)
+
+            # Sort the @k values within each group
+            for metric, columns in grouped_columns.items():
+                grouped_columns[metric] = sorted(columns, key=lambda x: int(x.split("@")[-1]))
+
+            # Print table for each metric type
+            for metric, columns in grouped_columns.items():
+                table = Table(show_header=True, header_style="bold magenta")
+                for column_name in columns:
+                    table.add_column(column_name)
+
+                row_data = self.result_df.iloc[i][columns]
+                table.add_row(*[str(row_data[col]) for col in columns])
+
+                console.print(table)
+
+
 def beir_report(
     dataset_name: str,
     model_name: str,
@@ -122,7 +162,7 @@ def beir_report(
     out_dir=None,
     client=None,
     groupby=["split"],
-):
+) -> BeirReport:
     embeddings: EmbeddingDatataset = embed(
         dataset_name,
         model_name=model_name,
@@ -159,4 +199,4 @@ def beir_report(
 
     results = aggregate(joined, aggregator, to_frame=True)
 
-    return results
+    return BeirReport(results)
