@@ -1,12 +1,9 @@
 import os
 import shutil
 
-import cudf
-import dask_cudf
-
 from crossfit.dataset.home import CF_HOME
 from crossfit.dataset.base import IRDataset
-from crossfit.dataset.beir.raw import download_raw
+from crossfit.dataset.beir.raw import download_raw, sample_raw
 
 
 def load_dataset(
@@ -17,8 +14,28 @@ def load_dataset(
 ) -> IRDataset:
     raw_path = download_raw(name, out_dir=out_dir, overwrite=False)
 
+    return _process_data(name, raw_path, blocksize=blocksize, overwrite=overwrite, out_dir=out_dir)
+
+
+def load_test_dataset(
+    name,
+    out_dir=None,
+    blocksize=2**30,
+    overwrite=False,
+) -> IRDataset:
+    raw_path = sample_raw(name, out_dir=out_dir, overwrite=False)
+
+    return _process_data(
+        name, raw_path, blocksize=blocksize, overwrite=overwrite, out_dir=out_dir, is_test=True
+    )
+
+
+def _process_data(name, raw_path, blocksize=2**30, overwrite=False, out_dir=None, is_test=False):
+    import dask_cudf
+
     out_dir = out_dir or CF_HOME
-    processed_dir = os.path.join(out_dir, "processed", name)
+    processed_name = "processed-test" if is_test else "processed"
+    processed_dir = os.path.join(out_dir, processed_name, name)
 
     # Check if the output directory already exists
     if os.path.exists(processed_dir):

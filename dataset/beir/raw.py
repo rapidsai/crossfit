@@ -289,6 +289,8 @@ def sample_raw(name, out_dir=None, overwrite=False, sample_size=100, blocksize=2
             os.path.join(sampled_qrels_dir, qrels_file), sep="\t", index=False
         )
 
+    return output_path
+
 
 def download_all(out_dir=None):
     for dataset in BEIR_DATASETS:
