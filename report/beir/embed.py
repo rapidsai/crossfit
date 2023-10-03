@@ -3,6 +3,7 @@ import shutil
 import functools as ft
 
 from cuml.dask.neighbors import NearestNeighbors
+import dask.dataframe as dd
 import cudf
 
 from crossfit.backend.cudf.series import create_list_series_from_2d_ar
@@ -26,7 +27,7 @@ def embed(
     out_dir = out_dir or CF_HOME
     emb_dir = os.path.join(out_dir, "processed", "beir", dataset_name, "emb", model_name)
 
-    if os.path.exists(emb_dir):
+    if os.path.exists(os.path.join(emb_dir, "predictions")):
         if overwrite:
             print("Embedding directory {} already exists. Overwriting.".format(emb_dir))
             shutil.rmtree(emb_dir)
@@ -36,6 +37,9 @@ def embed(
 
     dfs = []
     for dtype in ["query", "item"]:
+        if os.path.exists(os.path.join(emb_dir, dtype)):
+            continue
+
         df = getattr(dataset, dtype).ddf()
         partitions = max(int(len(df) / partition_num), 1)
         if not partitions % 2 == 0:
@@ -88,6 +92,10 @@ def query_kneighbors(embeddings, knn_index=None, n_neighbors=50, client=None):
     distances.index = _query_ddf.index
     indices.index = _query_ddf.index
 
+    # A workaround for cuml scrabmling the indices.
+    # indices = reset_global_index(indices)
+    # distances = reset_global_index(distances)
+
     df = distances
     for i in range(len(indices.columns)):
         df[f"i_{i}"] = indices[i]
@@ -126,3 +134,10 @@ def per_dim_ddf(data):
     output = data.map_partitions(to_map, dim=dim, meta=meta)
 
     return output
+
+
+def reset_global_index(ddf: dd.DataFrame, index_col: str = "index"):
+    ddf[index_col] = 1
+    ddf[index_col] = ddf[index_col].cumsum() - 1
+
+    return ddf.set_index(index_col, sorted=True, drop=True)

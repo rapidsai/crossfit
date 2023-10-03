@@ -144,7 +144,9 @@ class Aggregator:
 
             if isinstance(keys[0], str):
                 # return pd.DataFrame(present_dict)
-                return pd.DataFrame.from_dict(present_dict, orient="index").T
+                result = {k: convert_array(v, np.ndarray) for k, v in present_dict.items()}
+
+                return pd.DataFrame.from_dict(result, orient="index").T
 
             groupings = {"&".join(k.grouping) if k.grouping else None for k in keys}
             columns = {k.column for k in keys}
