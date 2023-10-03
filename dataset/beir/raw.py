@@ -232,6 +232,73 @@ def download_raw(name, out_dir=None, overwrite=False) -> str:
     return output_path
 
 
+def sample_raw(name, out_dir=None, overwrite=False, sample_size=100, blocksize=2**30) -> str:
+    import cudf
+    import dask_cudf
+
+    full_path = download_raw(name, overwrite=overwrite)
+
+    out_dir = out_dir or CF_HOME
+    sampled_dir = os.path.join(out_dir, "sampled")
+    output_path = os.path.join(sampled_dir, name)
+
+    qrels_files = [f for f in os.listdir(os.path.join(full_path, "qrels")) if f.endswith(".tsv")]
+    sampled_query_ids, sampled_corpus_id = set(), set()
+    qrel_dfs = {}
+
+    for qrels_file in qrels_files:
+        qrels_df = cudf.read_csv(
+            os.path.join(full_path, "qrels", qrels_file),
+            sep="\t",
+            dtype={"query-id": "str", "corpus-id": "str", "score": "int32"},
+        )
+        n = min(sample_size, qrels_df["query-id"].nunique())
+
+        sampled_ids = qrels_df["query-id"].drop_duplicates().sample(n=n)
+        sampled_query_ids.update(list(sampled_ids.to_pandas()))
+        qrel_dfs[qrels_file] = qrels_df[qrels_df["query-id"].isin(sampled_query_ids)]
+        sampled_corpus_id.update(list(qrel_dfs[qrels_file]["corpus-id"].to_pandas()))
+
+    queries_df = dask_cudf.read_json(
+        os.path.join(full_path, "queries.jsonl"),
+        lines=True,
+        blocksize=blocksize,
+        dtype={"_id": "string", "text": "string"},
+    )[["_id", "text"]]
+    queries_df = queries_df[queries_df["_id"].isin(sampled_query_ids)].compute()
+
+    # Filter the query and corpus dataframes to include only the sampled query-ids
+    corpus_df = dask_cudf.read_json(
+        os.path.join(full_path, "corpus.jsonl"),
+        lines=True,
+        blocksize=blocksize,
+        dtype={"_id": "string", "title": "string", "text": "string"},
+    )[["_id", "title", "text"]]
+    corpus_df = corpus_df[corpus_df["_id"].isin(sampled_corpus_id)].compute()
+
+    sampled_queries_path = os.path.join(output_path, "queries.jsonl")
+    sampled_corpus_path = os.path.join(output_path, "corpus.jsonl")
+    sampled_qrels_dir = os.path.join(output_path, "qrels")
+    os.makedirs(sampled_qrels_dir, exist_ok=True)
+
+    queries_df.to_json(sampled_queries_path, orient="records", lines=True)
+    corpus_df.to_json(sampled_corpus_path, orient="records", lines=True)
+
+    for qrels_file in qrels_files:
+        qrel_dfs[qrels_file].to_csv(
+            os.path.join(sampled_qrels_dir, qrels_file), sep="\t", index=False
+        )
+
+
 def download_all(out_dir=None):
     for dataset in BEIR_DATASETS:
         download_raw(dataset, out_dir=out_dir)
+
+
+def download_all_sampled(out_dir=None):
+    for dataset in BEIR_DATASETS:
+        if dataset in {"cqadupstack", "germanquad"}:
+            continue
+
+        print(f"Sampling {dataset}")
+        sample_raw(dataset, out_dir=out_dir)
