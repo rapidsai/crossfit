@@ -1,7 +1,7 @@
-from crossfit.data.array.masked import MaskedArray
-from crossfit.metric.continuous.mean import Mean
 import numpy as np
 
+from crossfit.data.array.masked import MaskedArray
+from crossfit.metric.continuous.mean import Mean
 from crossfit.data.sparse.ranking import BinaryLabels, Labels, Rankings
 
 
@@ -141,6 +141,7 @@ class RankingMetric(Mean):
             k = ""
         else:
             k = f"@{self._k}"
+
         return self.__class__.__name__ + k
 
 

@@ -85,8 +85,8 @@ class NPSparseMatrixBackend(SparseMatrixBackend):
             instance.eliminate_zeros()
         return instance
 
-    def tocsr(self):
-        return sp.csr_matrix((self.data, self.col_idx, self.idx_ptr), copy=False, shape=self.shape)
+    def tocsr(self, copy=False):
+        return sp.csr_matrix((self.data, self.col_idx, self.idx_ptr), copy=copy, shape=self.shape)
 
     def todense(self):
         return np.asarray(self.tocsr().todense())
@@ -129,7 +129,7 @@ class NPSparseMatrixBackend(SparseMatrixBackend):
 
     def rank_top_k(self, k=None) -> MaskedArray:
         if k is None:
-            k = self.indices.max_nnz_row_values()
+            k = self.max_nnz_row_values()
         return self.todense_masked((self.shape[0], k))
 
     def getnnz(self, axis=None):

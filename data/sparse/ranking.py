@@ -34,6 +34,9 @@ class Labels:
 
         return MaskedArray(retrieved, indices.mask)
 
+    def as_rankings(self):
+        return Rankings.from_scores(self._labels.tocsr(copy=True), warn_empty=False)
+
     @property
     def labels(self) -> SparseMatrixProtocol:
         return self._labels
@@ -93,9 +96,6 @@ class BinaryLabels(Labels):
         <rankereval.data.BinaryLabels...>
         """
         return cls(CrossSparse.from_matrix(labels))
-
-    def as_rankings(self):
-        return Rankings.from_scores(self._labels.tocsr(copy=True), warn_empty=False)
 
     def labels_to_list(self):
         return self._labels.tolil().data.tolist()
@@ -293,9 +293,10 @@ class DenseRankings(Rankings):
 
     def get_top_k(self, k=None):
         if k is None:
-            k = self.indices.shape[1]
+            k = self.shape[1]
         indices = self.indices[:, :k]
         mask = self.mask[:, :k]
+
         return indices, mask
 
     def to_list(self):

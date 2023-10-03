@@ -94,7 +94,7 @@ class MeanRanks(BinaryRankingMetric):
     def __init__(self):
         self._k = None
 
-    def _score(self, y_true, y_pred_labels):
+    def _score(self, y_true: BinaryLabels, y_pred_labels: MaskedArray):
         n_pos = y_true.get_n_positives(y_pred_labels.shape[0])
         labels = y_pred_labels.filled(0)
         ranks = np.arange(1, labels.shape[1] + 1, dtype=float).reshape(1, -1)
@@ -165,7 +165,7 @@ class FirstRelevantRank(BinaryRankingMetric):
     def __init__(self):
         self._k = None
 
-    def _score(self, y_true, y_pred_labels):
+    def _score(self, y_true: BinaryLabels, y_pred_labels: MaskedArray):
         n_pos = y_true.get_n_positives(y_pred_labels.shape[0])
         labels = y_pred_labels.filled(0)
         ranks = np.arange(1, labels.shape[1] + 1, dtype=float).reshape(1, -1)

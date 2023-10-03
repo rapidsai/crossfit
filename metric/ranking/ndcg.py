@@ -1,6 +1,7 @@
 import numpy as np
 
-from crossfit.metric.ranking.base import RankingMetric
+from crossfit.metric.ranking.base import RankingMetric, Labels, Rankings
+from crossfit.data.array.masked import MaskedArray
 
 
 class DCG(RankingMetric):
@@ -53,7 +54,7 @@ class DCG(RankingMetric):
         self._rel_scale = self.SCALERS[relevance_scaling]
         self._log_fct = self.LOGS[log_base]
 
-    def _dcg(self, y_true, y_pred_labels):
+    def _dcg(self, y_true: Labels, y_pred_labels: MaskedArray):
         n_pos = y_true.get_n_positives(y_pred_labels.shape[0])
         labels = y_pred_labels[:, : self._k].filled(0)
         ranks = np.arange(1, labels.shape[1] + 1, dtype=float).reshape(1, -1)
@@ -62,10 +63,10 @@ class DCG(RankingMetric):
         scores[n_pos == 0] = np.NaN
         return scores
 
-    def _score(self, y_true, y_pred_labels):
+    def _score(self, y_true: Labels, y_pred_labels: MaskedArray):
         return self._dcg(y_true, y_pred_labels)
 
-    def score(self, y_true, y_pred):
+    def score(self, y_true: Labels, y_pred: Rankings):
         r"""
         Computes Discounted Cumulative Gain at k (DCG@k) [KJ]_ as a
         weighted sum of relevance labels of top *k* results of `y_pred`.
@@ -130,14 +131,14 @@ class NDCG(DCG):
     For a description of the arguments, see :class:`DCG`.
     """
 
-    def _score(self, y_true, y_pred_labels):
+    def _score(self, y_true: Labels, y_pred_labels: MaskedArray):
         dcg = self._dcg(y_true, y_pred_labels)
         ideal_labels = y_true.get_labels_for(y_true.as_rankings(), self._k)
         idcg = self._dcg(y_true, ideal_labels)
 
         return dcg / idcg
 
-    def score(self, y_true, y_pred):
+    def score(self, y_true: Labels, y_pred: Rankings):
         r"""
         Computes the *normalized* Discounted Cumulative Gain at k (nDCG@k) [KJ]_
         as a weighted sum of relevance labels of top *k* results of `y_pred`,

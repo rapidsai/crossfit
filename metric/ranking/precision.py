@@ -44,6 +44,7 @@ class Precision(BinaryRankingMetric):
             scores = n_relevant.astype(float) / self._k
             # not defined if there are no relevant labels
             scores[n_pos == 0] = np.NaN
+
         return scores
 
     def _score(self, y_true, y_pred_labels):
@@ -118,9 +119,8 @@ class AP(BinaryRankingMetric):
 
     def _score(self, y_true: BinaryLabels, y_pred_labels: MaskedArray):
         n_pos = y_true.get_n_positives(y_pred_labels.shape[0])
-        labels = y_pred_labels.data[:, : self._k].astype(bool) & y_pred_labels.mask[
-            :, : self._k
-        ].astype(bool)
+        labels = y_pred_labels[:, : self._k].filled(0)
+
         ranks = np.arange(1, labels.shape[1] + 1, dtype=float).reshape(1, -1)
 
         precision = np.cumsum(labels, axis=-1) / ranks

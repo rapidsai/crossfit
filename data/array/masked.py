@@ -12,6 +12,19 @@ class MaskedArray:
             else:
                 self.mask = mask
 
+    def __getitem__(self, index):
+        new_data = self.data[index]
+        new_mask = self.mask[index]
+        return MaskedArray(new_data, new_mask)
+
+    def __setitem__(self, index, value):
+        if isinstance(value, MaskedArray):
+            self.data[index] = value.data
+            self.mask[index] = value.mask
+        else:
+            self.data[index] = value
+            self.mask[index] = False  # Assuming you want to unmask this value
+
     def __add__(self, other):
         if isinstance(other, MaskedArray):
             new_data = self.data + other.data
