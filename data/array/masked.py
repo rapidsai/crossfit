@@ -10,7 +10,7 @@ class MaskedArray:
             if mask is None:
                 self.mask = np.zeros_like(self.data, dtype=np.bool_)
             else:
-                self.mask = np.array(mask)
+                self.mask = mask
 
     def __add__(self, other):
         if isinstance(other, MaskedArray):
