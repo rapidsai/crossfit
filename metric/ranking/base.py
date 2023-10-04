@@ -1,8 +1,9 @@
+from crossfit.data.array.dispatch import crossarray
 import numpy as np
 
 from crossfit.data.array.masked import MaskedArray
 from crossfit.metric.continuous.mean import Mean
-from crossfit.data.sparse.ranking import BinaryLabels, Labels, Rankings
+from crossfit.data.sparse.ranking import SparseBinaryLabels, SparseLabels, Rankings, SparseRankings
 
 
 class RankingMetric(Mean):
@@ -11,7 +12,7 @@ class RankingMetric(Mean):
     ):
         ...
 
-    def score(self, y_true: Labels, y_pred: Rankings):
+    def score(self, y_true: SparseLabels, y_pred: Rankings, nan_handling="zerofill"):
         """
         Individual scores for each ranking.
 
@@ -34,14 +35,15 @@ class RankingMetric(Mean):
         ValueError
                 if `n_bootstrap_samples`, `confidence` or `nan_handling` contain invalid values.
         """
-        if not isinstance(y_true, Labels):
+        if not isinstance(y_true, SparseLabels):
             raise TypeError("y_true must be of type Labels")
         if not isinstance(y_pred, Rankings):
             raise TypeError("y_pred must be of type Rankings")
 
         y_pred_labels = y_true.get_labels_for(y_pred, self._k)
+        scores = self._score(y_true, y_pred_labels)
 
-        return self._score(y_true, y_pred_labels)
+        return self.nan_handling(scores, nan_handling)
 
     @classmethod
     def _bootstrap_ci(cls, scores, n_bootstrap_samples, confidence):
@@ -110,16 +112,7 @@ class RankingMetric(Mean):
                 values.
         """
 
-        scores = self.score(y_true, y_pred)
-        if nan_handling == "drop":
-            scores = scores[~np.isnan(scores)]
-        elif nan_handling == "zerofill":
-            scores = np.nan_to_num(scores)
-        elif nan_handling == "propagate":
-            if np.isnan(scores).sum():
-                scores = []
-        else:
-            raise ValueError('nan_handling must be "propagate", "drop" or "zerofill"')
+        scores = self.score(y_true, y_pred, nan_handling=nan_handling)
 
         if conf_interval:
             ci = self._bootstrap_ci(scores, n_bootstrap_samples, confidence)
@@ -136,6 +129,17 @@ class RankingMetric(Mean):
         else:
             return mean
 
+    def nan_handling(self, scores, handling="zerofill"):
+        with crossarray:
+            if handling == "drop":
+                return scores[~np.isnan(scores)]
+            elif handling == "zerofill":
+                return np.nan_to_num(scores)
+            elif handling == "propagate":
+                return scores
+            else:
+                raise ValueError('nan_handling must be "propagate", "drop" or "zerofill"')
+
     def name(self):
         if self._k is None:
             k = ""
@@ -151,9 +155,9 @@ class BinaryRankingMetric(RankingMetric):
             raise ValueError("Cutoff k needs to be integer > 0")
         self._k = k
 
-    def score(self, y_true: BinaryLabels, y_pred: MaskedArray):
-        if not isinstance(y_true, BinaryLabels):
+    def score(self, y_true: SparseBinaryLabels, y_pred: MaskedArray, **kwargs):
+        if not isinstance(y_true, SparseBinaryLabels):
             raise TypeError(
                 f"y_true must be of type BinaryLabels but is of instance {type(y_true)}"
             )
-        return super().score(y_true, y_pred)
+        return super().score(y_true, y_pred, **kwargs)

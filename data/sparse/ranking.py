@@ -6,20 +6,18 @@ from crossfit.data.sparse.dispatch import CrossSparse, SparseMatrixProtocol
 from crossfit.data.array.dispatch import crossarray
 
 
-class Labels:
+class SparseLabels:
     def __init__(self, labels):
-        if self.binary:
-            with crossarray:
-                if not np.all(np.isin(labels.data, [0, 1])):
-                    raise ValueError("Matrix may only contain 0 and 1 entries.")
-        # nonfinite_entries = ~np.isfinite(matrix.data)
-        # if np.any(nonfinite_entries):
-        #     raise ValueError("Input contains NaN or Inf entries")
-        # return matrix
-
         self._labels: SparseMatrixProtocol = labels
 
-    def get_labels_for(self, ranking: "Rankings", k=None) -> MaskedArray:
+        if self.binary:
+            if not self.labels.is_binary():
+                raise ValueError("Matrix may only contain 0 and 1 entries.")
+
+        if self.labels.contains_inf():
+            raise ValueError("Input contains NaN or Inf entries")
+
+    def get_labels_for(self, ranking: "SparseRankings", k=None) -> MaskedArray:
         n_label_rows = self._labels.shape[0]
         n_ranking_rows = len(ranking)
 
@@ -29,29 +27,17 @@ class Labels:
                 f" {n_ranking_rows} rows"
             )
 
-        indices = ranking.indices.rank_top_k(k)
+        indices = ranking.rank_top_k(k)
         retrieved = self._labels.lookup(indices.data)
 
         return MaskedArray(retrieved, indices.mask)
 
     def as_rankings(self):
-        return Rankings.from_scores(self._labels.tocsr(copy=True), warn_empty=False)
+        return SparseRankings.from_scores(self._labels.tocsr(copy=True), warn_empty=False)
 
     @property
     def labels(self) -> SparseMatrixProtocol:
         return self._labels
-
-
-class InvalidValuesWarning(UserWarning):
-    pass
-
-
-class BinaryLabels(Labels):
-    """
-    Represents binary ground truth data (e.g., 1 indicating relevance).
-    """
-
-    binary = True
 
     @classmethod
     def from_positive_indices(cls, indices):
@@ -104,8 +90,8 @@ class BinaryLabels(Labels):
         return self._labels.tolil()
 
     def get_n_positives(self, n_rankings):
-        n_label_rows = self._labels.shape[0]
-        n_pos = self._labels.getnnz(axis=1)
+        n_label_rows = self.labels.shape[0]
+        n_pos = self.labels.getnnz(axis=1)
         if n_label_rows == 1:
             with crossarray:
                 n_pos = np.tile(n_pos, n_rankings)
@@ -116,7 +102,19 @@ class BinaryLabels(Labels):
         return str(self.indices_to_list())
 
 
-class NumericLabels(BinaryLabels):
+class InvalidValuesWarning(UserWarning):
+    pass
+
+
+class SparseBinaryLabels(SparseLabels):
+    """
+    Represents binary ground truth data (e.g., 1 indicating relevance).
+    """
+
+    binary = True
+
+
+class SparseNumericLabels(SparseBinaryLabels):
     """
     Represents numeric ground truth data (e.g., relevance labels from 1-5).
     """
@@ -125,6 +123,96 @@ class NumericLabels(BinaryLabels):
 
 
 class Rankings:
+    """
+    Data structure where rankings have the same length (approximately).
+    """
+
+    def __init__(self, indices, mask=None, warn_empty=True):
+        if warn_empty:
+            with crossarray:
+                n_empty_rows = ((~mask).sum(axis=1) == 0).sum()
+            if n_empty_rows:
+                warnings.warn(
+                    f"Input rankings have {n_empty_rows} empty rankings (rows). "
+                    + "These will impact the mean scores."
+                    + str(indices),
+                    InvalidValuesWarning,
+                )
+        self.indices = indices
+        self.mask = mask
+
+    @classmethod
+    def _verify_input(cls, arr, dtype=np.floating):
+        if not isinstance(arr, np.ndarray):
+            raise ValueError("Input needs to be a numpy matrix")
+        arr = np.asarray(np.atleast_2d(arr))
+        if arr.ndim != 2:
+            raise ValueError("Input arrays need to be 1D or 2D.")
+        elif not np.issubdtype(arr.dtype, dtype):
+            raise ValueError(f"Input array needs to be of type {dtype}")
+
+        if np.issubdtype(dtype, np.floating):
+            if not np.all(np.isfinite(arr)):
+                warnings.warn(
+                    "Input contains NaN or Inf entries which will be ignored.", InvalidValuesWarning
+                )
+                arr[~np.isfinite(arr)] = np.NINF
+        elif not np.issubdtype(dtype, np.integer):
+            raise TypeError("dtype argument must be floating or int")
+        return arr
+
+    @classmethod
+    def from_ranked_indices(cls, indices, valid_items=None, invalid_items=None):
+        """
+        Set indices to -1 (or any other negative value) to indicate invalid index
+        """
+        indices = cls._verify_input(indices, dtype=np.integer)
+
+        if valid_items is not None or invalid_items is not None:
+            raise NotImplementedError("Not implemented yet")
+        mask = indices < 0
+        return cls(indices, mask)
+
+    @classmethod
+    def from_scores(
+        cls, raw_scores, valid_items=None, invalid_items=None, warn_empty=True, k_max=None
+    ):
+        raw_scores = cls._verify_input(raw_scores, dtype=np.floating)
+
+        if valid_items is not None:
+            invalid_idx = CrossSparse.from_nonzero_indices(invalid_items).csr.toarray() == 0
+            raw_scores -= np.inf * invalid_idx
+        if invalid_items is not None:
+            invalid_items = CrossSparse.from_nonzero_indices(invalid_items).csr
+            raw_scores -= np.inf * invalid_items
+
+        mask = ~np.isfinite(raw_scores)
+        if k_max is None:
+            sorted_idx = np.argsort(-raw_scores, axis=1, kind="stable")
+        else:
+            sorted_idx = topk(raw_scores, k_max)
+        mask = np.take_along_axis(mask, sorted_idx, axis=1)
+        return cls(sorted_idx, mask)
+
+    def rank_top_k(self, k=None) -> MaskedArray:
+        if k is None:
+            k = self.shape[1]
+        indices = self.indices[:, :k]
+        mask = self.mask[:, :k]
+
+        return MaskedArray(indices, mask)
+
+    def to_list(self):
+        return self.indices.tolist()
+
+    def __str__(self):
+        return str(self.indices)
+
+    def __len__(self):
+        return self.indices.shape[0]
+
+
+class SparseRankings(Rankings):
     """
     Represents (predicted) rankings to be evaluated.
     """
@@ -209,98 +297,11 @@ class Rankings:
 
         return cls(indices, valid_items, invalid_items, warn_empty=warn_empty)
 
-    def __str__(self):
-        return str(self.indices)
-
-    def __len__(self):
-        return self.indices.shape[0]
+    def rank_top_k(self, k=None):
+        return self.indices.rank_top_k(k)
 
     def to_list(self):
         return self.indices.tolil()
-
-
-class DenseRankings(Rankings):
-    """
-    Data structure where rankings have the same length (approximately).
-    """
-
-    def __init__(self, indices, mask=None, warn_empty=True):
-        if warn_empty:
-            with crossarray:
-                n_empty_rows = ((~mask).sum(axis=1) == 0).sum()
-            if n_empty_rows:
-                warnings.warn(
-                    f"Input rankings have {n_empty_rows} empty rankings (rows). "
-                    + "These will impact the mean scores."
-                    + str(indices.csr.todense()),
-                    InvalidValuesWarning,
-                )
-        self.indices = indices
-        self.mask = mask
-
-    @classmethod
-    def _verify_input(cls, arr, dtype=np.floating):
-        if not isinstance(arr, np.ndarray):
-            raise ValueError("Input needs to be a numpy matrix")
-        arr = np.asarray(np.atleast_2d(arr))
-        if arr.ndim != 2:
-            raise ValueError("Input arrays need to be 1D or 2D.")
-        elif not np.issubdtype(arr.dtype, dtype):
-            raise ValueError(f"Input array needs to be of type {dtype}")
-
-        if np.issubdtype(dtype, np.floating):
-            if not np.all(np.isfinite(arr)):
-                warnings.warn(
-                    "Input contains NaN or Inf entries which will be ignored.", InvalidValuesWarning
-                )
-                arr[~np.isfinite(arr)] = np.NINF
-        elif not np.issubdtype(dtype, np.integer):
-            raise TypeError("dtype argument must be floating or int")
-        return arr
-
-    @classmethod
-    def from_ranked_indices(cls, indices, valid_items=None, invalid_items=None):
-        """
-        Set indices to -1 (or any other negative value) to indicate invalid index
-        """
-        indices = cls._verify_input(indices, dtype=np.integer)
-
-        if valid_items is not None or invalid_items is not None:
-            raise NotImplementedError("Not implemented yet")
-        mask = indices < 0
-        return cls(indices, mask)
-
-    @classmethod
-    def from_scores(
-        cls, raw_scores, valid_items=None, invalid_items=None, warn_empty=True, k_max=None
-    ):
-        raw_scores, mask = cls._verify_input(raw_scores, dtype=np.floating)
-
-        if valid_items is not None:
-            invalid_idx = CrossSparse.from_nonzero_indices(invalid_items).csr.toarray() == 0
-            raw_scores -= np.inf * invalid_idx
-        if invalid_items is not None:
-            invalid_items = CrossSparse.from_nonzero_indices(invalid_items).csr
-            raw_scores -= np.inf * invalid_items
-
-        mask = ~np.isfinite(raw_scores)
-        if k_max is None:
-            sorted_idx = np.argsort(-raw_scores, axis=1, kind="stable")
-        else:
-            sorted_idx = topk(raw_scores, k_max)
-        mask = np.take_along_axis(mask, sorted_idx, axis=1)
-        return cls(sorted_idx, mask)
-
-    def get_top_k(self, k=None):
-        if k is None:
-            k = self.shape[1]
-        indices = self.indices[:, :k]
-        mask = self.mask[:, :k]
-
-        return indices, mask
-
-    def to_list(self):
-        return self.indices.tolist()
 
 
 def topk(x, k, return_scores=False):

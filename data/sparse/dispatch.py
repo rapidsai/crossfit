@@ -5,6 +5,16 @@ from crossfit.data.sparse.core import SparseMatrixProtocol
 
 class _CrossSparseDispatch(Dispatch, SparseMatrixProtocol):
     def __call__(self, data):
+        from crossfit.backend.cupy.sparse import CPSparseMatrixBackend
+        from crossfit.backend.numpy.sparse import NPSparseMatrixBackend
+
+        backends = [CPSparseMatrixBackend, NPSparseMatrixBackend]
+
+        for backend in backends:
+            for support in backend.supports():
+                if isinstance(data, support):
+                    return backend
+
         return super().__call__(data)
 
     @classmethod

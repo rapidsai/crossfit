@@ -1,6 +1,6 @@
 import numpy as np
 
-from crossfit.metric.ranking.base import BinaryRankingMetric, BinaryLabels
+from crossfit.metric.ranking.base import BinaryRankingMetric, SparseBinaryLabels
 from crossfit.data.array.masked import MaskedArray
 
 
@@ -23,7 +23,7 @@ class Precision(BinaryRankingMetric):
         super().__init__(k)
         self._truncated = truncated
 
-    def _precision(self, y_true: BinaryLabels, y_pred_labels: MaskedArray):
+    def _precision(self, y_true: SparseBinaryLabels, y_pred_labels: MaskedArray):
         n_pos = y_true.get_n_positives(y_pred_labels.shape[0])
         n_relevant = np.sum(
             (y_pred_labels.data[:, : self._k] == 1) & (~y_pred_labels.mask[:, : self._k]), axis=-1
@@ -50,59 +50,6 @@ class Precision(BinaryRankingMetric):
     def _score(self, y_true, y_pred_labels):
         return self._precision(y_true, y_pred_labels)
 
-    def score(self, y_true, y_pred):
-        r"""
-        Computes Precision@k [MN]_ of each ranking *y* in `y_pred` as
-
-        .. math::
-
-                \mathrm{Precision}@k(y) = \frac{\sum_{i=1}^{k'} \mathrm{rel}(y_i)}{k'},
-
-        where :math:`\mathrm{rel}(y_i)` is the relevance label of the item at rank *i*
-        in the ranking *y*. If `truncated` then :math:`k' = \min(k,|y|)`, i.e., `k'`
-        can never exceed the length of the input ranking; otherwise :math:`k' = k` (default).
-
-        Parameters
-        ----------
-        y_true : :class:`~rankereval.data.BinaryLabels`
-                Ground truth labels, must be binary.
-        y_pred : :class:`~rankereval.data.Rankings`
-                Rankings to be evaluated. If `y_true` only contains one row,
-                the labels in this row will be used for every ranking in `y_pred`.
-                Otherwise, each row *i* in `y_pred` uses label row *i* in `y_true`.
-
-        Returns
-        -------
-        computed_metric: ndarray, shape (n_rankings, )
-                Computed metric for each ranking.
-
-        Raises
-        ------
-        TypeError
-                if `y_true` or `y_pred` are of incorrect type.
-
-        Notes
-        -----
-        Edge cases:
-
-        1. Ranking to be evaluated is empty, i.e., :math:`|y|=0`. Per definition above,
-        :math:`\mathrm{Precision}@k(y) = 0`.
-
-        2. There are no relevant items in `y_true`: :math:`\mathrm{Precision}@k(y) =` NaN.
-        This marks invalid instances explicitly and is consistent with Recall.
-
-        Examples
-        --------
-        >>> from rankereval import BinaryLabels, Rankings, Precision
-        >>> # use separate labels for each ranking
-        >>> y_true = BinaryLabels.from_positive_indices([[0, 5],[1,2,3]])
-        >>> y_pred = Rankings.from_ranked_indices([[3,2,1], [1,2]])
-        >>> Precision(3).score(y_true, y_pred)
-        array([0.        , 0.66666667])
-
-        """
-        return super().score(y_true, y_pred)
-
 
 class AP(BinaryRankingMetric):
     """
@@ -117,7 +64,7 @@ class AP(BinaryRankingMetric):
             if `k` is not integer > 0.
     """
 
-    def _score(self, y_true: BinaryLabels, y_pred_labels: MaskedArray):
+    def _score(self, y_true: SparseBinaryLabels, y_pred_labels: MaskedArray):
         n_pos = y_true.get_n_positives(y_pred_labels.shape[0])
         labels = y_pred_labels[:, : self._k].filled(0)
 
@@ -132,74 +79,3 @@ class AP(BinaryRankingMetric):
         scores[n_pos == 0] = np.NaN
 
         return scores
-
-    def score(self, y_true, y_pred):
-        r"""
-        Computes AveragePrecision@k [MN]_, an approximation to the the area
-        under the precision-recall curve, of each ranking *y* in `y_pred` as
-
-        .. math::
-
-                \mathrm{AveragePrecision}@k(y) &= \frac{1}{Z} \sum_{i=1}^{k'}
-                \mathrm{rel}(y_i)\cdot \mathrm{Precision}@i(y),
-
-                k' &= \min(k,|y|),
-
-                Z &= \min \big(k, \left\| y_{true} \right\| _1\big);
-
-        where :math:`\mathrm{rel}(y_i)` is the relevance label of the item at
-        rank *i* in the ranking *y*.
-
-        .. note::
-
-                Sometimes the denominator *Z* is defined with respect to only the
-                retrieved or recommended set of items `y_pred`. This is not desirable
-                as AP could be artificially inflated, e.g., by returning only one
-                relevant item at the top
-                and then filling up the ranking with and irrelevant items.
-
-
-        Parameters
-        ----------
-        y_true : :class:`~rankereval.data.BinaryLabels`
-                Ground truth labels, must be binary.
-        y_pred : :class:`~rankereval.data.Rankings`
-                Rankings to be evaluated. If `y_true` only contains one row,
-                the labels in this row will be used for every ranking in `y_pred`.
-                Otherwise, each row *i* in `y_pred` uses label row *i* in `y_true`.
-
-        Returns
-        -------
-        computed_metric: ndarray, shape (n_rankings, )
-                Computed metric for each ranking.
-
-        Raises
-        ------
-        TypeError
-                if `y_true` or `y_pred` are of incorrect type.
-
-        Notes
-        -----
-        Edge cases:
-
-        1. Ranking to be evaluated is empty, i.e., :math:`|y|=0`.
-        Per definition above, :math:`\mathrm{AveragePrecision}@k(y) = 0`.
-
-        2. There are no relevant items in `y_true`:
-        :math:`\mathrm{AveragePrecision}@k(y) =` NaN to make it consistent with other metrics.
-
-        3. There are no relevant items in `y_pred` up to *k*:
-        Per definition above, :math:`\mathrm{AveragePrecision}@k(y) = 0`.
-
-
-        Examples
-        --------
-        >>> from rankereval import BinaryLabels, Rankings, AP
-        >>> # use separate labels for each ranking
-        >>> y_true = BinaryLabels.from_positive_indices([[0, 5],[1,2,3]])
-        >>> y_pred = Rankings.from_ranked_indices([[3,2,1], [1,2]])
-        >>> AP(3).score(y_true, y_pred) # doctest: +NORMALIZE_WHITESPACE
-        array([0. , 0.66666667])
-
-        """
-        return super().score(y_true, y_pred)
