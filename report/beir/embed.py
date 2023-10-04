@@ -1,6 +1,7 @@
 import os
 import shutil
 import functools as ft
+from crossfit.op.dense_search import DenseSearchOp
 
 from cuml.dask.neighbors import NearestNeighbors
 import dask.dataframe as dd
@@ -19,7 +20,7 @@ def embed(
     partition_num: int = 50_000,
     overwrite=False,
     out_dir=None,
-    dense_search=True,
+    dense_search=False,
     client=None,
     tiny_sample=False,
 ) -> EmbeddingDatataset:
@@ -63,9 +64,13 @@ def embed(
         dfs.append(df)
 
     output: EmbeddingDatataset = EmbeddingDatataset.from_dir(emb_dir, data=dataset)
-    if dense_search:
+    pred_path = os.path.join(emb_dir, "predictions")
+    if isinstance(dense_search, DenseSearchOp):
+        topk_df = dense_search(output)
+        topk_df.to_parquet(pred_path)
+        output.predictions = Dataset(pred_path)
+    elif dense_search is True:
         topk_df = query_kneighbors(output, client=client)
-        pred_path = os.path.join(emb_dir, "predictions")
         topk_df.to_parquet(pred_path)
         output.predictions = Dataset(pred_path)
 
@@ -95,7 +100,7 @@ def query_kneighbors(
             client=client,
         )
     elif mode == "raft":
-        return raft_query_kneighbors()
+        return raft_query_kneighbors(embeddings, n_neighbors=n_neighbors)
     else:
         raise ValueError(f"Unknown `mode`: {mode}.")
 
@@ -159,7 +164,10 @@ def cuml_query_kneighbors(
 
 
 def raft_query_kneighbors(embeddings, n_neghbors=50):
-    print("Perofrming exact KNN search...")
+    print("Performing exact KNN search...")
+
+    from pylibraft.neighbors.brute_force import knn
+    import cupy as cp
 
     items = per_dim_ddf(embeddings.item.ddf())
     queries = per_dim_ddf(embeddings.query.ddf())

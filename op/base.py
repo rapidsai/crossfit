@@ -51,9 +51,9 @@ class Op:
             **kwargs,
         )
 
-    def __call__(self, data, partition_info=None):
+    def __call__(self, data, *args, partition_info=None, **kwargs):
         if isinstance(data, dd.DataFrame):
-            return self.call_dask(data)
+            return self.call_dask(data, *args, **kwargs)
 
         self.setup_worker()
 
@@ -66,6 +66,6 @@ class Op:
 
         params = inspect.signature(self.call).parameters
         if "partition_info" in params:
-            return self.call(data, partition_info=partition_info)
+            return self.call(data, *args, partition_info=partition_info, **kwargs)
         else:
-            return self.call(data)
+            return self.call(data, *args, **kwargs)
