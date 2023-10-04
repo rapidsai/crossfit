@@ -18,6 +18,9 @@ from crossfit.op import *  # noqa
 from crossfit import metric
 from crossfit.metric import *  # noqa
 
+from crossfit.report.beir.embed import embed
+from crossfit.report.beir.report import beir_report
+
 
 __all__ = [
     "Aggregator",
@@ -33,4 +36,6 @@ __all__ = [
     "op",
     "metric",
     "setup_dask_cluster",
+    "embed",
+    "beir_report",
 ]

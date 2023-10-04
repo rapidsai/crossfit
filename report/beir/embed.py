@@ -72,6 +72,34 @@ def embed(
     return output
 
 
+def query_kneighbors(
+    embeddings,
+    mode="cuml",
+    knn_index=None,
+    n_neighbors=50,
+    algorithm="brute",
+    client=None,
+):
+    if mode == "cuml" and (knn_index is not None):
+        raise ValueError("`knn_index` is provided but mode is not `cuml`.")
+
+    if mode == "raft" and algorithm == "brute":
+        raise ValueError("Only brute-force search is supported in `raft` mode.")
+
+    if mode == "cuml":
+        return cuml_query_kneighbors(
+            embeddings,
+            knn_index=knn_index,
+            n_neighbors=n_neighbors,
+            algorithm=algorithm,
+            client=client,
+        )
+    elif mode == "raft":
+        return raft_query_kneighbors()
+    else:
+        raise ValueError(f"Unknown `mode`: {mode}.")
+
+
 def item_knn(items, n_neighbors=100, client=None, **kwargs) -> NearestNeighbors:
     knn = NearestNeighbors(n_neighbors=n_neighbors, client=client, **kwargs)
     print("Building ANN-index for items...")
@@ -83,8 +111,12 @@ def item_knn(items, n_neighbors=100, client=None, **kwargs) -> NearestNeighbors:
     return knn
 
 
-def query_kneighbors(embeddings, knn_index=None, n_neighbors=50, client=None):
-    knn_index = knn_index or item_knn(embeddings.item, n_neighbors=n_neighbors, client=client)
+def cuml_query_kneighbors(
+    embeddings, knn_index=None, n_neighbors=50, algorithm="brute", client=None
+):
+    knn_index = knn_index or item_knn(
+        embeddings.item, n_neighbors=n_neighbors, algorithm=algorithm, client=client
+    )
 
     print("Querying ANN-index for queries...")
     query_ddf = embeddings.query.ddf()
@@ -117,7 +149,35 @@ def query_kneighbors(embeddings, knn_index=None, n_neighbors=50, client=None):
 
     output = df.map_partitions(
         ft.partial(join_map, n_neighbors=n_neighbors),
-        meta={"corpus-index": "object", "score": "float32"},
+        meta={"corpus-index": "object", "score": "object"},
+    )
+
+    output["query-id"] = _query_ddf["_id"]
+    output["query-index"] = _query_ddf.index
+
+    return output
+
+
+def raft_query_kneighbors(embeddings, n_neghbors=50):
+    print("Perofrming exact KNN search...")
+
+    items = per_dim_ddf(embeddings.item.ddf())
+    queries = per_dim_ddf(embeddings.query.ddf())
+
+    def search(part, items, n_neighbors):
+        items = items.to_cupy()
+        queries = part.to_cupy()
+        distances, indices = knn(items, queries, n_neighbors)
+        df = cudf.DataFrame()
+        df["corpus-index"] = create_list_series_from_2d_ar(cp.asarray(indices), part.index)
+        df["score"] = create_list_series_from_2d_ar(cp.asarray(distances), part.index)
+        return df
+
+    output = queries.map_partitions(
+        search,
+        items=items,
+        n_neighbors=n_neighbors,
+        meta={"corpus-index": "object", "score": "object"},
     )
 
     output["query-id"] = _query_ddf["_id"]
@@ -136,6 +196,9 @@ def per_dim_ddf(data):
 
     meta = {i: "float32" for i in range(int(dim))}
     output = data.map_partitions(to_map, dim=dim, meta=meta)
+
+    output.index = data.index
+    output = output.reset_index().set_index("index", sort=True, drop=True)
 
     return output
 

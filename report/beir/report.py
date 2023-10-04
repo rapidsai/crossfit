@@ -162,6 +162,7 @@ def beir_report(
     out_dir=None,
     client=None,
     groupby=["split"],
+    tiny_sample=False,
 ) -> BeirReport:
     embeddings: EmbeddingDatataset = embed(
         dataset_name,
@@ -171,6 +172,7 @@ def beir_report(
         out_dir=out_dir,
         client=client,
         dense_search=True,
+        tiny_sample=tiny_sample,
     )
 
     observations = []
