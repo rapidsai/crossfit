@@ -1,5 +1,8 @@
 from typing import Protocol
 
+import numpy as np
+
+from crossfit.data.array.dispatch import crossarray
 from crossfit.data.array.masked import MaskedArray
 
 
@@ -60,6 +63,12 @@ class SparseMatrixProtocol(Protocol):
         ...
 
     def __str__(self):
+        ...
+
+    def is_binary(self) -> bool:
+        ...
+
+    def contains_inf(self) -> bool:
         ...
 
 
@@ -133,6 +142,30 @@ class SparseMatrixBackend:
             start, end = self.idx_ptr[i], self.idx_ptr[i + 1]
             res += [self.col_idx[start:end].tolist()]
         return res
+
+    def is_binary(self) -> bool:
+        with crossarray:
+            return np.all(np.isin(self.data, [0, 1]))
+
+    def contains_inf(self) -> bool:
+        with crossarray:
+            nonfinite_entries = ~np.isfinite(self.data)
+            return np.any(nonfinite_entries)
+
+    def to_pytrec(self, is_run=False):
+        sparse_matrix = self.tocsr()
+
+        qrel = {}
+        for i in range(self.indices.shape[0]):
+            query_id = f"q{i+1}"
+            qrel[query_id] = {}
+
+            row = sparse_matrix[i]
+            for j, score in zip(row.indices, row.data):
+                doc_id = f"d{j+1}"
+                qrel[query_id][doc_id] = int(score) if is_run else float(score)
+
+        return qrel
 
     def __str__(self):
         return str((self.idx_ptr, self.col_idx, self.data))

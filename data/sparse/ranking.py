@@ -8,17 +8,14 @@ from crossfit.data.array.dispatch import crossarray
 
 class SparseLabels:
     def __init__(self, labels):
-        # if self.binary:
-        #     with crossarray:
-        #         if not np.all(np.isin(labels.data, [0, 1])):
-        #             raise ValueError("Matrix may only contain 0 and 1 entries.")
-
-        # nonfinite_entries = ~np.isfinite(matrix.data)
-        # if np.any(nonfinite_entries):
-        #     raise ValueError("Input contains NaN or Inf entries")
-        # return matrix
-
         self._labels: SparseMatrixProtocol = labels
+
+        if self.binary:
+            if not self.labels.is_binary():
+                raise ValueError("Matrix may only contain 0 and 1 entries.")
+
+        if self.labels.contains_inf():
+            raise ValueError("Input contains NaN or Inf entries")
 
     def get_labels_for(self, ranking: "SparseRankings", k=None) -> MaskedArray:
         n_label_rows = self._labels.shape[0]
@@ -30,7 +27,7 @@ class SparseLabels:
                 f" {n_ranking_rows} rows"
             )
 
-        indices = ranking.indices.rank_top_k(k)
+        indices = ranking.rank_top_k(k)
         retrieved = self._labels.lookup(indices.data)
 
         return MaskedArray(retrieved, indices.mask)
@@ -100,21 +97,6 @@ class SparseLabels:
                 n_pos = np.tile(n_pos, n_rankings)
 
         return n_pos
-
-    def to_pytrec_qrel(self):
-        sparse_matrix = self.labels.tocsr()
-
-        qrel = {}
-        for i in range(self.labels.shape[0]):
-            query_id = f"q{i+1}"
-            qrel[query_id] = {}
-
-            row = sparse_matrix[i]
-            for j, score in zip(row.indices, row.data):
-                doc_id = f"d{j+1}"
-                qrel[query_id][doc_id] = int(score)
-
-        return qrel
 
     def __str__(self):
         return str(self.indices_to_list())
@@ -225,6 +207,9 @@ class SparseRankings:
 
         return cls(indices, valid_items, invalid_items, warn_empty=warn_empty)
 
+    def rank_top_k(self, k=None):
+        return self.indices.rank_top_k(k)
+
     def __str__(self):
         return str(self.indices)
 
@@ -233,21 +218,6 @@ class SparseRankings:
 
     def to_list(self):
         return self.indices.tolil()
-
-    def to_pytrec_run(self):
-        run = {}
-
-        sparse_matrix = self.indices.tocsr()
-        for i in range(sparse_matrix.shape[0]):
-            query_id = f"q{i+1}"
-            run[query_id] = {}
-
-            row = sparse_matrix[i]
-            for j, score in zip(row.indices, row.data):
-                doc_id = f"d{j+1}"
-                run[query_id][doc_id] = float(score)
-
-        return run
 
 
 class DenseRankings(SparseRankings):
@@ -263,7 +233,7 @@ class DenseRankings(SparseRankings):
                 warnings.warn(
                     f"Input rankings have {n_empty_rows} empty rankings (rows). "
                     + "These will impact the mean scores."
-                    + str(indices.csr.todense()),
+                    + str(indices),
                     InvalidValuesWarning,
                 )
         self.indices = indices
@@ -305,7 +275,7 @@ class DenseRankings(SparseRankings):
     def from_scores(
         cls, raw_scores, valid_items=None, invalid_items=None, warn_empty=True, k_max=None
     ):
-        raw_scores, mask = cls._verify_input(raw_scores, dtype=np.floating)
+        raw_scores = cls._verify_input(raw_scores, dtype=np.floating)
 
         if valid_items is not None:
             invalid_idx = CrossSparse.from_nonzero_indices(invalid_items).csr.toarray() == 0
@@ -322,13 +292,13 @@ class DenseRankings(SparseRankings):
         mask = np.take_along_axis(mask, sorted_idx, axis=1)
         return cls(sorted_idx, mask)
 
-    def get_top_k(self, k=None):
+    def rank_top_k(self, k=None) -> MaskedArray:
         if k is None:
             k = self.shape[1]
         indices = self.indices[:, :k]
         mask = self.mask[:, :k]
 
-        return indices, mask
+        return MaskedArray(indices, mask)
 
     def to_list(self):
         return self.indices.tolist()

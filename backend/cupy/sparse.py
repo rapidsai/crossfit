@@ -179,6 +179,13 @@ class CPSparseMatrixBackend(SparseMatrixBackend):
         else:
             raise ValueError("Invalid axis, expected None, 0 or 1")
 
+    def is_binary(self) -> bool:
+        return cp.all(cp.isin(self.data, cp.asarray([0, 1])))
+
+    def contains_inf(self) -> bool:
+        nonfinite_entries = ~cp.isfinite(self.data)
+        return cp.any(nonfinite_entries)
+
 
 @CrossSparse.register(cp.ndarray)
 def _cupy_sparse(data):

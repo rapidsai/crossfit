@@ -1,3 +1,4 @@
+from crossfit.data.array.dispatch import crossarray
 import numpy as np
 
 from crossfit.data.array.masked import MaskedArray
@@ -11,7 +12,7 @@ class RankingMetric(Mean):
     ):
         ...
 
-    def score(self, y_true: SparseLabels, y_pred: SparseRankings):
+    def score(self, y_true: SparseLabels, y_pred: SparseRankings, nan_handling="zerofill"):
         """
         Individual scores for each ranking.
 
@@ -40,8 +41,9 @@ class RankingMetric(Mean):
             raise TypeError("y_pred must be of type Rankings")
 
         y_pred_labels = y_true.get_labels_for(y_pred, self._k)
+        scores = self._score(y_true, y_pred_labels)
 
-        return self._score(y_true, y_pred_labels)
+        return self.nan_handling(scores, nan_handling)
 
     @classmethod
     def _bootstrap_ci(cls, scores, n_bootstrap_samples, confidence):
@@ -110,16 +112,7 @@ class RankingMetric(Mean):
                 values.
         """
 
-        scores = self.score(y_true, y_pred)
-        if nan_handling == "drop":
-            scores = scores[~np.isnan(scores)]
-        elif nan_handling == "zerofill":
-            scores = np.nan_to_num(scores)
-        elif nan_handling == "propagate":
-            if np.isnan(scores).sum():
-                scores = []
-        else:
-            raise ValueError('nan_handling must be "propagate", "drop" or "zerofill"')
+        scores = self.score(y_true, y_pred, nan_handling=nan_handling)
 
         if conf_interval:
             ci = self._bootstrap_ci(scores, n_bootstrap_samples, confidence)
@@ -135,6 +128,17 @@ class RankingMetric(Mean):
             return {"score": mean, "conf_interval": ci}
         else:
             return mean
+
+    def nan_handling(self, scores, handling="zerofill"):
+        with crossarray:
+            if handling == "drop":
+                return scores[~np.isnan(scores)]
+            elif handling == "zerofill":
+                return np.nan_to_num(scores)
+            elif handling == "propagate":
+                return scores
+            else:
+                raise ValueError('nan_handling must be "propagate", "drop" or "zerofill"')
 
     def name(self):
         if self._k is None:
