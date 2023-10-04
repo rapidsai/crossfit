@@ -1,5 +1,4 @@
 from typing import List
-from crossfit.report.base import Report
 
 import cudf
 import cupy as cp
@@ -15,6 +14,8 @@ from crossfit.report.beir.embed import embed
 from crossfit.calculate.aggregate import Aggregator
 from crossfit.metric.continuous.mean import Mean
 from crossfit.metric.ranking import NDCG, Precision, Recall, SparseBinaryLabels, SparseRankings
+from crossfit.report.base import Report
+from crossfit.op.dense_search import DenseSearchOp
 
 
 class BeirMetricAggregator(Aggregator):
@@ -156,6 +157,7 @@ class BeirReport(Report):
 def beir_report(
     dataset_name: str,
     model_name: str,
+    dense_search: DenseSearchOp,
     partition_num: int = 50_000,
     ks=[1, 3, 5, 10],
     overwrite=False,
@@ -163,7 +165,6 @@ def beir_report(
     client=None,
     groupby=["split"],
     tiny_sample=False,
-    dense_search=True,
 ) -> BeirReport:
     embeddings: EmbeddingDatataset = embed(
         dataset_name,

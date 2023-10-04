@@ -1,7 +1,7 @@
 import os
 import shutil
 import functools as ft
-from crossfit.op.dense_search import DenseSearchOp
+
 
 from cuml.dask.neighbors import NearestNeighbors
 import dask.dataframe as dd
@@ -12,6 +12,7 @@ from crossfit.dataset.home import CF_HOME
 from crossfit.dataset.base import IRDataset, EmbeddingDatataset, Dataset
 from crossfit.dataset.load import load_dataset
 from crossfit import op
+from crossfit.op.dense_search import DenseSearchOp
 
 
 def embed(
