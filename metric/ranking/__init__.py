@@ -9,6 +9,7 @@ from crossfit.data.sparse.ranking import (
     SparseBinaryLabels,
     SparseNumericLabels,
     SparseRankings,
+    Rankings,
 )
 
 
@@ -27,4 +28,5 @@ __all__ = [
     "SparseBinaryLabels",
     "SparseNumericLabels",
     "SparseRankings",
+    "Rankings",
 ]

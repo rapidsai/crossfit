@@ -3,7 +3,7 @@ import numpy as np
 
 from crossfit.data.array.masked import MaskedArray
 from crossfit.metric.continuous.mean import Mean
-from crossfit.data.sparse.ranking import SparseBinaryLabels, SparseLabels, SparseRankings
+from crossfit.data.sparse.ranking import SparseBinaryLabels, SparseLabels, Rankings, SparseRankings
 
 
 class RankingMetric(Mean):
@@ -12,7 +12,7 @@ class RankingMetric(Mean):
     ):
         ...
 
-    def score(self, y_true: SparseLabels, y_pred: SparseRankings, nan_handling="zerofill"):
+    def score(self, y_true: SparseLabels, y_pred: Rankings, nan_handling="zerofill"):
         """
         Individual scores for each ranking.
 
@@ -37,7 +37,7 @@ class RankingMetric(Mean):
         """
         if not isinstance(y_true, SparseLabels):
             raise TypeError("y_true must be of type Labels")
-        if not isinstance(y_pred, SparseRankings):
+        if not isinstance(y_pred, Rankings):
             raise TypeError("y_pred must be of type Rankings")
 
         y_pred_labels = y_true.get_labels_for(y_pred, self._k)
@@ -155,9 +155,9 @@ class BinaryRankingMetric(RankingMetric):
             raise ValueError("Cutoff k needs to be integer > 0")
         self._k = k
 
-    def score(self, y_true: SparseBinaryLabels, y_pred: MaskedArray):
+    def score(self, y_true: SparseBinaryLabels, y_pred: MaskedArray, **kwargs):
         if not isinstance(y_true, SparseBinaryLabels):
             raise TypeError(
                 f"y_true must be of type BinaryLabels but is of instance {type(y_true)}"
             )
-        return super().score(y_true, y_pred)
+        return super().score(y_true, y_pred, **kwargs)
