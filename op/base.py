@@ -3,6 +3,7 @@ import uuid
 
 from dask.distributed import get_worker
 import dask.dataframe as dd
+from tqdm import tqdm
 
 
 class Op:
@@ -41,6 +42,14 @@ class Op:
         output = output[self.keep_cols + columns]
 
         return output
+
+    def create_progress_bar(self, total, partition_info=None, **kwargs):
+        return tqdm(
+            total=total,
+            position=int(self.worker_name),
+            desc=f"GPU: {self.worker_name}, Part: {partition_info['number']}",
+            **kwargs,
+        )
 
     def __call__(self, data, partition_info=None):
         if isinstance(data, dd.DataFrame):

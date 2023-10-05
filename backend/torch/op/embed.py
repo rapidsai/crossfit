@@ -38,20 +38,15 @@ class Embedder(Op):
 
     @torch.no_grad()
     def call(self, data, partition_info=None):
-        progress_bar = tqdm(
-            total=len(data),
-            position=int(self.worker_name),
-            desc=f"GPU: {self.worker_name}, Part: {partition_info['number']}",
-        )
-        predictor = SortedSeqLoader(
+        loader = SortedSeqLoader(
             data[["input_ids", "attention_mask"]],
             self.memory_estimator,
-            progress_bar=progress_bar,
-        ).map(self.model)
+            progress_bar=self.create_progress_bar(len(data), partition_info),
+        )
 
-        data = predictor.sort_df(data)
+        data = loader.sort_df(data)
         all_embeddings_ls = []
-        for output in predictor:
+        for output in loader.map(self.model):
             all_embeddings_ls.append(output["sentence_embedding"])
 
         out = cudf.DataFrame()
