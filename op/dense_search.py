@@ -24,6 +24,8 @@ class DenseSearchOp(Op):
         ...
 
     def __call__(self, data, *args, **kwargs):
+        print(f"Doing vector search: {self.__class__.__name__}...")
+
         if isinstance(data, EmbeddingDatataset):
             queries = data.query.ddf()
             items = data.item.ddf()
@@ -39,7 +41,7 @@ class ExactSearch(DenseSearchOp):
         k: int,
         pre=None,
         embedding_col="embedding",
-        metric="cosine",
+        metric="sqeuclidean",
         normalize=True,
         keep_cols=None,
     ):
@@ -47,16 +49,16 @@ class ExactSearch(DenseSearchOp):
         self.k = k
         self.metric = metric
         self.embedding_col = embedding_col
+        self.normalize = normalize
 
     def call(self, queries, items):
         items = items.reset_index()
-        query_emb = _get_embedding_cupy(queries, self.embedding_col)
-        item_emb = _get_embedding_cupy(items, self.embedding_col)
+        query_emb = _get_embedding_cupy(queries, self.embedding_col, self.normalize)
+        item_emb = _get_embedding_cupy(items, self.embedding_col, self.normalize)
 
         results, indices = knn(dataset=item_emb, queries=query_emb, k=self.k, metric=self.metric)
         results, indices = cp.asarray(results), cp.asarray(indices)
 
-        # Create a DataFrame for 'indices' with a column name 'key'
         indices_df = cudf.DataFrame({"key": indices.reshape(-1)})
         ids_df = cudf.DataFrame({"key": items.index, "value": items["index"]})
         merged_df = indices_df.merge(ids_df, on="key", how="left")
@@ -70,6 +72,38 @@ class ExactSearch(DenseSearchOp):
         df["score"] = create_list_series_from_2d_ar(results, queries["index"])
 
         return df
+
+    def reduce_dask(self, df):
+        df = df.reset_index()
+        grouped = (
+            df.groupby("query-id")
+            .agg(
+                {
+                    "query-index": "first",
+                    "score": list,
+                    "corpus-index": list,
+                }
+            )
+            .reset_index()
+        )
+
+        num_groups, num_parts = len(grouped), int(grouped["score"].list.len().iloc[0])
+        scores = grouped["score"].list.leaves.values.reshape(num_groups, num_parts, -1)
+        indices = grouped["corpus-index"].list.leaves.values.reshape(num_groups, num_parts, -1)
+        indices_flattened = indices.reshape(num_groups, -1)
+        scores_flattened = scores.reshape(num_groups, -1)
+        sorted = cp.argsort(-scores_flattened, axis=1)[:, : self.k]
+        sorted_scores = cp.take_along_axis(scores_flattened, sorted, axis=1)
+        sorted_indices = cp.take_along_axis(indices_flattened, sorted, axis=1)
+
+        out = cudf.DataFrame()
+        out.index = grouped.index
+        out["query-id"] = grouped["query-id"]
+        out["query-index"] = grouped["query-index"]
+        out["corpus-index"] = create_list_series_from_2d_ar(sorted_indices, out.index)
+        out["score"] = create_list_series_from_2d_ar(sorted_scores, out.index)
+
+        return out
 
     def call_dask(self, queries, items):
         delayed_cross_products = []
@@ -85,26 +119,20 @@ class ExactSearch(DenseSearchOp):
                 )
                 delayed_cross_products.append(delayed_cross_product)
 
-        # Create a new Dask DataFrame from the delayed objects
         result_ddf = from_delayed(delayed_cross_products)
-        results = (
-            result_ddf.groupby("query-id")
-            .apply(
-                lambda x: x.nlargest(self.k, "score"),
-                meta={
-                    "query-id": "object",
-                    "query-index": "object",
-                    "corpus-index": "object",
-                    "score": "float32",
-                },
-            )
-            .reset_index(drop=True)
-            .groupby("query-id")
-            .agg({"query-index": "first", "corpus-index": list, "score": list})
-            .reset_index()
+
+        output = result_ddf.set_index("query-index")
+        output = output.map_partitions(
+            self.reduce_dask,
+            meta={
+                "query-id": "object",
+                "query-index": "object",
+                "corpus-index": "object",
+                "score": "float32",
+            },
         )
 
-        return results
+        return output
 
 
 class CuMLANNSearch(DenseSearchOp):
@@ -181,10 +209,15 @@ class CuMLANNSearch(DenseSearchOp):
         return self.query(knn, queries)
 
 
-def _get_embedding_cupy(data, embedding_col):
+def _get_embedding_cupy(data, embedding_col, normalize=True):
     dim = len(data.head()[embedding_col].iloc[0])
 
-    return data[embedding_col].list.leaves.values.reshape(-1, dim).astype("float32")
+    embs = data[embedding_col].list.leaves.values.reshape(-1, dim).astype("float32")
+
+    if normalize:
+        embs = embs / cp.linalg.norm(embs, axis=1, keepdims=True)
+
+    return embs
 
 
 def _per_dim_ddf(
