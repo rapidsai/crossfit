@@ -3,7 +3,7 @@ from crossfit.op.combinators import Sequential
 from crossfit.op.tokenize import Tokenizer
 
 # Backend specific ops
-from crossfit.backend.torch.ops.embed import Embedder
+from crossfit.backend.torch.op.embed import Embedder
 
 
 __all__ = [
