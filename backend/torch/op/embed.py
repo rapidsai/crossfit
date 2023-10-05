@@ -45,10 +45,8 @@ class Embedder(Op):
         for output in loader.map(self.model):
             all_embeddings_ls.append(output["sentence_embedding"])
 
-        out = cudf.DataFrame()
-        out.index = data.index
-        all_embeddings = torch.vstack(all_embeddings_ls)
-        embedding = cp.asarray(all_embeddings)
+        out = cudf.DataFrame(index=data.index)
+        embedding = cp.asarray(torch.vstack(all_embeddings_ls))
         out["embedding"] = create_list_series_from_2d_ar(embedding, out.index)
 
         gc.collect()
