@@ -1,4 +1,3 @@
-from functools import lru_cache
 from crossfit.backend.torch.loader import MemoryEstimator
 from dask.utils import Dispatch
 

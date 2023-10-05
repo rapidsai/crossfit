@@ -1,10 +1,12 @@
 from typing import Dict, overload
 from itertools import islice
-from crossfit.data.array.dispatch import crossarray
 
 import torch
+import cupy as cp
 
 from crossfit.data.dataframe.dispatch import CrossFrame
+from crossfit.data.array.dispatch import crossarray
+from crossfit.data.array.conversion import convert_array
 
 
 class InMemoryLoader:
@@ -17,7 +19,8 @@ class InMemoryLoader:
         ...
 
     def __init__(self, data, batch_size: int):
-        self.tensor_dict = CrossFrame(data).cast(torch.Tensor).to_dict()
+        self.data = CrossFrame(data).cast(torch.Tensor)
+        self.tensor_dict = self.data.to_dict()
         self._batch_size = batch_size
         self.num_rows = len(next(iter(self.tensor_dict.values())))
         self.current_idx = 0
@@ -41,14 +44,14 @@ class InMemoryLoader:
         batch_size = self.batch_size
         end = batch_size + self.current_idx
 
-        next_batch = {key: val[self.current_idx : end] for key, val in self.tensor_dict.items()}
+        batch = {key: val[self.current_idx : end] for key, val in self.tensor_dict.items()}
 
         self.current_idx += self.batch_size
 
         for fn in self._to_map:
-            next_batch = fn(next_batch)
+            batch = fn(batch)
 
-        return next_batch
+        return batch
 
     def get_batches(self, n):
         return list(islice(self, n))
@@ -93,31 +96,43 @@ class SortedSeqLoader(InMemoryLoader):
         frame = frame.assign(seq_length=seq_length[self.sorted_indices])
 
         super().__init__(frame, initial_batch_size)
-        self.splits = self.find_optimal_splits()
+        self.splits = self._find_optimal_splits()
+
+    def sort_df(self, df):
+        df["__seq_length"] = convert_array(self.data["seq_length"], cp.ndarray)
+
+        return df.sort_values(by="__seq_length")
 
     def __next__(self):
-        if self.current_idx >= self.num_rows:
+        if self.current_idx >= len(self.splits):
             raise StopIteration
 
-        end = self.splits[self.current_idx]
+        if self.current_idx == 0:
+            start = 0
+        else:
+            start = self.splits[self.current_idx - 1]
+        end = min(self.splits[self.current_idx], self.num_rows)
         _tokens = self.tensor_dict["seq_length"]
 
         batch = {
-            key: val[self.current_idx : end]
+            key: val[start:end]
             for key, val in self.tensor_dict.items()
             if key not in self.to_ignore
         }
         clip_len = min(_tokens[end - 1], self.memory_estimator.max_seq_length())
-        next_batch = {key: val[:, :clip_len] for key, val in batch.items()}
+        batch = {key: val[:, :clip_len] for key, val in batch.items()}
 
         self.current_idx += 1
 
         for fn in self._to_map:
-            next_batch = fn(next_batch)
+            batch = fn(batch)
 
-        return next_batch
+        if self.progress_bar is not None:
+            self.progress_bar.update(end - start)
 
-    def find_optimal_splits(self):
+        return batch
+
+    def _find_optimal_splits(self):
         splits = []
         i = 0
         doubling_factor = 2

@@ -45,8 +45,12 @@ class Tokenizer(Op):
         tokenized_data = self.tokenize_strings(text).copy()
         tokenized_data = clip_tokens(tokenized_data, max_length=self.max_length, return_type="cp")
 
-        input_ids = create_list_series_from_2d_ar(tokenized_data["input_ids"], data.index)
-        attention_mask = create_list_series_from_2d_ar(tokenized_data["attention_mask"], data.index)
+        input_ids = create_list_series_from_2d_ar(
+            tokenized_data["input_ids"].astype("int32"), data.index
+        )
+        attention_mask = create_list_series_from_2d_ar(
+            tokenized_data["attention_mask"].astype("int32"), data.index
+        )
 
         return input_ids, attention_mask
 

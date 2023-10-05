@@ -4,7 +4,6 @@ from functools import lru_cache
 from typing import Callable, List
 
 from crossfit.data.array.dispatch import crossarray
-from crossfit.data.array.conversion import convert_array
 from crossfit.data.dataframe.dispatch import CrossFrame
 
 
@@ -120,6 +119,8 @@ class FrameBackend:
             New ``FrameBackend`` object
         """
 
+        import crossfit as cf
+
         # Deal with array casting
         frame = self
         if columns:
@@ -130,7 +131,7 @@ class FrameBackend:
                     if col not in frame.columns:
                         raise ValueError(f"{col} not in available columns: {frame.columns}")
                     try:
-                        new_columns[col] = convert_array(frame[col], typ)
+                        new_columns[col] = cf.convert_array(frame[col], typ)
                     except TypeError as err:
                         raise TypeError(
                             f"Unable to cast column {col} to {typ}.\nOriginal error: {err}"
@@ -138,7 +139,7 @@ class FrameBackend:
                 frame = frame.assign(**new_columns)
             else:
                 try:
-                    frame = CrossFrame(self.to_dict()).apply(convert_array, columns)
+                    frame = CrossFrame(self.to_dict()).apply(cf.convert_array, columns)
                 except TypeError as err:
                     raise TypeError(
                         f"Unable to cast all column types to {columns}.\nOriginal error: {err}"

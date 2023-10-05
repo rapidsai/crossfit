@@ -31,7 +31,7 @@ def embed(
     processed_name = "processed-test" if tiny_sample else "processed"
     emb_dir = os.path.join(out_dir, processed_name, "beir", dataset_name, "emb", model_name)
 
-    if os.path.exists(os.path.join(emb_dir, "predictions")):
+    if os.path.exists(emb_dir):
         if overwrite:
             print("Embedding directory {} already exists. Overwriting.".format(emb_dir))
             shutil.rmtree(emb_dir)

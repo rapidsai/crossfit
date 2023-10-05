@@ -5,11 +5,12 @@ import cudf
 import torch
 from sentence_transformers import SentenceTransformer
 from transformers import AutoConfig
-from cudf.core.subword_tokenizer import _cast_to_appropriate_type
 from tqdm import tqdm
 
-from crossfit.backend.cudf.series import create_list_series_from_2d_ar
 from crossfit.op.base import Op
+from crossfit.backend.cudf.series import create_list_series_from_2d_ar
+from crossfit.backend.torch.hf.memory import HFMemoryEstimator
+from crossfit.backend.torch.loader import SortedSeqLoader
 
 
 class Embedder(Op):
@@ -31,57 +32,28 @@ class Embedder(Op):
         cfg = AutoConfig.from_pretrained("sentence-transformers/" + self.model_name)
         cfg.num_parameters = sum(p.numel() for p in model.parameters())
 
+        max_memory = int(self.max_mem.split("GB")[0]) / 2
+        self.memory_estimator = HFMemoryEstimator(max_memory, cfg)
         self.model = model.to("cuda")
         self.cfg = cfg
 
+    @torch.no_grad()
     def call(self, data, partition_info=None):
-        all_embeddings_ls = []
-        num_rows = len(data)
-        seq_len = len(data["input_ids"][data.index[0]])
-        tokenized_d = {
-            "input_ids": data["input_ids"].list.leaves.values.reshape(-1, seq_len),
-            "attention_mask": data["attention_mask"].list.leaves.values.reshape(-1, seq_len),
-        }
-
-        del data["input_ids"]
-        del data["attention_mask"]
-
-        num_tokens = (tokenized_d["input_ids"] != 0).sum(axis=1)
-        data["num_tokens"] = num_tokens
-        sorted_indices = data["num_tokens"].argsort()
-        data = data.sort_values(by="num_tokens")
-        tokenized_d = {
-            key: _cast_to_appropriate_type(val[sorted_indices], "pt")
-            for key, val in tokenized_d.items()
-        }
-
-        progress = tqdm(
-            total=num_rows,
+        progress_bar = tqdm(
+            total=len(data),
             position=int(self.worker_name),
             desc=f"GPU: {self.worker_name}, Part: {partition_info['number']}",
         )
+        predictor = SortedSeqLoader(
+            data[["input_ids", "attention_mask"]],
+            self.memory_estimator,
+            progress_bar=progress_bar,
+        ).map(self.model)
 
-        free_memory = int(self.max_mem.split("GB")[0])
-        free_memory = free_memory / 2  # Add safety margin
-
-        _tokens = data["num_tokens"].reset_index(drop=True)
-        splits = find_optimal_splits(_tokens, self.batch_size, self.cfg, free_memory)
-
-        current = 0
-        with torch.no_grad():
-            for split in splits:
-                end = min(split, num_rows)
-                batch = {key: val[current:end] for key, val in tokenized_d.items()}
-                clip_len = min(_tokens[end - 1], self.cfg.max_position_embeddings)
-                batch = {key: val[:, :clip_len] for key, val in batch.items()}
-
-                try:
-                    model_output = self.model(batch)
-                    all_embeddings_ls.append(model_output["sentence_embedding"])
-                    progress.update(split - current)
-                    current = split
-                except IndexError:
-                    pass  # Skip this batch
+        data = predictor.sort_df(data)
+        all_embeddings_ls = []
+        for output in predictor:
+            all_embeddings_ls.append(output["sentence_embedding"])
 
         out = cudf.DataFrame()
         out.index = data.index
