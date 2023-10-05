@@ -30,7 +30,6 @@ class Embedder(Op):
     def setup(self):
         model = SentenceTransformer(self.model_name, device="cuda")
         cfg = AutoConfig.from_pretrained("sentence-transformers/" + self.model_name)
-        cfg.num_parameters = sum(p.numel() for p in model.parameters())
 
         max_memory = int(self.max_mem.split("GB")[0]) / 2
         self.memory_estimator = HFMemoryEstimator(max_memory, cfg)
