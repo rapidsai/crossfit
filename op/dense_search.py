@@ -35,7 +35,7 @@ class DenseSearchOp(Op):
         return super().__call__(data, *args, **kwargs)
 
 
-class ExactSearch(DenseSearchOp):
+class RaftExactSearch(DenseSearchOp):
     def __init__(
         self,
         k: int,
@@ -135,10 +135,11 @@ class ExactSearch(DenseSearchOp):
         return output
 
 
-class CuMLANNSearch(DenseSearchOp):
+class CuMLDenseSearch(DenseSearchOp):
     def __init__(
         self,
         k: int,
+        algorithm: str,
         pre=None,
         embedding_col="embedding",
         metric="cosine",
@@ -147,14 +148,15 @@ class CuMLANNSearch(DenseSearchOp):
     ):
         super().__init__(pre=pre, keep_cols=keep_cols)
         self.k = k
+        self.algorithm = algorithm
         self.metric = metric
         self.embedding_col = embedding_col
         self.metric = metric
         self.normalize = normalize
 
     def fit(self, items, client=None, **kwargs):
-        knn = NearestNeighbors(n_neighbors=self.k, client=client, metric=self.metric, **kwargs)
-        print("Building ANN-index for items...")
+        knn = NearestNeighbors(n_neighbors=self.k, algorithm=self.algorithm, client=client, metric=self.metric, **kwargs)
+        print("Building nearest neighbor index for items...")
 
         item_ddf = items
         if hasattr(items, "ddf"):
@@ -209,6 +211,19 @@ class CuMLANNSearch(DenseSearchOp):
         return self.query(knn, queries)
 
 
+class CuMLANNSearch(CuMLDenseSearch):
+    def __init__(self, *args, **kwargs):
+        algorithm = kwargs.pop("algorithm", None) or "auto"
+        super().__init__(algorithm=algorithm, *args, **kwargs)
+
+
+class CuMLExactSearch(CuMLDenseSearch):
+    def __init__(self, *args, **kwargs):
+        algorithm = kwargs.pop("algorithm", None) or "brute"
+        super().__init__(algorithm=algorithm, *args, **kwargs)
+
+
+
 def _get_embedding_cupy(data, embedding_col, normalize=True):
     dim = len(data.head()[embedding_col].iloc[0])
 
@@ -230,12 +245,9 @@ def _per_dim_ddf(
         if normalize:
             values = values / cp.linalg.norm(values, axis=1, keepdims=True)
 
-        return cudf.DataFrame(values)
+        return cudf.DataFrame(values, index=part.index)
 
     meta = {i: "float32" for i in range(int(dim))}
     output = data.map_partitions(to_map, dim=dim, meta=meta)
-
-    output.index = data.index
-    output = output.reset_index().set_index("index", sort=True, drop=True)
 
     return output
