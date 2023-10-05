@@ -4,6 +4,7 @@ import functools as ft
 import cupy as cp
 import cudf
 from dask import delayed
+import dask_cudf
 from dask_cudf import from_delayed
 from cuml.dask.neighbors import NearestNeighbors
 from pylibraft.neighbors.brute_force import knn
@@ -34,7 +35,13 @@ class DenseSearchOp(Op):
 
 class ExactSearch(DenseSearchOp):
     def __init__(
-        self, k: int, pre=None, embedding_col="embedding", metric="cosine", keep_cols=None
+        self,
+        k: int,
+        pre=None,
+        embedding_col="embedding",
+        metric="cosine",
+        normalize=True,
+        keep_cols=None,
     ):
         super().__init__(pre=pre, keep_cols=keep_cols)
         self.k = k
@@ -102,22 +109,30 @@ class ExactSearch(DenseSearchOp):
 
 class CuMLANNSearch(DenseSearchOp):
     def __init__(
-        self, k: int, pre=None, embedding_col="embedding", metric="cosine", keep_cols=None
+        self,
+        k: int,
+        pre=None,
+        embedding_col="embedding",
+        metric="cosine",
+        normalize=True,
+        keep_cols=None,
     ):
         super().__init__(pre=pre, keep_cols=keep_cols)
         self.k = k
         self.metric = metric
         self.embedding_col = embedding_col
+        self.metric = metric
+        self.normalize = normalize
 
     def fit(self, items, client=None, **kwargs):
-        knn = NearestNeighbors(n_neighbors=self.k, client=client, **kwargs)
+        knn = NearestNeighbors(n_neighbors=self.k, client=client, metric=self.metric, **kwargs)
         print("Building ANN-index for items...")
 
         item_ddf = items
         if hasattr(items, "ddf"):
             item_ddf = items.ddf()
 
-        embs = _per_dim_ddf(item_ddf, self.embedding_col)
+        embs = _per_dim_ddf(item_ddf, self.embedding_col, normalize=self.normalize)
         knn.fit(embs)
 
         return knn
@@ -128,7 +143,7 @@ class CuMLANNSearch(DenseSearchOp):
             query_ddf = queries.ddf()
 
         _query_ddf = query_ddf.set_index("index")
-        query_ddf_per_dim = _per_dim_ddf(_query_ddf, self.embedding_col)
+        query_ddf_per_dim = _per_dim_ddf(_query_ddf, self.embedding_col, normalize=self.normalize)
 
         distances, indices = knn.kneighbors(query_ddf_per_dim)
 
@@ -172,15 +187,17 @@ def _get_embedding_cupy(data, embedding_col):
     return data[embedding_col].list.leaves.values.reshape(-1, dim).astype("float32")
 
 
-def _per_dim_ddf(data, embedding_col):
+def _per_dim_ddf(
+    data: dask_cudf.DataFrame, embedding_col: str, normalize: bool = True
+) -> dask_cudf.DataFrame:
     dim = len(data.head()[embedding_col].iloc[0])
 
     def to_map(part, dim):
-        df = cudf.DataFrame(
-            part[embedding_col].list.leaves.values.reshape(-1, dim).astype("float32")
-        )
+        values = part[embedding_col].list.leaves.values.reshape(-1, dim).astype("float32")
+        if normalize:
+            values = values / cp.linalg.norm(values, axis=1, keepdims=True)
 
-        return df
+        return cudf.DataFrame(values)
 
     meta = {i: "float32" for i in range(int(dim))}
     output = data.map_partitions(to_map, dim=dim, meta=meta)
