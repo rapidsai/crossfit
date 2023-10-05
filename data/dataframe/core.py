@@ -155,6 +155,9 @@ class FrameBackend:
         # Cast backend and return
         if issubclass(backend, FrameBackend) and backend != frame.__class__:
             return backend.from_dict(frame.to_dict())
+
+        if isinstance(backend, str):
+            pass
         return frame
 
     @classmethod
@@ -447,6 +450,12 @@ class ArrayBundle(FrameBackend):
             pass
 
         raise NotImplementedError("groupby_indices not implemented for ArrayBundle")
+
+    def __repr__(self):
+        name = self.__class__.__name__
+        backends = ", ".join(set(str(d).split(".")[0] for d in self.dtypes.values()))
+
+        return f"<CrossFrame({name}[{backends}]): columns={self.columns}>"
 
 
 # Map Tensorflow data to ArrayBundle

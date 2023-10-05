@@ -25,6 +25,14 @@ def register_cudf_to_dlpack():
     @conversion.dispatch_to_dlpack.register(cudf.Series)
     def cudf_to_dlpack(input_array: cudf.Series):
         logging.debug(f"Converting {input_array} to DLPack")
+
+        if input_array.dtype.name == "list":
+            if not input_array.list.len().min() == input_array.list.len().max():
+                raise NotImplementedError("Cannot convert list column with variable length")
+
+            dim = input_array.list.len().iloc[0]
+            return input_array.list.leaves.values.reshape(-1, dim).toDlpack()
+
         return input_array.to_dlpack()
 
 

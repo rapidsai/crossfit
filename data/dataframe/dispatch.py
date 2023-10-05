@@ -3,6 +3,11 @@ from dask.utils import Dispatch
 
 class _CrossFrameDispatch(Dispatch):
     def __call__(self, data, *args, **kwargs):
+        from crossfit.data.dataframe.core import FrameBackend
+
+        if isinstance(data, FrameBackend):
+            return data
+
         # TODO: Fix this
 
         from crossfit.backend.cudf.dataframe import CudfDataFrame
