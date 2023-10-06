@@ -33,12 +33,11 @@ class Op:
             setattr(worker, init_name, True)
 
     def call_dask(self, data):
-        output = data.map_partitions(self, meta=self.meta())
+        keep_cols_meta = {col: data[col].dtype for col in data.columns if col in self.keep_cols}
+        meta = dict(self.meta(), **keep_cols_meta) if self.meta() else None
+        output = data.map_partitions(self, meta=meta)
 
         columns = list(output.columns)
-        for col in self.keep_cols:
-            output[col] = data[col]
-
         output = output[self.keep_cols + columns]
 
         return output
@@ -66,6 +65,12 @@ class Op:
 
         params = inspect.signature(self.call).parameters
         if "partition_info" in params:
-            return self.call(data, *args, partition_info=partition_info, **kwargs)
+            output = self.call(data, *args, partition_info=partition_info, **kwargs)
         else:
-            return self.call(data, *args, **kwargs)
+            output = self.call(data, *args, **kwargs)
+
+        for col in self.keep_cols:
+            if col not in output.columns:
+                output[col] = data[col]
+
+        return output
