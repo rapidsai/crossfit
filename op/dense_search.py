@@ -179,7 +179,6 @@ class CuMLDenseSearch(DenseSearchOp):
             query_ddf = queries.ddf()
 
         query_ddf_per_dim = _per_dim_ddf(query_ddf, self.embedding_col, normalize=self.normalize)
-        query_ddf_per_dim = query_ddf_per_dim.sort_values("index").drop(labels=["index"], axis=1)
 
         distances, indices = knn.kneighbors(query_ddf_per_dim)
 
@@ -259,6 +258,6 @@ def _per_dim_ddf(
     output = data.map_partitions(to_map, dim=dim, meta=meta)
 
     output["index"] = output.index.values
-    #output = output.sort_values("index").drop(labels=["index"], axis=1)
+    output = output.sort_values("index").drop(labels=["index"], axis=1)
 
     return output
