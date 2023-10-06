@@ -49,6 +49,9 @@ class Embedder(Op):
         embedding = cp.asarray(torch.vstack(all_embeddings_ls))
         out["embedding"] = create_list_series_from_2d_ar(embedding, out.index)
 
+        # We sort data, so we need to add add the keep-cols expliticly
+        out = self.add_keep_cols(data, out)
+
         gc.collect()
 
         return out

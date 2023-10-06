@@ -1,5 +1,5 @@
 from crossfit import backend, metric, op
-from crossfit.backend.dask.cluster import setup_dask_cluster
+from crossfit.backend.dask.cluster import Distributed, Serial
 from crossfit.calculate.aggregate import Aggregator
 from crossfit.calculate.module import CrossModule
 from crossfit.data.array.conversion import convert_array
@@ -13,6 +13,7 @@ from crossfit.op import *  # noqa
 from crossfit.report.beir.embed import embed
 from crossfit.report.beir.report import beir_report
 
+
 __all__ = [
     "Aggregator",
     "backend",
@@ -20,6 +21,7 @@ __all__ = [
     "CrossFrame",
     "crossarray",
     "convert_array",
+    "Distributed",
     "FrameBackend",
     "load_dataset",
     "MultiDataset",
@@ -27,6 +29,7 @@ __all__ = [
     "op",
     "metric",
     "setup_dask_cluster",
+    "Serial",
     "embed",
     "beir_report",
 ]

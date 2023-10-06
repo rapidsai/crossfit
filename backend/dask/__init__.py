@@ -1,3 +1,3 @@
-from crossfit.backend.dask.cluster import setup_dask_cluster
+from crossfit.backend.dask.cluster import Distributed, Serial
 
-__all__ = ["setup_dask_cluster"]
+__all__ = ["Distributed", "Serial"]

@@ -32,13 +32,8 @@ class Op:
             self.setup()
             setattr(worker, init_name, True)
 
-    def call_dask(self, data):
-        keep_cols_meta = {col: data[col].dtype for col in data.columns if col in self.keep_cols}
-        meta = dict(self.meta(), **keep_cols_meta) if self.meta() else None
-        output = data.map_partitions(self, meta=meta)
-
-        columns = list(output.columns)
-        output = output[self.keep_cols + columns]
+    def call_dask(self, data: dd.DataFrame):
+        output = data.map_partitions(self, meta=self._build_dask_meta(data))
 
         return output
 
@@ -49,6 +44,19 @@ class Op:
             desc=f"GPU: {self.worker_name}, Part: {partition_info['number']}",
             **kwargs,
         )
+
+    def add_keep_cols(self, data, output):
+        if not self.keep_cols:
+            return output
+
+        for col in self.keep_cols:
+            if col not in output.columns:
+                output[col] = data[col]
+
+        columns = list(output.columns)
+        output = output[self.keep_cols + columns]
+
+        return output
 
     def __call__(self, data, *args, partition_info=None, **kwargs):
         if isinstance(data, dd.DataFrame):
@@ -69,8 +77,15 @@ class Op:
         else:
             output = self.call(data, *args, **kwargs)
 
-        for col in self.keep_cols:
-            if col not in output.columns:
-                output[col] = data[col]
+        if self.keep_cols:
+            output = self.add_keep_cols(data, output)
+
+        return output
+
+    def _build_dask_meta(self, data):
+        output = {col: data[col].dtype for col in self.keep_cols}
+        meta = self.meta()
+        if meta:
+            output.update(meta)
 
         return output

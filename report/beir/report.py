@@ -15,7 +15,7 @@ from crossfit.calculate.aggregate import Aggregator
 from crossfit.metric.continuous.mean import Mean
 from crossfit.metric.ranking import NDCG, Precision, Recall, SparseBinaryLabels, SparseRankings
 from crossfit.report.base import Report
-from crossfit.op.dense_search import DenseSearchOp
+from crossfit.op.vector_search import VectorSearchOp
 
 
 class BeirMetricAggregator(Aggregator):
@@ -27,7 +27,6 @@ class BeirMetricAggregator(Aggregator):
         post=None,
         groupby=None,
         metrics=[NDCG, Precision, Recall],
-        # metrics=[Precision],
     ):
         super().__init__(None, pre=pre, post_group=post_group, post=post, groupby=groupby)
         self.ks = ks
@@ -157,12 +156,11 @@ class BeirReport(Report):
 def beir_report(
     dataset_name: str,
     model_name: str,
-    dense_search: DenseSearchOp,
+    vector_search: VectorSearchOp,
     partition_num: int = 50_000,
     ks=[1, 3, 5, 10],
     overwrite=False,
     out_dir=None,
-    client=None,
     groupby=["split"],
     tiny_sample=False,
 ) -> BeirReport:
@@ -172,8 +170,7 @@ def beir_report(
         partition_num=partition_num,
         overwrite=overwrite,
         out_dir=out_dir,
-        client=client,
-        dense_search=dense_search,
+        vector_search=vector_search,
         tiny_sample=tiny_sample,
     )
 

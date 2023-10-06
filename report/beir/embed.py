@@ -1,31 +1,21 @@
-import functools as ft
 import os
 import shutil
-from typing import Optional, Union
-
-import cupy as cp
-import cudf
-import dask.dataframe as dd
-from cuml.dask.neighbors import NearestNeighbors
+from typing import Optional
 
 from crossfit import op
-from crossfit.backend.cudf.series import create_list_series_from_2d_ar
 from crossfit.dataset.base import Dataset, EmbeddingDatataset, IRDataset
 from crossfit.dataset.home import CF_HOME
 from crossfit.dataset.load import load_dataset
-from crossfit.op.dense_search import DenseSearchOp, CuMLANNSearch
+from crossfit.op.vector_search import VectorSearchOp
 
 
 def embed(
     dataset_name: str,
     model_name: str,
+    vector_search: Optional[VectorSearchOp] = None,
     partition_num: int = 50_000,
     overwrite: bool = False,
     out_dir: Optional[str] = None,
-    dense_search: Union[bool, DenseSearchOp] = False,
-    n_neighbors: int = 100,
-    normalize: bool = True,
-    client=None,
     tiny_sample: bool = False,
 ) -> EmbeddingDatataset:
     dataset: IRDataset = load_dataset(
@@ -70,13 +60,10 @@ def embed(
     output: EmbeddingDatataset = EmbeddingDatataset.from_dir(emb_dir, data=dataset)
     pred_path = os.path.join(emb_dir, "predictions")
 
-    if dense_search is False:
+    if vector_search is None:
         return output
 
-    if dense_search is True:
-        dense_search = CuMLANNSearch(n_neighbors, normalize=normalize)
-
-    topk_df = dense_search(output)
+    topk_df = vector_search(output)
     topk_df.to_parquet(pred_path)
     output.predictions = Dataset(pred_path)
 

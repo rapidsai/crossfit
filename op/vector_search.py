@@ -10,11 +10,12 @@ from dask_cudf import from_delayed
 from pylibraft.neighbors.brute_force import knn
 
 from crossfit.backend.cudf.series import create_list_series_from_2d_ar
+from crossfit.backend.dask.cluster import global_dask_client
 from crossfit.dataset.base import EmbeddingDatataset
 from crossfit.op.base import Op
 
 
-class DenseSearchOp(Op):
+class VectorSearchOp(Op):
     @overload
     def __call__(self, queries, items, partition_info=None):
         ...
@@ -35,7 +36,7 @@ class DenseSearchOp(Op):
         return super().__call__(data, *args, **kwargs)
 
 
-class RaftExactSearch(DenseSearchOp):
+class RaftExactSearch(VectorSearchOp):
     def __init__(
         self,
         k: int,
@@ -135,7 +136,7 @@ class RaftExactSearch(DenseSearchOp):
         return output
 
 
-class CuMLDenseSearch(DenseSearchOp):
+class CuMLVectorSearch(VectorSearchOp):
     def __init__(
         self,
         k: int,
@@ -154,11 +155,11 @@ class CuMLDenseSearch(DenseSearchOp):
         self.metric = metric
         self.normalize = normalize
 
-    def fit(self, items, client=None, **kwargs):
+    def fit(self, items, **kwargs):
         knn = NearestNeighbors(
             n_neighbors=self.k,
             algorithm=self.algorithm,
-            client=client,
+            client=global_dask_client(),
             metric=self.metric,
             **kwargs,
         )
@@ -189,7 +190,10 @@ class CuMLDenseSearch(DenseSearchOp):
 
         def join_map(part, n_neighbors: int):
             distances = part.values[:, :n_neighbors].astype("float32")
-            indices = part.values[:, n_neighbors : 2 * n_neighbors].astype("int32")
+            # index is last column
+            indices = part.values[:, n_neighbors:-1].astype("int32")
+
+            assert indices.shape == distances.shape
 
             df = cudf.DataFrame()
             df.index = part["index"].values
@@ -199,7 +203,8 @@ class CuMLDenseSearch(DenseSearchOp):
             return df
 
         output = df.map_partitions(
-            ft.partial(join_map, n_neighbors=self.k),
+            join_map,
+            n_neighbors=self.k,
             meta={"corpus-index": "object", "score": "object"},
         )
 
@@ -217,13 +222,13 @@ class CuMLDenseSearch(DenseSearchOp):
         return self.query(knn, queries)
 
 
-class CuMLANNSearch(CuMLDenseSearch):
+class CuMLANNSearch(CuMLVectorSearch):
     def __init__(self, *args, **kwargs):
         algorithm = kwargs.pop("algorithm", None) or "auto"
         super().__init__(algorithm=algorithm, *args, **kwargs)
 
 
-class CuMLExactSearch(CuMLDenseSearch):
+class CuMLExactSearch(CuMLVectorSearch):
     def __init__(self, *args, **kwargs):
         algorithm = kwargs.pop("algorithm", None) or "brute"
         super().__init__(algorithm=algorithm, *args, **kwargs)
