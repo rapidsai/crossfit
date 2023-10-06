@@ -21,7 +21,7 @@ class Embedder(Op):
         keep_cols=None,
         default_batch_size=1024,
         max_mem: str = "16GB",
-        sorted_data_loader: bool = False,
+        sorted_data_loader: bool = True,
     ):
         super().__init__(pre=pre, cols=cols, keep_cols=keep_cols)
         self.model_name = model_name
