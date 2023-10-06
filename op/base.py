@@ -1,9 +1,9 @@
 import inspect
 import uuid
 
-from dask.distributed import get_worker
 import dask.dataframe as dd
 from tqdm import tqdm
+from dask.distributed import get_worker
 
 
 class Op:

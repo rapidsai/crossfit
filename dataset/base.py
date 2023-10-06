@@ -1,11 +1,11 @@
-from typing import Optional, Union
 import os
+from dataclasses import dataclass
+from typing import Dict, Optional, Union
 
 import dask_cudf
-from dataclasses import dataclass
 from cuml.dask.neighbors import NearestNeighbors
-from crossfit.backend.cudf.series import create_list_series_from_2d_ar
 
+from crossfit.backend.cudf.series import create_list_series_from_2d_ar
 
 _SPLIT_ALIASES = {
     "val": ["validation", "valid", "dev"],
@@ -33,8 +33,8 @@ class FromDirMixin:
     def from_dir(
         cls,
         dir: str,
-        format="parquet",
-        dataset_kwargs=None,
+        format: str = "parquet",
+        dataset_kwargs: Optional[Dict] = None,
         **kwargs,
     ) -> "MultiDataset":
         datasets = {}

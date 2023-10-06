@@ -3,9 +3,10 @@ import os
 import cudf
 from cudf.core.subword_tokenizer import SubwordTokenizer, _cast_to_appropriate_type
 from cudf.utils.hash_vocab_utils import hash_vocab
-from transformers import AutoTokenizer, AutoConfig
-from crossfit.op.base import Op
+from transformers import AutoConfig, AutoTokenizer
+
 from crossfit.backend.cudf.series import create_list_series_from_2d_ar
+from crossfit.op.base import Op
 
 
 class Tokenizer(Op):
@@ -56,8 +57,6 @@ class Tokenizer(Op):
 
     def call(self, data):
         output = cudf.DataFrame()
-        # output["index"] = data["index"]
-        # output["_id"] = data["_id"]
 
         if self.cols is None:
             if not isinstance(data, cudf.Series):
@@ -81,8 +80,6 @@ class Tokenizer(Op):
 
     def meta(self):
         tokenized = {
-            # "index": "int64",
-            # "_id": "object",
             "input_ids": "int32",
             "attention_mask": "int32",
         }

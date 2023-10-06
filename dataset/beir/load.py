@@ -1,9 +1,11 @@
 import os
 import shutil
 
-from crossfit.dataset.home import CF_HOME
+import dask.dataframe as dd
+
 from crossfit.dataset.base import IRDataset
 from crossfit.dataset.beir.raw import download_raw, sample_raw
+from crossfit.dataset.home import CF_HOME
 
 
 def load_dataset(
@@ -59,9 +61,7 @@ def _process_data(name, raw_path, blocksize=2**30, overwrite=False, out_dir=None
         blocksize=blocksize,
         dtype={"_id": "string", "text": "string"},
     )[["_id", "text"]]
-
-    # queries_ddf = queries_ddf.set_index("_id")
-    queries_ddf = queries_ddf.reset_index()
+    queries_ddf = reset_global_index(queries_ddf)
     queries_ddf.to_parquet(queries_dir)
 
     print("Converting corpus...")
@@ -72,8 +72,7 @@ def _process_data(name, raw_path, blocksize=2**30, overwrite=False, out_dir=None
         blocksize=blocksize,
         dtype={"_id": "string", "title": "string", "text": "string"},
     )[["_id", "title", "text"]]
-    # corpus_ddf = corpus_ddf.set_index("_id")
-    corpus_ddf = corpus_ddf.reset_index()
+    corpus_ddf = reset_global_index(corpus_ddf)
     corpus_ddf.to_parquet(corpus_dir)
 
     qrels_dir = os.path.join(processed_dir, "qrels")
@@ -93,7 +92,6 @@ def _process_data(name, raw_path, blocksize=2**30, overwrite=False, out_dir=None
                 queries_ddf,
                 left_on="query-id",
                 right_on="_id",
-                # right_index=True,
                 how="left",
             )
             .rename(columns={"text": "query", "index": "query-index"})
@@ -101,7 +99,6 @@ def _process_data(name, raw_path, blocksize=2**30, overwrite=False, out_dir=None
                 corpus_ddf,
                 left_on="corpus-id",
                 right_on="_id",
-                # right_index=True,
                 how="left",
             )
             .rename(columns={"index": "corpus-index"})
@@ -122,3 +119,10 @@ def _process_data(name, raw_path, blocksize=2**30, overwrite=False, out_dir=None
         qrels_ddf.to_parquet(qrels_path)
 
     return IRDataset.from_dir(processed_dir)
+
+
+def reset_global_index(ddf: dd.DataFrame, index_col: str = "index") -> dd.DataFrame:
+    ddf[index_col] = 1
+    ddf[index_col] = ddf[index_col].cumsum() - 1
+
+    return ddf.set_index(index_col, sorted=True, drop=False)

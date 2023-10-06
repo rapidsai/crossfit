@@ -1,17 +1,17 @@
-from typing import overload
 import functools as ft
+from typing import overload
 
-import cupy as cp
 import cudf
-from dask import delayed
-import dask_cudf
-from dask_cudf import from_delayed
+import cupy as cp
+import dask.dataframe as dd
 from cuml.dask.neighbors import NearestNeighbors
+from dask import delayed
+from dask_cudf import from_delayed
 from pylibraft.neighbors.brute_force import knn
 
 from crossfit.backend.cudf.series import create_list_series_from_2d_ar
-from crossfit.op.base import Op
 from crossfit.dataset.base import EmbeddingDatataset
+from crossfit.op.base import Op
 
 
 class DenseSearchOp(Op):
@@ -155,7 +155,13 @@ class CuMLDenseSearch(DenseSearchOp):
         self.normalize = normalize
 
     def fit(self, items, client=None, **kwargs):
-        knn = NearestNeighbors(n_neighbors=self.k, algorithm=self.algorithm, client=client, metric=self.metric, **kwargs)
+        knn = NearestNeighbors(
+            n_neighbors=self.k,
+            algorithm=self.algorithm,
+            client=client,
+            metric=self.metric,
+            **kwargs,
+        )
         print("Building nearest neighbor index for items...")
 
         item_ddf = items
@@ -172,24 +178,22 @@ class CuMLDenseSearch(DenseSearchOp):
         if hasattr(queries, "ddf"):
             query_ddf = queries.ddf()
 
-        _query_ddf = query_ddf.set_index("index")
-        query_ddf_per_dim = _per_dim_ddf(_query_ddf, self.embedding_col, normalize=self.normalize)
+        query_ddf_per_dim = _per_dim_ddf(query_ddf, self.embedding_col, normalize=self.normalize)
+        query_ddf_per_dim = query_ddf_per_dim.sort_values("index").drop(labels=["index"], axis=1)
 
         distances, indices = knn.kneighbors(query_ddf_per_dim)
-
-        distances.index = _query_ddf.index
-        indices.index = _query_ddf.index
 
         df = distances
         for i in range(len(indices.columns)):
             df[f"i_{i}"] = indices[i]
+        df["index"] = query_ddf_per_dim.index.values
 
         def join_map(part, n_neighbors: int):
             distances = part.values[:, :n_neighbors].astype("float32")
-            indices = part.values[:, n_neighbors:].astype("int32")
+            indices = part.values[:, n_neighbors : 2 * n_neighbors].astype("int32")
 
             df = cudf.DataFrame()
-            df.index = part.index
+            df.index = part["index"].values
             df["corpus-index"] = create_list_series_from_2d_ar(indices, df.index)
             df["score"] = create_list_series_from_2d_ar(distances, df.index)
 
@@ -200,8 +204,11 @@ class CuMLDenseSearch(DenseSearchOp):
             meta={"corpus-index": "object", "score": "object"},
         )
 
-        output["query-id"] = _query_ddf["_id"]
-        output["query-index"] = _query_ddf.index
+        output["query-index"] = output.index.values
+
+        output = output.merge(
+            query_ddf[["_id"]], left_index=True, right_index=True, how="left"
+        ).rename(columns={"_id": "query-id"})
 
         return output
 
@@ -223,7 +230,6 @@ class CuMLExactSearch(CuMLDenseSearch):
         super().__init__(algorithm=algorithm, *args, **kwargs)
 
 
-
 def _get_embedding_cupy(data, embedding_col, normalize=True):
     dim = len(data.head()[embedding_col].iloc[0])
 
@@ -236,8 +242,8 @@ def _get_embedding_cupy(data, embedding_col, normalize=True):
 
 
 def _per_dim_ddf(
-    data: dask_cudf.DataFrame, embedding_col: str, normalize: bool = True
-) -> dask_cudf.DataFrame:
+    data: dd.DataFrame, embedding_col: str, index_col: str = "index", normalize: bool = True
+) -> dd.DataFrame:
     dim = len(data.head()[embedding_col].iloc[0])
 
     def to_map(part, dim):
@@ -245,9 +251,14 @@ def _per_dim_ddf(
         if normalize:
             values = values / cp.linalg.norm(values, axis=1, keepdims=True)
 
-        return cudf.DataFrame(values, index=part.index)
+        out_part = cudf.DataFrame(values)
+        out_part.index = part[index_col].values
+        return out_part
 
     meta = {i: "float32" for i in range(int(dim))}
     output = data.map_partitions(to_map, dim=dim, meta=meta)
+
+    output["index"] = output.index.values
+    #output = output.sort_values("index").drop(labels=["index"], axis=1)
 
     return output
