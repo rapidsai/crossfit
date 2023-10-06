@@ -40,9 +40,12 @@ def embed(
             continue
 
         df = getattr(dataset, dtype).ddf()
-        partitions = max(int(len(df) / partition_num), 1)
-        if not partitions % 2 == 0:
-            partitions += 1
+        if partition_num:
+            partitions = max(int(len(df) / partition_num), 1)
+            if not partitions % 2 == 0:
+                partitions += 1
+        else:
+            partitions = None
 
         print(f"Embedding {dataset_name} {dtype} ({partitions} parts)...")
 

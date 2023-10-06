@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 import cudf
 import cupy as cp
@@ -157,7 +157,7 @@ def beir_report(
     dataset_name: str,
     model_name: str,
     vector_search: VectorSearchOp,
-    partition_num: int = 50_000,
+    partition_num: Optional[int] = 50_000,
     ks=[1, 3, 5, 10],
     overwrite=False,
     out_dir=None,

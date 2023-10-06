@@ -1,4 +1,3 @@
-import functools as ft
 from typing import overload
 
 import cudf
@@ -36,48 +35,11 @@ class VectorSearchOp(Op):
         return super().__call__(data, *args, **kwargs)
 
 
-class RaftExactSearch(VectorSearchOp):
-    def __init__(
-        self,
-        k: int,
-        pre=None,
-        embedding_col="embedding",
-        metric="sqeuclidean",
-        normalize=True,
-        keep_cols=None,
-    ):
-        super().__init__(pre=pre, keep_cols=keep_cols)
-        self.k = k
-        self.metric = metric
-        self.embedding_col = embedding_col
-        self.normalize = normalize
-
-    def call(self, queries, items):
-        items = items.reset_index()
-        query_emb = _get_embedding_cupy(queries, self.embedding_col, self.normalize)
-        item_emb = _get_embedding_cupy(items, self.embedding_col, self.normalize)
-
-        results, indices = knn(dataset=item_emb, queries=query_emb, k=self.k, metric=self.metric)
-        results, indices = cp.asarray(results), cp.asarray(indices)
-
-        indices_df = cudf.DataFrame({"key": indices.reshape(-1)})
-        ids_df = cudf.DataFrame({"key": items.index, "value": items["index"]})
-        merged_df = indices_df.merge(ids_df, on="key", how="left")
-        item_ids = merged_df["value"].values.reshape(-1, self.k)
-
-        df = cudf.DataFrame()
-        df.index = queries.index
-        df["query-id"] = queries["_id"]
-        df["query-index"] = queries["index"]
-        df["corpus-index"] = create_list_series_from_2d_ar(item_ids, queries["index"])
-        df["score"] = create_list_series_from_2d_ar(results, queries["index"])
-
-        return df
-
+class ExactSearchOp(VectorSearchOp):
     def reduce_dask(self, df):
-        df = df.reset_index()
         grouped = (
-            df.groupby("query-id")
+            df.reset_index()
+            .groupby("query-id")
             .agg(
                 {
                     "query-index": "first",
@@ -93,16 +55,18 @@ class RaftExactSearch(VectorSearchOp):
         indices = grouped["corpus-index"].list.leaves.values.reshape(num_groups, num_parts, -1)
         indices_flattened = indices.reshape(num_groups, -1)
         scores_flattened = scores.reshape(num_groups, -1)
-        sorted = cp.argsort(-scores_flattened, axis=1)[:, : self.k]
-        sorted_scores = cp.take_along_axis(scores_flattened, sorted, axis=1)
-        sorted_indices = cp.take_along_axis(indices_flattened, sorted, axis=1)
 
-        out = cudf.DataFrame()
-        out.index = grouped.index
-        out["query-id"] = grouped["query-id"]
-        out["query-index"] = grouped["query-index"]
-        out["corpus-index"] = create_list_series_from_2d_ar(sorted_indices, out.index)
-        out["score"] = create_list_series_from_2d_ar(sorted_scores, out.index)
+        scores_ordered = -scores_flattened if self.desc else scores_flattened
+        sorted = cp.argsort(scores_ordered, axis=1)[:, : self.k]
+        topk_scores = cp.take_along_axis(scores_flattened, sorted, axis=1)
+        topk_indices = cp.take_along_axis(indices_flattened, sorted, axis=1)
+
+        reduced = cudf.DataFrame(index=grouped["query-index"])
+        reduced["corpus-index"] = create_list_series_from_2d_ar(topk_indices, reduced.index)
+        reduced["score"] = create_list_series_from_2d_ar(topk_scores, reduced.index)
+
+        out = df[["query-id"]].join(reduced, sort=True).reset_index()
+        out = out[["query-id", "query-index", "corpus-index", "score"]]
 
         return out
 
@@ -127,13 +91,55 @@ class RaftExactSearch(VectorSearchOp):
             self.reduce_dask,
             meta={
                 "query-id": "object",
-                "query-index": "object",
-                "corpus-index": "object",
+                "query-index": "int32",
+                "corpus-index": "int32",
                 "score": "float32",
             },
         )
 
         return output
+
+
+class RaftExactSearch(ExactSearchOp):
+    def __init__(
+        self,
+        k: int,
+        pre=None,
+        embedding_col="embedding",
+        metric="cosine",
+        normalize=True,
+        keep_cols=None,
+    ):
+        super().__init__(pre=pre, keep_cols=keep_cols)
+        self.k = k
+        self.metric = metric
+        self.embedding_col = embedding_col
+        self.normalize = normalize
+
+        self.desc = False
+        if metric in ["cosine"]:
+            self.desc = True
+
+    def call(self, queries, items):
+        items = items.reset_index()
+        query_emb = _get_embedding_cupy(queries, self.embedding_col, self.normalize)
+        item_emb = _get_embedding_cupy(items, self.embedding_col, self.normalize)
+
+        results, indices = knn(dataset=item_emb, queries=query_emb, k=self.k, metric=self.metric)
+        results, indices = cp.asarray(results), cp.asarray(indices)
+
+        indices_df = cudf.DataFrame({"key": indices.reshape(-1)})
+        ids_df = cudf.DataFrame({"key": items.index, "value": items["index"]})
+        merged_df = indices_df.merge(ids_df, on="key", how="left")
+        item_ids = merged_df["value"].values.reshape(-1, self.k)
+
+        df = cudf.DataFrame(index=queries.index)
+        df["query-id"] = queries["_id"]
+        df["query-index"] = queries["index"]
+        df["corpus-index"] = create_list_series_from_2d_ar(item_ids, df.index)
+        df["score"] = create_list_series_from_2d_ar(results, df.index)
+
+        return df
 
 
 class CuMLVectorSearch(VectorSearchOp):
@@ -190,7 +196,7 @@ class CuMLVectorSearch(VectorSearchOp):
 
         def join_map(part, n_neighbors: int):
             distances = part.values[:, :n_neighbors].astype("float32")
-            # index is last column
+            # index is last col
             indices = part.values[:, n_neighbors:-1].astype("int32")
 
             assert indices.shape == distances.shape

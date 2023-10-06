@@ -11,20 +11,21 @@ from crossfit.data.array.conversion import convert_array
 
 class InMemoryLoader:
     @overload
-    def __init__(self, data: Dict[str, torch.Tensor], batch_size: int):
+    def __init__(self, data: Dict[str, torch.Tensor], batch_size: int, progress_bar=None):
         ...
 
     @overload
-    def __init__(self, data: CrossFrame, batch_size: int):
+    def __init__(self, data: CrossFrame, batch_size: int, progress_bar=None):
         ...
 
-    def __init__(self, data, batch_size: int):
+    def __init__(self, data, batch_size: int, progress_bar=None):
         self.data = CrossFrame(data).cast(torch.Tensor)
         self.tensor_dict = self.data.to_dict()
         self._batch_size = batch_size
         self.num_rows = len(next(iter(self.tensor_dict.values())))
         self.current_idx = 0
         self._to_map = []
+        self.progress_bar = progress_bar
 
     def map(self, fn):
         self._to_map.append(fn)
@@ -50,6 +51,9 @@ class InMemoryLoader:
 
         for fn in self._to_map:
             batch = fn(batch)
+
+        if self.progress_bar is not None:
+            self.progress_bar.update(batch_size)
 
         return batch
 
@@ -82,11 +86,9 @@ class SortedSeqLoader(InMemoryLoader):
         to_ignore=None,
         progress_bar=None,
     ):
-        self._original_data = data
         self.sort_key = sort_key
         self.to_ignore = to_ignore or []
         self.to_ignore.append("seq_length")
-        self.progress_bar = progress_bar
         self.memory_estimator = memory_estimator
 
         frame = CrossFrame(data).cast(torch.Tensor)
@@ -95,13 +97,20 @@ class SortedSeqLoader(InMemoryLoader):
         frame = frame.apply(lambda x: x[self.sorted_indices])
         frame = frame.assign(seq_length=seq_length[self.sorted_indices])
 
-        super().__init__(frame, initial_batch_size)
+        super().__init__(frame, initial_batch_size, progress_bar=progress_bar)
         self.splits = self._find_optimal_splits()
 
-    def sort_df(self, df):
-        df["__seq_length"] = convert_array(self.data["seq_length"], cp.ndarray)
+    def sort_column(self, col):
+        indices = convert_array(self.sorted_indices, type(col))
 
-        return df.sort_values(by="__seq_length")
+        return col[indices]
+
+    def sort_df(self, df):
+        output = type(df)()
+        for col in df.columns:
+            output[col] = self.sort_column(df[col])
+
+        return output
 
     def __next__(self):
         if self.current_idx >= len(self.splits):

@@ -11,9 +11,15 @@ from crossfit.op.base import Op
 
 class Tokenizer(Op):
     def __init__(
-        self, name: str, cols=None, pre=None, max_length: int = 1024, is_sentence_transformer=True
+        self,
+        name: str,
+        cols=None,
+        keep_cols=None,
+        pre=None,
+        max_length: int = 1024,
+        is_sentence_transformer=True,
     ):
-        super().__init__(pre=pre, cols=cols)
+        super().__init__(pre=pre, cols=cols, keep_cols=keep_cols)
         self.name = name
         if is_sentence_transformer:
             self.name = f"sentence-transformers/{name}"
@@ -76,7 +82,7 @@ class Tokenizer(Op):
             output[self._construct_name(col, "input_ids")] = input_ids
             output[self._construct_name(col, "attention_mask")] = attention_mask
 
-        return output
+        return output.reset_index(drop=True)
 
     def meta(self):
         tokenized = {

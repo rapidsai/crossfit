@@ -9,7 +9,7 @@ from transformers import AutoConfig
 from crossfit.op.base import Op
 from crossfit.backend.cudf.series import create_list_series_from_2d_ar
 from crossfit.backend.torch.hf.memory import HFMemoryEstimator
-from crossfit.backend.torch.loader import SortedSeqLoader
+from crossfit.backend.torch.loader import SortedSeqLoader, InMemoryLoader
 
 
 class Embedder(Op):
@@ -18,14 +18,17 @@ class Embedder(Op):
         model_name: str,
         pre=None,
         cols=False,
+        keep_cols=None,
         default_batch_size=1024,
         max_mem: str = "16GB",
+        sorted_data_loader: bool = False,
     ):
-        super().__init__(pre, cols)
+        super().__init__(pre=pre, cols=cols, keep_cols=keep_cols)
         self.model_name = model_name
         self.batch_size = default_batch_size
         self.max_mem = max_mem
         self.max_mem_gb = int(self.max_mem.split("GB")[0]) / 2
+        self.sorted_data_loader = sorted_data_loader
 
     def setup(self):
         self.model = SentenceTransformer(self.model_name, device="cuda").to("cuda")
@@ -34,23 +37,28 @@ class Embedder(Op):
 
     @torch.no_grad()
     def call(self, data, partition_info=None):
-        loader = SortedSeqLoader(
-            data[["input_ids", "attention_mask"]],
-            self.memory_estimator,
-            progress_bar=self.create_progress_bar(len(data), partition_info),
-        )
+        index = data.index
+        if self.sorted_data_loader:
+            loader = SortedSeqLoader(
+                data[["input_ids", "attention_mask"]],
+                self.memory_estimator,
+                progress_bar=self.create_progress_bar(len(data), partition_info),
+            )
+        else:
+            loader = InMemoryLoader(
+                data[["input_ids", "attention_mask"]],
+                batch_size=self.batch_size,
+                progress_bar=self.create_progress_bar(len(data), partition_info),
+            )
 
-        data = loader.sort_df(data)
         all_embeddings_ls = []
         for output in loader.map(self.model):
             all_embeddings_ls.append(output["sentence_embedding"])
 
-        out = cudf.DataFrame(index=data.index)
+        out = cudf.DataFrame(index=index)
         embedding = cp.asarray(torch.vstack(all_embeddings_ls))
-        out["embedding"] = create_list_series_from_2d_ar(embedding, out.index)
-
-        # We sort data, so we need to add add the keep-cols expliticly
-        out = self.add_keep_cols(data, out)
+        _index = loader.sort_column(index.values) if self.sorted_data_loader else index
+        out["embedding"] = create_list_series_from_2d_ar(embedding, _index)
 
         gc.collect()
 
