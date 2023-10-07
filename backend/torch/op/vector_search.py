@@ -41,22 +41,15 @@ class TorchExactSearch(ExactSearchOp):
         return results, indices
 
     def call(self, queries, items):
-        items = items.reset_index()
-
         query_emb = _get_embedding_cupy(queries, self.embedding_col, normalize=True)
         item_emb = _get_embedding_cupy(items, self.embedding_col, normalize=True)
 
         results, indices = self.search_tensors(query_emb, item_emb)
 
-        indices_df = cudf.DataFrame({"key": indices.reshape(-1)})
-        ids_df = cudf.DataFrame({"key": items.index, "value": items["index"]})
-        merged_df = indices_df.merge(ids_df, on="key", how="left")
-        item_ids = merged_df["value"].values.reshape(-1, self.k)
-
         df = cudf.DataFrame(index=queries.index)
         df["query-id"] = queries["_id"]
         df["query-index"] = queries["index"]
-        df["corpus-index"] = create_list_series_from_2d_ar(item_ids, df.index)
+        df["corpus-index"] = create_list_series_from_2d_ar(items["index"].values[indices], df.index)
         df["score"] = create_list_series_from_2d_ar(results, df.index)
 
         return df
