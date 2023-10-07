@@ -63,7 +63,7 @@ def embed(
     output: EmbeddingDatataset = EmbeddingDatataset.from_dir(emb_dir, data=dataset)
     pred_path = os.path.join(emb_dir, "predictions")
 
-    if vector_search is None:
+    if not vector_search:
         return output
 
     topk_df = vector_search(output)

@@ -82,7 +82,7 @@ class Tokenizer(Op):
             output[self._construct_name(col, "input_ids")] = input_ids
             output[self._construct_name(col, "attention_mask")] = attention_mask
 
-        return output.reset_index(drop=True)
+        return output
 
     def meta(self):
         tokenized = {

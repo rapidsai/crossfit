@@ -38,16 +38,15 @@ class VectorSearchOp(Op):
 class ExactSearchOp(VectorSearchOp):
     def reduce_dask(self, df):
         grouped = (
-            df.reset_index()
-            .groupby("query-id")
+            df
+            .groupby("query-index")
             .agg(
                 {
-                    "query-index": "first",
+                    "query-id": "first",
                     "score": list,
                     "corpus-index": list,
                 }
             )
-            .reset_index()
         )
 
         num_groups, num_parts = len(grouped), int(grouped["score"].list.len().iloc[0])
@@ -61,39 +60,49 @@ class ExactSearchOp(VectorSearchOp):
         topk_scores = cp.take_along_axis(scores_flattened, sorted, axis=1)
         topk_indices = cp.take_along_axis(indices_flattened, sorted, axis=1)
 
-        reduced = cudf.DataFrame(index=grouped["query-index"])
-        reduced["corpus-index"] = create_list_series_from_2d_ar(topk_indices, reduced.index)
+        grouped = grouped.reset_index()
+
+        reduced = cudf.DataFrame(index=grouped.index)
+        reduced["query-index"] = grouped["query-index"]
+        reduced["query-id"] = grouped["query-id"]
         reduced["score"] = create_list_series_from_2d_ar(topk_scores, reduced.index)
+        reduced["corpus-index"] = create_list_series_from_2d_ar(topk_indices, reduced.index)
 
-        out = df[["query-id"]].join(reduced, sort=True).reset_index()
-        out = out[["query-id", "query-index", "corpus-index", "score"]]
+        reduced = reduced.set_index("query-index", drop=False)
 
-        return out
+        return reduced
 
     def call_dask(self, queries, items):
         delayed_cross_products = []
         for i in range(queries.npartitions):
             query_part = queries.get_partition(i)
 
-            for j in range(items.npartitions):
-                item_part = items.get_partition(j)
+            #for j in range(items.npartitions):
+            #    item_part = items.get_partition(j)
 
-                delayed_cross_product = delayed(self.call)(
-                    query_part,
-                    item_part,
-                )
-                delayed_cross_products.append(delayed_cross_product)
+            #    delayed_cross_product = delayed(self.call)(
+            #        query_part,
+            #        item_part,
+            #    )
+            #    delayed_cross_products.append(delayed_cross_product)
+
+            delayed_cross_product = delayed(self.call)(
+                query_part,
+                items,
+            )
+            delayed_cross_products.append(delayed_cross_product)
+
 
         result_ddf = from_delayed(delayed_cross_products)
 
-        output = result_ddf.set_index("query-index")
+        output = result_ddf.set_index("query-index", drop=False)
         output = output.map_partitions(
             self.reduce_dask,
             meta={
-                "query-id": "object",
                 "query-index": "int32",
-                "corpus-index": "int32",
-                "score": "float32",
+                "query-id": "object",
+                "score": "object",
+                "corpus-index": "object",
             },
         )
 
@@ -117,26 +126,22 @@ class RaftExactSearch(ExactSearchOp):
         self.normalize = normalize
 
         self.desc = False
-        if metric in ["cosine"]:
+        if metric in ["cosine", "inner_product"]:
             self.desc = True
 
     def call(self, queries, items):
-        items = items.reset_index()
         query_emb = _get_embedding_cupy(queries, self.embedding_col, self.normalize)
         item_emb = _get_embedding_cupy(items, self.embedding_col, self.normalize)
 
         results, indices = knn(dataset=item_emb, queries=query_emb, k=self.k, metric=self.metric)
         results, indices = cp.asarray(results), cp.asarray(indices)
 
-        indices_df = cudf.DataFrame({"key": indices.reshape(-1)})
-        ids_df = cudf.DataFrame({"key": items.index, "value": items["index"]})
-        merged_df = indices_df.merge(ids_df, on="key", how="left")
-        item_ids = merged_df["value"].values.reshape(-1, self.k)
+        queries = queries.set_index("index", drop=False)
 
         df = cudf.DataFrame(index=queries.index)
         df["query-id"] = queries["_id"]
         df["query-index"] = queries["index"]
-        df["corpus-index"] = create_list_series_from_2d_ar(item_ids, df.index)
+        df["corpus-index"] = create_list_series_from_2d_ar(items["index"].values[indices], df.index)
         df["score"] = create_list_series_from_2d_ar(results, df.index)
 
         return df

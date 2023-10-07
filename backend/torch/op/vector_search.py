@@ -42,6 +42,7 @@ class TorchExactSearch(ExactSearchOp):
 
     def call(self, queries, items):
         items = items.reset_index()
+
         query_emb = _get_embedding_cupy(queries, self.embedding_col, normalize=True)
         item_emb = _get_embedding_cupy(items, self.embedding_col, normalize=True)
 
