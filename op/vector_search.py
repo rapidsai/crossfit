@@ -36,26 +36,52 @@ class VectorSearchOp(Op):
 
 
 class ExactSearchOp(VectorSearchOp):
-    def reduce_dask(self, df):
-        grouped = (
-            df
-            .groupby("query-index")
-            .agg(
-                {
-                    "query-id": "first",
-                    "score": list,
-                    "corpus-index": list,
-                }
-            )
-        )
+    def search_tensors(self, queries, corpus):
+        raise NotImplementedError()
 
-        num_groups, num_parts = len(grouped), int(grouped["score"].list.len().iloc[0])
-        scores = grouped["score"].list.leaves.values.reshape(num_groups, num_parts, -1)
-        indices = grouped["corpus-index"].list.leaves.values.reshape(num_groups, num_parts, -1)
+    def call_part(self, queries, items):
+        query_emb = _get_embedding_cupy(queries, self.embedding_col, normalize=self.normalize)
+        item_emb = _get_embedding_cupy(items, self.embedding_col, normalize=self.normalize)
+
+        results, indices = self.search_tensors(query_emb, item_emb)
+
+        dfs = []
+        for i in range(self.k):
+            df = cudf.DataFrame()
+            df["query-id"] = queries["_id"]
+            df["query-index"] = queries["index"]
+            df["corpus-index"] = items["index"].values[indices[:, i]]
+            df["score"] = results[:, i]
+
+            dfs.append(df)
+
+        out = cudf.concat(dfs)
+
+        return out
+
+    def call(self, queries, items):
+        query_emb = _get_embedding_cupy(queries, self.embedding_col, normalize=self.normalize)
+        item_emb = _get_embedding_cupy(items, self.embedding_col, normalize=self.normalize)
+
+        results, indices = self.search_tensors(query_emb, item_emb)
+
+        df = cudf.DataFrame(index=queries.index)
+        df["query-id"] = queries["_id"]
+        df["query-index"] = queries["index"]
+        df["corpus-index"] = create_list_series_from_2d_ar(items["index"].values[indices], df.index)
+        df["score"] = create_list_series_from_2d_ar(results, df.index)
+
+        return df
+
+    def reduce(self, grouped):
+        num_groups = len(grouped)
+        scores = grouped["score"].list.leaves.values
+        indices = grouped["corpus-index"].list.leaves.values
         indices_flattened = indices.reshape(num_groups, -1)
         scores_flattened = scores.reshape(num_groups, -1)
 
-        scores_ordered = -scores_flattened if self.desc else scores_flattened
+        desc = float(scores_flattened[0][0]) > float(scores_flattened[0][1])
+        scores_ordered = -scores_flattened if desc else scores_flattened
         sorted = cp.argsort(scores_ordered, axis=1)[:, : self.k]
         topk_scores = cp.take_along_axis(scores_flattened, sorted, axis=1)
         topk_indices = cp.take_along_axis(indices_flattened, sorted, axis=1)
@@ -77,27 +103,27 @@ class ExactSearchOp(VectorSearchOp):
         for i in range(queries.npartitions):
             query_part = queries.get_partition(i)
 
-            #for j in range(items.npartitions):
-            #    item_part = items.get_partition(j)
+            for j in range(items.npartitions):
+                item_part = items.get_partition(j)
 
-            #    delayed_cross_product = delayed(self.call)(
-            #        query_part,
-            #        item_part,
-            #    )
-            #    delayed_cross_products.append(delayed_cross_product)
-
-            delayed_cross_product = delayed(self.call)(
-                query_part,
-                items,
-            )
-            delayed_cross_products.append(delayed_cross_product)
-
+                delayed_cross_product = delayed(self.call_part)(
+                    query_part,
+                    item_part,
+                )
+                delayed_cross_products.append(delayed_cross_product)
 
         result_ddf = from_delayed(delayed_cross_products)
 
-        output = result_ddf.set_index("query-index", drop=False)
-        output = output.map_partitions(
-            self.reduce_dask,
+        return (
+            result_ddf.groupby("query-index").agg(
+                {
+                    "query-id": "first",
+                    "score": list,
+                    "corpus-index": list,
+                }
+            )
+        ).map_partitions(
+            self.reduce,
             meta={
                 "query-index": "int32",
                 "query-id": "object",
@@ -105,8 +131,6 @@ class ExactSearchOp(VectorSearchOp):
                 "corpus-index": "object",
             },
         )
-
-        return output
 
 
 class RaftExactSearch(ExactSearchOp):
@@ -125,26 +149,10 @@ class RaftExactSearch(ExactSearchOp):
         self.embedding_col = embedding_col
         self.normalize = normalize
 
-        self.desc = False
-        if metric in ["cosine", "inner_product"]:
-            self.desc = True
+    def search_tensors(self, queries, corpus):
+        results, indices = knn(dataset=corpus, queries=queries, k=self.k, metric=self.metric)
 
-    def call(self, queries, items):
-        query_emb = _get_embedding_cupy(queries, self.embedding_col, self.normalize)
-        item_emb = _get_embedding_cupy(items, self.embedding_col, self.normalize)
-
-        results, indices = knn(dataset=item_emb, queries=query_emb, k=self.k, metric=self.metric)
-        results, indices = cp.asarray(results), cp.asarray(indices)
-
-        queries = queries.set_index("index", drop=False)
-
-        df = cudf.DataFrame(index=queries.index)
-        df["query-id"] = queries["_id"]
-        df["query-index"] = queries["index"]
-        df["corpus-index"] = create_list_series_from_2d_ar(items["index"].values[indices], df.index)
-        df["score"] = create_list_series_from_2d_ar(results, df.index)
-
-        return df
+        return cp.asarray(results), cp.asarray(indices)
 
 
 class CuMLVectorSearch(VectorSearchOp):

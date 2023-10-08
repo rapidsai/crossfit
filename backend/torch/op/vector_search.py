@@ -4,8 +4,7 @@ import cupy as cp
 import torch
 
 from crossfit.data.array.conversion import convert_array
-from crossfit.op.vector_search import ExactSearchOp, _get_embedding_cupy
-from crossfit.backend.cudf.series import create_list_series_from_2d_ar
+from crossfit.op.vector_search import ExactSearchOp
 
 
 class TorchExactSearch(ExactSearchOp):
@@ -20,8 +19,8 @@ class TorchExactSearch(ExactSearchOp):
         super().__init__(pre=pre, keep_cols=keep_cols)
         self.k = k
         self.metric = metric
-        self.desc = True
         self.embedding_col = embedding_col
+        self.normalize = False
         self.score_functions = {"cos_sim": utils.cos_sim, "dot": utils.dot_score}
         self.score_function_desc = {"cos_sim": "Cosine Similarity", "dot": "Dot Product"}
 
@@ -39,17 +38,3 @@ class TorchExactSearch(ExactSearchOp):
         indices = convert_array(sim_scores_top_k_idx, cp.ndarray)
 
         return results, indices
-
-    def call(self, queries, items):
-        query_emb = _get_embedding_cupy(queries, self.embedding_col, normalize=True)
-        item_emb = _get_embedding_cupy(items, self.embedding_col, normalize=True)
-
-        results, indices = self.search_tensors(query_emb, item_emb)
-
-        df = cudf.DataFrame(index=queries.index)
-        df["query-id"] = queries["_id"]
-        df["query-index"] = queries["index"]
-        df["corpus-index"] = create_list_series_from_2d_ar(items["index"].values[indices], df.index)
-        df["score"] = create_list_series_from_2d_ar(results, df.index)
-
-        return df
