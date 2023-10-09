@@ -98,13 +98,19 @@ class ExactSearchOp(VectorSearchOp):
 
         return reduced
 
-    def call_dask(self, queries, items):
+    def call_dask(self, queries, items, partition_num=5_000):
+        # repartition items
+        partitions = max(int(len(items) / partition_num), 1)
+        if not partitions % 2 == 0:
+            partitions += 1
+        _items = items.repartition(partitions)
+
         delayed_cross_products = []
         for i in range(queries.npartitions):
             query_part = queries.get_partition(i)
 
             for j in range(items.npartitions):
-                item_part = items.get_partition(j)
+                item_part = _items.get_partition(j)
 
                 delayed_cross_product = delayed(self.call_part)(
                     query_part,
@@ -120,7 +126,9 @@ class ExactSearchOp(VectorSearchOp):
                     "query-id": "first",
                     "score": list,
                     "corpus-index": list,
-                }
+                },
+                split_out=result_ddf.npartitions,
+                shuffle=True,
             )
         ).map_partitions(
             self.reduce,

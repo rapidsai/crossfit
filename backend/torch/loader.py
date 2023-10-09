@@ -1,8 +1,9 @@
 from typing import Dict, overload
 from itertools import islice
+from crossfit.backend.torch.memory import MemoryEstimator
+from crossfit.backend.torch.model import Model
 
 import torch
-import cupy as cp
 
 from crossfit.data.dataframe.dispatch import CrossFrame
 from crossfit.data.array.dispatch import crossarray
@@ -18,7 +19,7 @@ class InMemoryLoader:
     def __init__(self, data: CrossFrame, batch_size: int, progress_bar=None):
         ...
 
-    def __init__(self, data, batch_size: int, progress_bar=None):
+    def __init__(self, data, batch_size: int, progress_bar=None, max_seq_len=None):
         self.data = CrossFrame(data).cast(torch.Tensor)
         self.tensor_dict = self.data.to_dict()
         self._batch_size = batch_size
@@ -26,6 +27,7 @@ class InMemoryLoader:
         self.current_idx = 0
         self._to_map = []
         self.progress_bar = progress_bar
+        self.max_seq_len = max_seq_len
 
     def map(self, fn):
         self._to_map.append(fn)
@@ -46,6 +48,8 @@ class InMemoryLoader:
         end = batch_size + self.current_idx
 
         batch = {key: val[self.current_idx : end] for key, val in self.tensor_dict.items()}
+        if self.max_seq_len is not None:
+            batch = {key: val[:, : self.max_seq_len] for key, val in batch.items()}
 
         self.current_idx += self.batch_size
 
@@ -61,35 +65,21 @@ class InMemoryLoader:
         return list(islice(self, n))
 
 
-class MemoryEstimator:
-    def __init__(self, max_mem_gb: int):
-        self.max_mem_gb = max_mem_gb
-
-    def max_seq_length(self) -> int:
-        raise NotImplementedError()
-
-    def estimate(self, max_num_tokens: int, batch_size: int) -> int:
-        raise NotImplementedError()
-
-    def __call__(self, max_num_tokens: int, batch_size: int) -> int:
-        return self.estimate(max_num_tokens, batch_size)
-
-
 class SortedSeqLoader(InMemoryLoader):
     @crossarray
     def __init__(
         self,
         data: CrossFrame,
-        memory_estimator: MemoryEstimator,
+        model: Model,
         sort_key: str = "input_ids",
-        initial_batch_size: int = 1024,
+        initial_batch_size: int = 512,
         to_ignore=None,
         progress_bar=None,
     ):
         self.sort_key = sort_key
         self.to_ignore = to_ignore or []
         self.to_ignore.append("seq_length")
-        self.memory_estimator = memory_estimator
+        self.model = model
 
         frame = CrossFrame(data).cast(torch.Tensor)
         seq_length = (frame[sort_key] != 0).sum(axis=1)
@@ -128,7 +118,7 @@ class SortedSeqLoader(InMemoryLoader):
             for key, val in self.tensor_dict.items()
             if key not in self.to_ignore
         }
-        clip_len = min(_tokens[end - 1], self.memory_estimator.max_seq_length())
+        clip_len = min(_tokens[end - 1], self.model.max_seq_length())
         batch = {key: val[:, :clip_len] for key, val in batch.items()}
 
         self.current_idx += 1
@@ -150,6 +140,7 @@ class SortedSeqLoader(InMemoryLoader):
         decreasing_attempts = 0
 
         num_tokens = self.tensor_dict["seq_length"]
+        max_seq_length = self.model.max_seq_length()
 
         while i < len(num_tokens):
             best_fit_e_ind = i + self.batch_size  # Initialize to at least initial_batch_size
@@ -159,9 +150,9 @@ class SortedSeqLoader(InMemoryLoader):
                 tentative_e_ind = i + best_fit_e_ind * doubling_factor  # Double the last best fit
                 tentative_e_ind = min(tentative_e_ind, len(num_tokens))
                 max_token = int(num_tokens[tentative_e_ind - 1])
-                est_memory = self.memory_estimator(max_token, int(tentative_e_ind - i))
+                est_memory = self.model.estimate_memory(max_token, int(tentative_e_ind - i))
 
-                if est_memory <= self.memory_estimator.max_mem_gb:
+                if est_memory <= self.model.max_mem_gb:
                     best_fit_e_ind = tentative_e_ind
                 else:
                     max_doubling_attempts = doubling_i  # Reduce max doubling attempts
@@ -171,9 +162,13 @@ class SortedSeqLoader(InMemoryLoader):
                 tentative_e_ind = best_fit_e_ind + dynamic_step_size  # Add dynamic step size
                 tentative_e_ind = min(tentative_e_ind, len(num_tokens))
                 max_token = int(num_tokens[tentative_e_ind - 1])
-                est_memory = self.memory_estimator(max_token, int(tentative_e_ind - i))
 
-                if est_memory <= self.memory_estimator.max_mem_gb:
+                est_memory = self.model.estimate_memory(max_token, int(tentative_e_ind - i))
+                # The closer we are to the end, the more we penalize the batch size
+                penalty_factor = 1 + 0.3 * ((max_token / max_seq_length) ** 2)
+                est_memory *= penalty_factor
+
+                if est_memory <= self.model.max_mem_gb:
                     best_fit_e_ind = tentative_e_ind
                     break
                 else:

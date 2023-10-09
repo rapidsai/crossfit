@@ -7,29 +7,27 @@ from transformers import AutoConfig, AutoTokenizer
 
 from crossfit.backend.cudf.series import create_list_series_from_2d_ar
 from crossfit.op.base import Op
+from crossfit.backend.torch.model import Model
 
 
 class Tokenizer(Op):
     def __init__(
         self,
-        name: str,
+        model: Model,
         cols=None,
         keep_cols=None,
         pre=None,
         max_length: int = 1024,
-        is_sentence_transformer=True,
     ):
         super().__init__(pre=pre, cols=cols, keep_cols=keep_cols)
-        self.name = name
-        if is_sentence_transformer:
-            self.name = f"sentence-transformers/{name}"
+        self.model = model
         self.max_length = max_length
 
         # Make sure we download the tokenizer just once
-        GPUTokenizer.from_pretrained(self.name)
+        GPUTokenizer.from_pretrained(self.model)
 
     def setup(self):
-        self.tokenizer = GPUTokenizer.from_pretrained(self.name)
+        self.tokenizer = GPUTokenizer.from_pretrained(self.model)
 
     def tokenize_strings(self, sentences, max_length=None):
         return self.tokenizer(
@@ -113,7 +111,10 @@ class GPUTokenizer(SubwordTokenizer):
 
     @classmethod
     def get_tokenizer_config(cls, name):
-        config = AutoConfig.from_pretrained(name)
+        if isinstance(name, Model):
+            config = name.load_cfg()
+        else:
+            config = AutoConfig.from_pretrained(name)
         return config.to_dict()
 
     @classmethod
