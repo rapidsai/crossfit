@@ -58,14 +58,9 @@ class Embedder(Op):
                 max_seq_len=self.model.max_seq_length(),
             )
 
-        model = self.model.get_model(self)
         all_embeddings_ls = []
-        # for output in loader.map(_safe_apply_model(model)):
-        #     all_embeddings_ls.append(output["sentence_embedding"])
-
-        for batch in loader:
-            outputs = model(batch)
-            all_embeddings_ls.append(outputs["sentence_embedding"])
+        for output in loader.map(self.model.get_model(self)):
+            all_embeddings_ls.append(output["sentence_embedding"])
 
         out = cudf.DataFrame(index=index)
         embedding = cp.asarray(torch.vstack(all_embeddings_ls))
@@ -79,53 +74,3 @@ class Embedder(Op):
 
     def meta(self):
         return {"embedding": "float32"}
-
-
-def _safe_apply_model(model):
-    def _inner(batch):
-        try:
-            to_call = model
-            outputs = to_call(batch)
-
-            return outputs
-        except Exception as e:
-            if (
-                "out of memory" in str(e)
-                or "CUDA error at" in str(e)
-                or isinstance(e, (SystemError, MemoryError))
-            ):
-                batch_size = list(batch.values())[0].shape[0]
-                to_call = model
-
-                device = next(model.parameters()).device
-                cpu_batch = {key: val.cpu() for key, val in batch.items()}
-                cpu_to_call = to_call.cpu()
-
-                del batch
-                del to_call
-
-                gc.collect()
-                torch.cuda.empty_cache()
-                rmm.reinitialize(pool_allocator=False)  # Resetting RMM
-
-                to_call = cpu_to_call.to(device)
-                batch = {key: val.to(device) for key, val in cpu_batch.items()}
-
-                # Split the batch in half and try again
-                first_half = {key: val[: batch_size // 2] for key, val in batch.items()}
-                second_half = {key: val[batch_size // 2 :] for key, val in batch.items()}
-
-                first = model(first_half)
-                second = model(second_half)
-
-                # Stack outputs based on their type
-                if isinstance(first, dict) and isinstance(second, dict):
-                    return {key: torch.cat([first[key], second[key]], dim=0) for key in first}
-                elif isinstance(first, torch.Tensor) and isinstance(second, torch.Tensor):
-                    return torch.cat([first, second], dim=0)
-                else:
-                    raise TypeError("Inconsistent output type from the model.")
-            else:
-                raise e
-
-    return _inner

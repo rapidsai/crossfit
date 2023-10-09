@@ -1,6 +1,5 @@
 from typing import Dict, overload
 from itertools import islice
-from crossfit.backend.torch.memory import MemoryEstimator
 from crossfit.backend.torch.model import Model
 
 import torch
@@ -165,7 +164,7 @@ class SortedSeqLoader(InMemoryLoader):
 
                 est_memory = self.model.estimate_memory(max_token, int(tentative_e_ind - i))
                 # The closer we are to the end, the more we penalize the batch size
-                penalty_factor = 1 + 0.3 * ((max_token / max_seq_length) ** 2)
+                penalty_factor = 1 + 5.0 * ((max_token / max_seq_length) ** 2)
                 est_memory *= penalty_factor
 
                 if est_memory <= self.model.max_mem_gb:

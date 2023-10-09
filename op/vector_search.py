@@ -98,7 +98,7 @@ class ExactSearchOp(VectorSearchOp):
 
         return reduced
 
-    def call_dask(self, queries, items, partition_num=5_000):
+    def call_dask(self, queries, items, partition_num=10_000):
         # repartition items
         partitions = max(int(len(items) / partition_num), 1)
         if not partitions % 2 == 0:
@@ -127,8 +127,8 @@ class ExactSearchOp(VectorSearchOp):
                     "score": list,
                     "corpus-index": list,
                 },
-                split_out=result_ddf.npartitions,
-                shuffle=True,
+                # split_out=result_ddf.npartitions,
+                # shuffle=True,
             )
         ).map_partitions(
             self.reduce,

@@ -1,5 +1,4 @@
 from beir.retrieval.search.dense import util as utils
-import cudf
 import cupy as cp
 import torch
 
