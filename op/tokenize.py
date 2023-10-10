@@ -6,8 +6,9 @@ from cudf.utils.hash_vocab_utils import hash_vocab
 from transformers import AutoConfig, AutoTokenizer
 
 from crossfit.backend.cudf.series import create_list_series_from_2d_ar
-from crossfit.op.base import Op
 from crossfit.backend.torch.model import Model
+from crossfit.dataset.home import CF_HOME
+from crossfit.op.base import Op
 
 
 class Tokenizer(Op):
@@ -121,7 +122,7 @@ class GPUTokenizer(SubwordTokenizer):
     def from_pretrained(cls, name, cache_dir=None):
         # Set default cache_dir if not provided
         if cache_dir is None:
-            cache_dir = os.path.join(os.path.expanduser("~"), ".cache", "lmdf")
+            cache_dir = os.path.join(CF_HOME, "vocab")
 
         # Create cache_dir if it doesn't exist
         if not os.path.exists(cache_dir):
@@ -132,15 +133,19 @@ class GPUTokenizer(SubwordTokenizer):
         tokenizer_class = config.get("tokenizer_class")
 
         # Construct hashed vocab file path
-        hashed_vocab_path = os.path.join(cache_dir, f"{tokenizer_class}.txt")
+        if not tokenizer_class:
+            tokenizer_class = cls.__name__
+
+        hashed_vocab_path = os.path.join(cache_dir, f"{tokenizer_class}-hash.txt")
 
         # Check if hashed vocab file exists
         if not os.path.exists(hashed_vocab_path):
             # Download and cache the tokenizer from Hugging Face
-            tokenizer = AutoTokenizer.from_pretrained(name)
+            tokenizer = AutoTokenizer.from_pretrained(config.get("_name_or_path"))
 
             # Save vocabulary to disk
-            vocab_path = tokenizer.save_vocabulary(cache_dir, "my_vocab")[0]
+            # `save_vocabulary()` automatically appends `-vocab.txt` suffix.
+            vocab_path = tokenizer.save_vocabulary(cache_dir, "{tokenizer_class}")[0]
 
             # Hash the vocabulary and save it
             hash_vocab(vocab_path, hashed_vocab_path)

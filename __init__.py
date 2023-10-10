@@ -1,5 +1,6 @@
 from crossfit import backend, metric, op
 from crossfit.backend.dask.cluster import Distributed, Serial
+from crossfit.backend.torch import SentenceTransformerModel, TorchExactSearch
 from crossfit.calculate.aggregate import Aggregator
 from crossfit.calculate.module import CrossModule
 from crossfit.data.array.conversion import convert_array
@@ -12,7 +13,6 @@ from crossfit.metric import *  # noqa
 from crossfit.op import *  # noqa
 from crossfit.report.beir.embed import embed
 from crossfit.report.beir.report import beir_report
-
 
 __all__ = [
     "Aggregator",
@@ -32,4 +32,6 @@ __all__ = [
     "Serial",
     "embed",
     "beir_report",
+    "TorchExactSearch",
+    "SentenceTransformerModel",
 ]

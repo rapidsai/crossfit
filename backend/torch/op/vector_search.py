@@ -1,6 +1,6 @@
-from beir.retrieval.search.dense import util as utils
 import cupy as cp
 import torch
+from beir.retrieval.search.dense import util as utils
 
 from crossfit.data.array.conversion import convert_array
 from crossfit.op.vector_search import ExactSearchOp
