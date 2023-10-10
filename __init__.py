@@ -1,6 +1,6 @@
 from crossfit import backend, metric, op
 from crossfit.backend.dask.cluster import Distributed, Serial
-from crossfit.backend.torch import SentenceTransformerModel, TorchExactSearch
+from crossfit.backend.torch import SentenceTransformerModel, TorchExactSearch, HFModel
 from crossfit.calculate.aggregate import Aggregator
 from crossfit.calculate.module import CrossModule
 from crossfit.data.array.conversion import convert_array
@@ -24,6 +24,7 @@ __all__ = [
     "Distributed",
     "FrameBackend",
     "load_dataset",
+    "HFModel",
     "MultiDataset",
     "IRDataset",
     "op",
