@@ -5,19 +5,6 @@ from crossfit.data.array.masked import MaskedArray
 
 
 class Recall(BinaryRankingMetric):
-    """
-    Parameters
-    ----------
-    k : int
-            specifies number of top results `k` of each ranking to be evaluated.
-    truncated : bool
-            if `true`, number of relevant results gets clipped at `k`.
-    Raises
-    ------
-    ValueError
-            if `k` is not integer > 0.
-    """
-
     def __init__(self, k, truncated=False):
         super().__init__(k)
         self._truncated = truncated

@@ -3,7 +3,7 @@ import numpy as np
 
 from crossfit.data.array.masked import MaskedArray
 from crossfit.metric.continuous.mean import Mean
-from crossfit.data.sparse.ranking import SparseBinaryLabels, SparseLabels, Rankings, SparseRankings
+from crossfit.data.sparse.ranking import SparseBinaryLabels, SparseLabels, Rankings
 
 
 class RankingMetric(Mean):
@@ -13,28 +13,6 @@ class RankingMetric(Mean):
         ...
 
     def score(self, y_true: SparseLabels, y_pred: Rankings, nan_handling="zerofill"):
-        """
-        Individual scores for each ranking.
-
-        Parameters
-        ----------
-        y_true : :class:`~rankereval.data.Labels`
-                Ground truth labels.
-        y_pred : :class:`~rankereval.data.Rankings`
-                Rankings to be evaluated.
-
-        Returns
-        -------
-        computed_metric: ndarray, shape (n_rankings, )
-                Computed metric for each ranking.
-
-        Raises
-        ------
-        TypeError
-                if `y_true` or `y_pred` are of incorrect type.
-        ValueError
-                if `n_bootstrap_samples`, `confidence` or `nan_handling` contain invalid values.
-        """
         if not isinstance(y_true, SparseLabels):
             raise TypeError("y_true must be of type Labels")
         if not isinstance(y_pred, Rankings):
@@ -73,45 +51,6 @@ class RankingMetric(Mean):
         n_bootstrap_samples=1000,
         confidence=0.95,
     ):
-        r"""
-        Mean score over all ranking after handling NaN values.
-
-        Parameters
-        ----------
-        y_true : :class:`~rankereval.data.Labels`
-                Ground truth labels, see also above.
-        y_pred : :class:`~rankereval.data.Rankings`
-                Rankings to be evaluated.
-        nan_handling : {'propagate', 'drop', 'zerofill'}, optional
-                `'propagate'` (default):
-                        Return NaN if any value is NaN
-                `'drop'` :
-                        Ignore NaN values
-                `'zerofill'` :
-                        Replace NaN values with zero
-        conv_interval : bool, optional
-                If True, then return bootstrapped confidence intervals of mean,
-                otherwise interval is None.
-                Defaults to False.
-        n_bootstrap_samples : int, optional
-                Number of bootstrap samples to draw.
-        confidence : float, optional
-                Indicates width of confidence interval. Default is 0.95 (95%).
-        Returns
-        -------
-        mean: float `mean` if `conv_interval` is `false` otherwise
-                Dictionary with ``mean["score"]`` and ``mean["conf_interval"]``
-                for the confidence interval tuple `(lower CI, upper CI)`.
-
-        Raises
-        ------
-        TypeError
-                if `y_true` or `y_pred` are of incorrect type.
-        ValueError
-                if `n_bootstrap_samples`, `confidence` or `nan_handling` contain invalid
-                values.
-        """
-
         scores = self.score(y_true, y_pred, nan_handling=nan_handling)
 
         if conf_interval:

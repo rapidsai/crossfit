@@ -5,20 +5,6 @@ from crossfit.data.array.masked import MaskedArray
 
 
 class Precision(BinaryRankingMetric):
-    """
-    Parameters
-    ----------
-    k : int
-            specifies number of top results `k` of each ranking to be evaluated.
-    truncated : bool
-            if `true`, `k` gets clipped at length of input ranking.
-
-    Raises
-    ------
-    ValueError
-            if `k` is not integer > 0.
-    """
-
     def __init__(self, k, truncated=False):
         super().__init__(k)
         self._truncated = truncated
@@ -52,18 +38,6 @@ class Precision(BinaryRankingMetric):
 
 
 class AP(BinaryRankingMetric):
-    """
-    Parameters
-    ----------
-    k : int
-            specifies number of top results `k` of each ranking to be evaluated.
-
-    Raises
-    ------
-    ValueError
-            if `k` is not integer > 0.
-    """
-
     def _score(self, y_true: SparseBinaryLabels, y_pred_labels: MaskedArray):
         n_pos = y_true.get_n_positives(y_pred_labels.shape[0])
         labels = y_pred_labels[:, : self._k].filled(0)

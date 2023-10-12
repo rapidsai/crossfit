@@ -6,43 +6,6 @@ from crossfit.data.array.conversion import convert_array
 
 
 class DCG(RankingMetric):
-    """
-
-
-    Parameters
-    ----------
-    k : int
-            specifies number of top results `k` of each ranking to be evaluated.
-
-    relevance_scaling : str, ['binary' (default), 'power']
-            Determines are relevance labels are transformed:
-
-            `'identity'`: (default)
-                    :math:`f(\mathrm{rel}(y_i)) = \mathrm{rel}(y_i)`
-            `'power'`:
-                    :math:`f(\mathrm{rel}(y_i)) = 2^{\mathrm{rel}(y_i)} - 1`
-
-    log_base : str, ['e' (default), '2']
-            Determines what log base is used in denominator.
-            The smaller this value, the heavier emphasis on top-ranked documents.
-
-            `'e'` (default):
-                    Natural logarithm :math:`\ln`
-            `'2'`:
-                    :math:`\log_2`
-
-    Notes
-    -----
-    The original definition of (n)DCG [KJ]_ uses 'identity' for `relevance_scaling`,
-    but leaves the choice of `log_base` open.
-
-    Raises
-    ------
-    ValueError
-            if `k` is not integer > 0 or `relevance_scaling` or `log_base` are invalid.
-
-    """
-
     SCALERS = {"identity": lambda x: x, "power": lambda x: np.power(x, 2) - 1}
     LOGS = {"2": lambda x: np.log2(x), "e": lambda x: np.log(x)}
 
@@ -70,10 +33,6 @@ class DCG(RankingMetric):
 
 
 class NDCG(DCG):
-    """
-    For a description of the arguments, see :class:`DCG`.
-    """
-
     def _score(self, y_true: SparseLabels, y_pred_labels: MaskedArray):
         dcg = self._dcg(y_true, y_pred_labels)
         ideal_labels = y_true.get_labels_for(y_true.as_rankings(), self._k)

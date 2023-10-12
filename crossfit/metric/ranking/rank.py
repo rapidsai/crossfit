@@ -5,18 +5,6 @@ from crossfit.data.array.masked import MaskedArray
 
 
 class ReciprocalRank(BinaryRankingMetric):
-    """
-    Parameters
-    ----------
-    k : int
-            specifies number of top results `k` of each ranking to be evaluated.
-
-    Raises
-    ------
-    ValueError
-            if `k` is not integer > 0.
-    """
-
     def _score(self, y_true: SparseBinaryLabels, y_pred_labels: MaskedArray):
         n_pos = y_true.get_n_positives(y_pred_labels.shape[0])
         labels = y_pred_labels[:, : self._k].filled(0)
@@ -30,11 +18,6 @@ class ReciprocalRank(BinaryRankingMetric):
 
 
 class MeanRanks(BinaryRankingMetric):
-    """
-    Used for evaluating permutations of `y_true`. Does not accept *k* as it
-    scores permutations.
-    """
-
     def __init__(self):
         self._k = None
 
@@ -50,11 +33,6 @@ class MeanRanks(BinaryRankingMetric):
 
 
 class FirstRelevantRank(BinaryRankingMetric):
-    """
-    Used for evaluating permutations of `y_true`. Does not accept *k* as it
-    scores permutations.
-    """
-
     def __init__(self):
         self._k = None
 
