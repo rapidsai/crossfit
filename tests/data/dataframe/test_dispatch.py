@@ -2,7 +2,7 @@ import pytest
 
 import numpy as np
 
-from crossfit.backends.pandas.dataframe import PandasDataFrame
+from crossfit.backend.pandas.dataframe import PandasDataFrame
 from crossfit.data.dataframe.core import ArrayBundle
 from crossfit.data.dataframe.dispatch import CrossFrame
 

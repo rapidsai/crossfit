@@ -8,15 +8,6 @@ from dask.utils import Dispatch
 from crossfit.utils import dispatch_utils
 
 
-# TODO: Should this be here?
-try:
-    import sklearn
-
-    sklearn.set_config(array_api_dispatch=True)
-except (ImportError, TypeError):
-    pass
-
-
 class NPBackendDispatch(Dispatch):
     def __call__(self, np_func, arg, *args, **kwargs):
         jit = kwargs.pop("__jit", False)
@@ -74,20 +65,6 @@ class NPFunctionDispatch(Dispatch):
             return True
         except TypeError:
             return False
-
-
-class CustomFunctionDispath(NPFunctionDispatch):
-    def __call__(self, arg, *args, **kwargs):
-        if self.supports(arg):
-            return super().__call__(arg, *args, **kwargs)
-
-        jit_kwargs = {}
-        if isinstance(self.jit, dict):
-            jit_kwargs = self.jit
-
-        fn = np_backend_dispatch.maybe_jit(self.function, arg, **jit_kwargs)
-
-        return fn(arg, *args, **kwargs)
 
 
 def with_dispatch(func, jit=False):
@@ -236,6 +213,20 @@ class ArrayBackend:
         return False
 
 
+class CustomFunctionDispath(NPFunctionDispatch):
+    def __call__(self, arg, *args, **kwargs):
+        if self.supports(arg):
+            return super().__call__(arg, *args, **kwargs)
+
+        jit_kwargs = {}
+        if isinstance(self.jit, dict):
+            jit_kwargs = self.jit
+
+        fn = np_backend_dispatch.maybe_jit(self.function, arg, **jit_kwargs)
+
+        return fn(arg, *args, **kwargs)
+
+
 class DispatchedNumpy:
     fns = {}
     no_dispatch = {"errstate", "may_share_memory", "finfo"}
@@ -261,7 +252,6 @@ class DispatchedNumpy:
 
 
 numpy = DispatchedNumpy()
-
 FuncType = TypeVar("FuncType", bound=types.FunctionType)
 
 

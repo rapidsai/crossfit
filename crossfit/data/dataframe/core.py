@@ -3,8 +3,8 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Callable, List
 
-from crossfit.data.array.dispatch import crossarray
 from crossfit.data.array.conversion import convert_array
+from crossfit.data.array.dispatch import crossarray
 from crossfit.data.dataframe.dispatch import CrossFrame
 
 
@@ -97,9 +97,7 @@ class FrameBackend:
         """
         if isinstance(by, (str, int, tuple)):
             by = [by]
-        return {
-            key: self.take(indices) for key, indices in self.groupby_indices(by).items()
-        }
+        return {key: self.take(indices) for key, indices in self.groupby_indices(by).items()}
 
     def cast(self, columns: type | dict | None = None, backend: type | bool = True):
         """Cast column types and/or frame backend
@@ -122,6 +120,8 @@ class FrameBackend:
             New ``FrameBackend`` object
         """
 
+        import crossfit as cf
+
         # Deal with array casting
         frame = self
         if columns:
@@ -130,24 +130,20 @@ class FrameBackend:
                 new_columns = {}
                 for col, typ in columns.items():
                     if col not in frame.columns:
-                        raise ValueError(
-                            f"{col} not in available columns: {frame.columns}"
-                        )
+                        raise ValueError(f"{col} not in available columns: {frame.columns}")
                     try:
-                        new_columns[col] = convert_array(frame[col], typ)
+                        new_columns[col] = cf.convert_array(frame[col], typ)
                     except TypeError as err:
                         raise TypeError(
-                            f"Unable to cast column {col} to {typ}.\n"
-                            f"Original error: {err}"
+                            f"Unable to cast column {col} to {typ}.\nOriginal error: {err}"
                         )
                 frame = frame.assign(**new_columns)
             else:
                 try:
-                    frame = CrossFrame(self.to_dict()).apply(convert_array, columns)
+                    frame = CrossFrame(self.to_dict()).apply(cf.convert_array, columns)
                 except TypeError as err:
                     raise TypeError(
-                        f"Unable to cast all column types to {columns}.\n"
-                        f"Original error: {err}"
+                        f"Unable to cast all column types to {columns}.\nOriginal error: {err}"
                     )
 
         # Set backend if backend is True
@@ -161,6 +157,9 @@ class FrameBackend:
         # Cast backend and return
         if issubclass(backend, FrameBackend) and backend != frame.__class__:
             return backend.from_dict(frame.to_dict())
+
+        if isinstance(backend, str):
+            pass
         return frame
 
     @classmethod
@@ -307,8 +306,7 @@ class FrameBackend:
 
     def __setitem__(self, *args):
         raise SyntaxError(
-            "In-place column assignment not supported. "
-            "Please use: new = old.assign(key=value)"
+            "In-place column assignment not supported. Please use: new = old.assign(key=value)"
         )
 
     def __getitem__(self, key):
@@ -343,9 +341,7 @@ class ArrayBundle(FrameBackend):
             if _len is None:
                 _len = len(v)
             elif len(v) != _len:
-                raise ValueError(
-                    f"Column {k} was length {len(v)}, but " f"expected length {_len}"
-                )
+                raise ValueError(f"Column {k} was length {len(v)}, but expected length {_len}")
         return _len
 
     @property
@@ -371,9 +367,7 @@ class ArrayBundle(FrameBackend):
             columns = frames[0].columns
             for frame in frames:
                 if type(frame) != cls:
-                    raise TypeError(
-                        f"All frames should be type {cls}, got {type(frame)}"
-                    )
+                    raise TypeError(f"All frames should be type {cls}, got {type(frame)}")
                 if columns != frame.columns:
                     raise TypeError("Cannot concatenat misaligned columns")
 
@@ -386,9 +380,7 @@ class ArrayBundle(FrameBackend):
             combined = {}
             for frame in frames:
                 if type(frame) != cls:
-                    raise TypeError(
-                        f"All frames should be type {cls}, got {type(frame)}"
-                    )
+                    raise TypeError(f"All frames should be type {cls}, got {type(frame)}")
                 _columns = set(frame.columns)
                 if _columns.intersection(columns):
                     intersection = _columns.intersection(columns)
@@ -415,10 +407,7 @@ class ArrayBundle(FrameBackend):
         data = self.data.copy()
         for k, v in kwargs.items():
             if self.columns and len(v) != len(self):
-                raise ValueError(
-                    f"Column {k} was length {len(v)}, but "
-                    f"expected length {len(self)}"
-                )
+                raise ValueError(f"Column {k} was length {len(v)}, but expected length {len(self)}")
         data.update(**kwargs)
         return self.__class__(data)
 
@@ -442,11 +431,10 @@ class ArrayBundle(FrameBackend):
 
         assert axis == 0  # TODO: Support axis=1
         with crossarray:
-            return self.__class__(
-                {k: np.take(v, indices, axis=axis) for k, v in self.data.items()}
-            )
+            return self.__class__({k: np.take(v, indices, axis=axis) for k, v in self.data.items()})
 
     def groupby_indices(self, by: list) -> dict:
+        
         if isinstance(by, (str, int, tuple)):
             by = [by]
 
@@ -465,6 +453,12 @@ class ArrayBundle(FrameBackend):
             pass
 
         raise NotImplementedError("groupby_indices not implemented for ArrayBundle")
+
+    def __repr__(self):
+        name = self.__class__.__name__
+        backends = ", ".join(set(str(d).split(".")[0] for d in self.dtypes.values()))
+
+        return f"<CrossFrame({name}[{backends}]): columns={self.columns}>"
 
 
 # Map Tensorflow data to ArrayBundle

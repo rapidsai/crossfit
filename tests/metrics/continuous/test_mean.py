@@ -1,7 +1,7 @@
 import numpy as np
 from sklearn.metrics import accuracy_score
 
-from crossfit.metrics import Mean, create_mean_metric
+from crossfit.metric import Mean, create_mean_metric
 
 
 def test_simple_mean():
