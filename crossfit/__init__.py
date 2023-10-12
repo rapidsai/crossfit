@@ -6,7 +6,6 @@ from crossfit.data.array.conversion import convert_array
 from crossfit.data.array.dispatch import crossarray
 from crossfit.data.dataframe.core import FrameBackend
 from crossfit.data.dataframe.dispatch import CrossFrame
-from crossfit.dataset.load import load_dataset
 from crossfit.metric import *  # noqa
 from crossfit.op import *  # noqa
 
@@ -20,7 +19,6 @@ __all__ = [
     "convert_array",
     "Distributed",
     "FrameBackend",
-    "load_dataset",
     "op",
     "metric",
     "setup_dask_cluster",
@@ -32,11 +30,13 @@ try:
     from crossfit.backend.torch import SentenceTransformerModel, TorchExactSearch, HFModel
     from crossfit.report.beir.embed import embed
     from crossfit.report.beir.report import beir_report
+    from crossfit.dataset.load import load_dataset
     from crossfit.dataset.base import IRDataset, MultiDataset
     
     __all__.extend([
         "embed",
         "beir_report",
+        "load_dataset",
         "TorchExactSearch",
         "SentenceTransformerModel",
         "HFModel",    
