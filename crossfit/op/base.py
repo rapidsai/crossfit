@@ -2,7 +2,7 @@ import inspect
 import uuid
 
 import dask.dataframe as dd
-from tqdm import tqdm
+from tqdm.auto import tqdm
 from dask.distributed import get_worker
 
 

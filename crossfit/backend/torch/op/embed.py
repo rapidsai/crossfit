@@ -2,7 +2,6 @@ import gc
 
 import cupy as cp
 import cudf
-import rmm
 import torch
 
 from crossfit.op.base import Op
@@ -31,14 +30,6 @@ class Embedder(Op):
 
     def setup(self):
         self.model.load_on_worker(self)
-
-        # self.model = SentenceTransformer(self.model_name, device="cuda").to("cuda")
-        # self.cfg = AutoConfig.from_pretrained("sentence-transformers/" + self.model_name)
-        # self.memory_estimator = HFMemoryEstimator(self.max_mem_gb, self.cfg)
-
-        # self.memory_estimator = NVMLMemoryEstimator(self.max_mem_gb, self.cfg)
-        # if hasattr(self.memory_estimator, "fit"):
-        #     self.memory_estimator.fit(self.model)
 
     @torch.no_grad()
     def call(self, data, partition_info=None):
