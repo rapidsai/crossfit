@@ -1,6 +1,7 @@
 astunparse
 pandas
 numpy
+numba
 dask
 scikit-learn>=1.2.0
 tensorflow_metadata
