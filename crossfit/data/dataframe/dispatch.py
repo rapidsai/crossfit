@@ -17,9 +17,10 @@ class _CrossFrameDispatch(Dispatch):
 
         try:
             from crossfit.backend.cudf.dataframe import CudfDataFrame
+            CudfDataFrame._lib()
             backends.append(CudfDataFrame)
         except ImportError:
-            pass    
+            pass
 
 
         for backend in backends:
