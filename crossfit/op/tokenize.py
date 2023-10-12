@@ -11,54 +11,9 @@ from crossfit.dataset.home import CF_HOME
 from crossfit.op.base import Op
 
 
-class Tokenizer(Op):
-    def __init__(
-        self,
-        model: Model,
-        cols=None,
-        keep_cols=None,
-        pre=None,
-        max_length: int = 1024,
-    ):
-        super().__init__(pre=pre, cols=cols, keep_cols=keep_cols)
-        self.model = model
-        self.max_length = max_length
-
-        # Make sure we download the tokenizer just once
-        GPUTokenizer.from_pretrained(self.model)
-
-    def setup(self):
-        self.tokenizer = GPUTokenizer.from_pretrained(self.model)
-
-    def tokenize_strings(self, sentences, max_length=None):
-        return self.tokenizer(
-            sentences,
-            max_length=max_length or self.max_length,
-            max_num_rows=len(sentences),
-            padding="max_length",
-            return_tensors="cp",
-            truncation=True,
-            add_special_tokens=True,
-        )
-
+class _TokenizerOp(Op):
     def call_column(self, data):
-        if isinstance(data, cudf.DataFrame):
-            raise ValueError(
-                "data must be a Series, got DataFrame. Add a pre step to convert to Series"
-            )
-
-        text = data.replace("", "unknown")
-        tokenized_data = self.tokenize_strings(text).copy()
-        tokenized_data = clip_tokens(tokenized_data, max_length=self.max_length, return_type="cp")
-
-        input_ids = create_list_series_from_2d_ar(
-            tokenized_data["input_ids"].astype("int32"), data.index
-        )
-        attention_mask = create_list_series_from_2d_ar(
-            tokenized_data["attention_mask"].astype("int32"), data.index
-        )
-
-        return input_ids, attention_mask
+        raise NotImplementedError()
 
     def call(self, data):
         output = cudf.DataFrame()
@@ -103,6 +58,58 @@ class Tokenizer(Op):
             return suffix
 
         return f"{col_name}_{suffix}"
+
+
+class Tokenizer(_TokenizerOp):
+    def __init__(
+        self,
+        model: Model,
+        cols=None,
+        keep_cols=None,
+        pre=None,
+        max_length: int = 1024,
+    ):
+        super().__init__(pre=pre, cols=cols, keep_cols=keep_cols)
+        self.model = model
+        self.max_length = max_length
+
+        # Make sure we download the tokenizer just once
+        GPUTokenizer.from_pretrained(self.model)
+
+    def setup(self):
+        self.tokenizer = GPUTokenizer.from_pretrained(self.model)
+
+    def tokenize_strings(self, sentences, max_length=None):
+        return self.tokenizer(
+            sentences,
+            max_length=max_length or self.max_length,
+            max_num_rows=len(sentences),
+            padding="max_length",
+            return_tensors="cp",
+            truncation=True,
+            add_special_tokens=True,
+        )
+
+    def call_column(self, data):
+        if isinstance(data, cudf.DataFrame):
+            raise ValueError(
+                "data must be a Series, got DataFrame. Add a pre step to convert to Series"
+            )
+
+        text = data.replace("", "unknown")
+        tokenized_data = self.tokenize_strings(text).copy()
+        tokenized_data = clip_tokens(
+            tokenized_data, max_length=self.max_length, return_type="cp"
+        )
+
+        input_ids = create_list_series_from_2d_ar(
+            tokenized_data["input_ids"].astype("int32"), data.index
+        )
+        attention_mask = create_list_series_from_2d_ar(
+            tokenized_data["attention_mask"].astype("int32"), data.index
+        )
+
+        return input_ids, attention_mask
 
 
 class GPUTokenizer(SubwordTokenizer):

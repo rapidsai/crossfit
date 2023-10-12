@@ -1,15 +1,16 @@
-from functools import lru_cache
 import gc
 import os
-from crossfit.dataset.home import CF_HOME
-import joblib
+from functools import lru_cache
 
+import joblib
 import numpy as np
 import torch
+from sklearn.linear_model import LinearRegression
 from tqdm import tqdm
 from transformers import AutoConfig, AutoModel, AutoTokenizer
-from sklearn.linear_model import LinearRegression
+
 from crossfit.backend.torch.model import Model
+from crossfit.dataset.home import CF_HOME
 
 
 class HFModel(Model):
@@ -62,13 +63,19 @@ class HFModel(Model):
                 torch.cuda.reset_peak_memory_stats()
 
                 batch = {
-                    "input_ids": torch.randint(1, 501, (batch_size, seq_len)).to(device=device),
-                    "attention_mask": torch.ones((batch_size, seq_len)).to(device=device),
+                    "input_ids": torch.randint(1, 501, (batch_size, seq_len)).to(
+                        device=device
+                    ),
+                    "attention_mask": torch.ones((batch_size, seq_len)).to(
+                        device=device
+                    ),
                 }
 
                 try:
                     outputs = model(batch)
-                    memory_used = torch.cuda.max_memory_allocated() / (1024**2)  # Convert to MB
+                    memory_used = torch.cuda.max_memory_allocated() / (
+                        1024**2
+                    )  # Convert to MB
                     X.append([batch_size, seq_len, seq_len**2])
                     y.append(memory_used)
 

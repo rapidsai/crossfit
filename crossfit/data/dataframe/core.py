@@ -97,7 +97,9 @@ class FrameBackend:
         """
         if isinstance(by, (str, int, tuple)):
             by = [by]
-        return {key: self.take(indices) for key, indices in self.groupby_indices(by).items()}
+        return {
+            key: self.take(indices) for key, indices in self.groupby_indices(by).items()
+        }
 
     def cast(self, columns: type | dict | None = None, backend: type | bool = True):
         """Cast column types and/or frame backend
@@ -130,7 +132,9 @@ class FrameBackend:
                 new_columns = {}
                 for col, typ in columns.items():
                     if col not in frame.columns:
-                        raise ValueError(f"{col} not in available columns: {frame.columns}")
+                        raise ValueError(
+                            f"{col} not in available columns: {frame.columns}"
+                        )
                     try:
                         new_columns[col] = cf.convert_array(frame[col], typ)
                     except TypeError as err:
@@ -341,7 +345,9 @@ class ArrayBundle(FrameBackend):
             if _len is None:
                 _len = len(v)
             elif len(v) != _len:
-                raise ValueError(f"Column {k} was length {len(v)}, but expected length {_len}")
+                raise ValueError(
+                    f"Column {k} was length {len(v)}, but expected length {_len}"
+                )
         return _len
 
     @property
@@ -367,7 +373,9 @@ class ArrayBundle(FrameBackend):
             columns = frames[0].columns
             for frame in frames:
                 if type(frame) != cls:
-                    raise TypeError(f"All frames should be type {cls}, got {type(frame)}")
+                    raise TypeError(
+                        f"All frames should be type {cls}, got {type(frame)}"
+                    )
                 if columns != frame.columns:
                     raise TypeError("Cannot concatenat misaligned columns")
 
@@ -380,7 +388,9 @@ class ArrayBundle(FrameBackend):
             combined = {}
             for frame in frames:
                 if type(frame) != cls:
-                    raise TypeError(f"All frames should be type {cls}, got {type(frame)}")
+                    raise TypeError(
+                        f"All frames should be type {cls}, got {type(frame)}"
+                    )
                 _columns = set(frame.columns)
                 if _columns.intersection(columns):
                     intersection = _columns.intersection(columns)
@@ -407,7 +417,9 @@ class ArrayBundle(FrameBackend):
         data = self.data.copy()
         for k, v in kwargs.items():
             if self.columns and len(v) != len(self):
-                raise ValueError(f"Column {k} was length {len(v)}, but expected length {len(self)}")
+                raise ValueError(
+                    f"Column {k} was length {len(v)}, but expected length {len(self)}"
+                )
         data.update(**kwargs)
         return self.__class__(data)
 
@@ -431,10 +443,12 @@ class ArrayBundle(FrameBackend):
 
         assert axis == 0  # TODO: Support axis=1
         with crossarray:
-            return self.__class__({k: np.take(v, indices, axis=axis) for k, v in self.data.items()})
+            return self.__class__(
+                {k: np.take(v, indices, axis=axis) for k, v in self.data.items()}
+            )
 
     def groupby_indices(self, by: list) -> dict:
-        
+
         if isinstance(by, (str, int, tuple)):
             by = [by]
 

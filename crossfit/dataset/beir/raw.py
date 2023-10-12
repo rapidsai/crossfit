@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Dict, List, Union
 
 from beir import util
+
 from crossfit.dataset.home import CF_HOME
 
 
@@ -203,7 +204,9 @@ BEIR_DATASETS: Dict[str, DatasetInfo] = {
 def download_raw(name, out_dir=None, overwrite=False) -> str:
     if name not in BEIR_DATASETS:
         raise ValueError(
-            "Dataset {} not found. Available datasets: {}".format(name, BEIR_DATASETS.keys())
+            "Dataset {} not found. Available datasets: {}".format(
+                name, BEIR_DATASETS.keys()
+            )
         )
 
     out_dir = out_dir or CF_HOME
@@ -213,10 +216,16 @@ def download_raw(name, out_dir=None, overwrite=False) -> str:
     # Check if the output directory already exists
     if os.path.exists(output_path):
         if overwrite:
-            print("Output directory {} already exists. Overwriting.".format(output_path))
+            print(
+                "Output directory {} already exists. Overwriting.".format(output_path)
+            )
             shutil.rmtree(output_path)  # Remove the existing directory
         else:
-            print("Output directory {} already exists. Skipping download.".format(output_path))
+            print(
+                "Output directory {} already exists. Skipping download.".format(
+                    output_path
+                )
+            )
             return output_path
 
     os.makedirs(output_path, exist_ok=True)
@@ -232,7 +241,9 @@ def download_raw(name, out_dir=None, overwrite=False) -> str:
     return output_path
 
 
-def sample_raw(name, out_dir=None, overwrite=False, sample_size=100, blocksize=2**30) -> str:
+def sample_raw(
+    name, out_dir=None, overwrite=False, sample_size=100, blocksize=2**30
+) -> str:
     import cudf
     import dask_cudf
 
@@ -242,7 +253,9 @@ def sample_raw(name, out_dir=None, overwrite=False, sample_size=100, blocksize=2
     sampled_dir = os.path.join(out_dir, "sampled")
     output_path = os.path.join(sampled_dir, name)
 
-    qrels_files = [f for f in os.listdir(os.path.join(full_path, "qrels")) if f.endswith(".tsv")]
+    qrels_files = [
+        f for f in os.listdir(os.path.join(full_path, "qrels")) if f.endswith(".tsv")
+    ]
     sampled_query_ids, sampled_corpus_id = set(), set()
     qrel_dfs = {}
 

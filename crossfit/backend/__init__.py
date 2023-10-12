@@ -1,8 +1,7 @@
-from crossfit.backend.numpy.sparse import *
 from crossfit.backend.dask.dataframe import *
+from crossfit.backend.numpy.sparse import *
 from crossfit.backend.pandas.array import *
 from crossfit.backend.pandas.dataframe import *
-
 
 try:
     from crossfit.backend.cudf.array import *

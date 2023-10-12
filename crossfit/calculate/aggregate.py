@@ -3,8 +3,9 @@ from collections import defaultdict, namedtuple
 from functools import wraps
 
 import numpy as np
-from crossfit.data.dataframe.core import FrameBackend
+
 from crossfit.data.array.conversion import convert_array
+from crossfit.data.dataframe.core import FrameBackend
 
 
 def pre_processing(func):
@@ -144,7 +145,9 @@ class Aggregator:
 
             if isinstance(keys[0], str):
                 # return pd.DataFrame(present_dict)
-                result = {k: convert_array(v, np.ndarray) for k, v in present_dict.items()}
+                result = {
+                    k: convert_array(v, np.ndarray) for k, v in present_dict.items()
+                }
 
                 return pd.DataFrame.from_dict(result, orient="index").T
 
@@ -153,7 +156,11 @@ class Aggregator:
 
             if columns and groupings != {None}:
                 for k, v in present_dict.items():
-                    grouping = "&".join(k.grouping) if isinstance(k.grouping, tuple) else k.grouping
+                    grouping = (
+                        "&".join(k.grouping)
+                        if isinstance(k.grouping, tuple)
+                        else k.grouping
+                    )
                     if isinstance(k.group, tuple):
                         if len(k.group) > 1:
                             group = "&".join([str(i) for i in k.group])
@@ -170,7 +177,9 @@ class Aggregator:
                         )
                     else:
                         new[(grouping, group, k.column)].update({k.name: v})
-                index = pd.MultiIndex.from_tuples(new.keys(), names=("grouping", "group", "column"))
+                index = pd.MultiIndex.from_tuples(
+                    new.keys(), names=("grouping", "group", "column")
+                )
                 output = pd.DataFrame.from_records(list(new.values()), index=index)
 
                 if columns == {None}:

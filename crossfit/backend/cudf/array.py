@@ -1,7 +1,7 @@
 import logging
 
 from crossfit.data.array import conversion
-from crossfit.data.array.dispatch import np_backend_dispatch, ArrayBackend
+from crossfit.data.array.dispatch import ArrayBackend, np_backend_dispatch
 
 
 @np_backend_dispatch.register_lazy("cudf")
@@ -28,7 +28,9 @@ def register_cudf_to_dlpack():
 
         if input_array.dtype.name == "list":
             if not input_array.list.len().min() == input_array.list.len().max():
-                raise NotImplementedError("Cannot convert list column with variable length")
+                raise NotImplementedError(
+                    "Cannot convert list column with variable length"
+                )
 
             dim = input_array.list.len().iloc[0]
             return input_array.list.leaves.values.reshape(-1, dim).toDlpack()

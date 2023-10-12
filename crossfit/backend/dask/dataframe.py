@@ -3,9 +3,9 @@ from __future__ import annotations
 from typing import Callable, List
 
 import dask.dataframe as dd
+
 from crossfit.data.dataframe.core import FrameBackend
 from crossfit.data.dataframe.dispatch import CrossFrame
-
 
 # @CrossFrame.register_lazy("dask")
 # def register_dask_backend():
@@ -36,7 +36,9 @@ class DaskDataFrame(FrameBackend):
         ignore_index: bool = False,
         axis: int = 0,
     ):
-        return CrossFrame(dd.DataFrame.concat(frames, ignore_index=ignore_index, axis=axis))
+        return CrossFrame(
+            dd.DataFrame.concat(frames, ignore_index=ignore_index, axis=axis)
+        )
 
     def aggregate(self, agg, **kwargs):
         from crossfit.backend.dask.aggregate import aggregate as dask_aggregate

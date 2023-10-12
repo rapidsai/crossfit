@@ -2,8 +2,8 @@ import inspect
 import uuid
 
 import dask.dataframe as dd
-from tqdm.auto import tqdm
 from dask.distributed import get_worker
+from tqdm.auto import tqdm
 
 
 class Op:

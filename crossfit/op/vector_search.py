@@ -40,8 +40,12 @@ class ExactSearchOp(VectorSearchOp):
         raise NotImplementedError()
 
     def call_part(self, queries, items):
-        query_emb = _get_embedding_cupy(queries, self.embedding_col, normalize=self.normalize)
-        item_emb = _get_embedding_cupy(items, self.embedding_col, normalize=self.normalize)
+        query_emb = _get_embedding_cupy(
+            queries, self.embedding_col, normalize=self.normalize
+        )
+        item_emb = _get_embedding_cupy(
+            items, self.embedding_col, normalize=self.normalize
+        )
 
         results, indices = self.search_tensors(query_emb, item_emb)
 
@@ -60,15 +64,21 @@ class ExactSearchOp(VectorSearchOp):
         return out
 
     def call(self, queries, items):
-        query_emb = _get_embedding_cupy(queries, self.embedding_col, normalize=self.normalize)
-        item_emb = _get_embedding_cupy(items, self.embedding_col, normalize=self.normalize)
+        query_emb = _get_embedding_cupy(
+            queries, self.embedding_col, normalize=self.normalize
+        )
+        item_emb = _get_embedding_cupy(
+            items, self.embedding_col, normalize=self.normalize
+        )
 
         results, indices = self.search_tensors(query_emb, item_emb)
 
         df = cudf.DataFrame(index=queries.index)
         df["query-id"] = queries["_id"]
         df["query-index"] = queries["index"]
-        df["corpus-index"] = create_list_series_from_2d_ar(items["index"].values[indices], df.index)
+        df["corpus-index"] = create_list_series_from_2d_ar(
+            items["index"].values[indices], df.index
+        )
         df["score"] = create_list_series_from_2d_ar(results, df.index)
 
         return df
@@ -92,7 +102,9 @@ class ExactSearchOp(VectorSearchOp):
         reduced["query-index"] = grouped["query-index"]
         reduced["query-id"] = grouped["query-id"]
         reduced["score"] = create_list_series_from_2d_ar(topk_scores, reduced.index)
-        reduced["corpus-index"] = create_list_series_from_2d_ar(topk_indices, reduced.index)
+        reduced["corpus-index"] = create_list_series_from_2d_ar(
+            topk_indices, reduced.index
+        )
 
         reduced = reduced.set_index("query-index", drop=False)
 
@@ -155,7 +167,9 @@ class RaftExactSearch(ExactSearchOp):
         self.normalize = normalize
 
     def search_tensors(self, queries, corpus):
-        results, indices = knn(dataset=corpus, queries=queries, k=self.k, metric=self.metric)
+        results, indices = knn(
+            dataset=corpus, queries=queries, k=self.k, metric=self.metric
+        )
 
         return cp.asarray(results), cp.asarray(indices)
 
@@ -203,7 +217,9 @@ class CuMLVectorSearch(VectorSearchOp):
         if hasattr(queries, "ddf"):
             query_ddf = queries.ddf()
 
-        query_ddf_per_dim = _per_dim_ddf(query_ddf, self.embedding_col, normalize=self.normalize)
+        query_ddf_per_dim = _per_dim_ddf(
+            query_ddf, self.embedding_col, normalize=self.normalize
+        )
 
         distances, indices = knn.kneighbors(query_ddf_per_dim)
 
@@ -270,12 +286,17 @@ def _get_embedding_cupy(data, embedding_col, normalize=True):
 
 
 def _per_dim_ddf(
-    data: dd.DataFrame, embedding_col: str, index_col: str = "index", normalize: bool = True
+    data: dd.DataFrame,
+    embedding_col: str,
+    index_col: str = "index",
+    normalize: bool = True,
 ) -> dd.DataFrame:
     dim = len(data.head()[embedding_col].iloc[0])
 
     def to_map(part, dim):
-        values = part[embedding_col].list.leaves.values.reshape(-1, dim).astype("float32")
+        values = (
+            part[embedding_col].list.leaves.values.reshape(-1, dim).astype("float32")
+        )
         if normalize:
             values = values / cp.linalg.norm(values, axis=1, keepdims=True)
 

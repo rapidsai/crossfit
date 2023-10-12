@@ -16,7 +16,9 @@ def load_dataset(
 ) -> IRDataset:
     raw_path = download_raw(name, out_dir=out_dir, overwrite=False)
 
-    return _process_data(name, raw_path, blocksize=blocksize, overwrite=overwrite, out_dir=out_dir)
+    return _process_data(
+        name, raw_path, blocksize=blocksize, overwrite=overwrite, out_dir=out_dir
+    )
 
 
 def load_test_dataset(
@@ -28,11 +30,18 @@ def load_test_dataset(
     raw_path = sample_raw(name, out_dir=out_dir, overwrite=False)
 
     return _process_data(
-        name, raw_path, blocksize=blocksize, overwrite=overwrite, out_dir=out_dir, is_test=True
+        name,
+        raw_path,
+        blocksize=blocksize,
+        overwrite=overwrite,
+        out_dir=out_dir,
+        is_test=True,
     )
 
 
-def _process_data(name, raw_path, blocksize=2**30, overwrite=False, out_dir=None, is_test=False):
+def _process_data(
+    name, raw_path, blocksize=2**30, overwrite=False, out_dir=None, is_test=False
+):
     import dask_cudf
 
     out_dir = out_dir or CF_HOME
@@ -42,11 +51,17 @@ def _process_data(name, raw_path, blocksize=2**30, overwrite=False, out_dir=None
     # Check if the output directory already exists
     if os.path.exists(processed_dir):
         if overwrite:
-            print("Processed directory {} already exists. Overwriting.".format(processed_dir))
+            print(
+                "Processed directory {} already exists. Overwriting.".format(
+                    processed_dir
+                )
+            )
             shutil.rmtree(processed_dir)  # Remove the existing directory
         else:
             print(
-                "Processed directory {} already exists. Skipping processing.".format(processed_dir)
+                "Processed directory {} already exists. Skipping processing.".format(
+                    processed_dir
+                )
             )
 
             return IRDataset.from_dir(processed_dir)
@@ -76,7 +91,9 @@ def _process_data(name, raw_path, blocksize=2**30, overwrite=False, out_dir=None
     corpus_ddf.to_parquet(corpus_dir)
 
     qrels_dir = os.path.join(processed_dir, "qrels")
-    qrels_files = [f for f in os.listdir(os.path.join(raw_path, "qrels")) if f.endswith(".tsv")]
+    qrels_files = [
+        f for f in os.listdir(os.path.join(raw_path, "qrels")) if f.endswith(".tsv")
+    ]
     qrels_dtypes = {"query-id": "str", "corpus-id": "str", "score": "int32"}
     dataset_dirs = {"query": queries_dir, "item": corpus_dir}
     name_mapping = {"train": "train", "dev": "val", "test": "test"}

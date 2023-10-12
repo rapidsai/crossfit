@@ -103,8 +103,8 @@ class PandasDataFrame(FrameBackend):
 @CrossFrame.register_lazy("numpy")
 def register_numpy_backend():
     try:
-        import pandas as pd
         import numpy as np
+        import pandas as pd
 
         @CrossFrame.register(np.ndarray)
         def _numpy_to_pandas(data, name="data"):

@@ -21,7 +21,10 @@ class TorchExactSearch(ExactSearchOp):
         self.embedding_col = embedding_col
         self.normalize = False
         self.score_functions = {"cos_sim": utils.cos_sim, "dot": utils.dot_score}
-        self.score_function_desc = {"cos_sim": "Cosine Similarity", "dot": "Dot Product"}
+        self.score_function_desc = {
+            "cos_sim": "Cosine Similarity",
+            "dot": "Dot Product",
+        }
 
     def search_tensors(self, queries, corpus):
         queries = convert_array(queries, torch.Tensor)

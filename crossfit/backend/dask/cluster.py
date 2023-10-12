@@ -1,16 +1,15 @@
-from typing import Callable, Optional, Any
-from contextvars import ContextVar
-import importlib
 import gc
+import importlib
 import warnings
+from contextvars import ContextVar
+from typing import Any, Callable, Optional
 
 import dask
-from dask.distributed import Client, get_client
-from dask.dataframe.optimize import optimize as dd_optimize
 import distributed
+from dask.dataframe.optimize import optimize as dd_optimize
+from dask.distributed import Client, get_client
 
 from crossfit.backend.gpu import HAS_GPU
-
 
 _crossfit_dask_client = ContextVar("_crossfit_dask_client", default="auto")
 
@@ -117,7 +116,9 @@ def ensure_optimize_dataframe_graph(ddf=None, dsk=None, keys=None):
 
     if ddf is None:
         if dsk is None or keys is None:
-            raise ValueError("Must specify both `dsk` and `keys` if `ddf` is not supplied.")
+            raise ValueError(
+                "Must specify both `dsk` and `keys` if `ddf` is not supplied."
+            )
     dsk = ddf.dask if dsk is None else dsk
     keys = ddf.__dask_keys__() if keys is None else keys
 
@@ -285,7 +286,9 @@ class Distributed:
 
         self._active = True
         if self._client in ("auto", None):
-            raise RuntimeError(f"Failed to deploy a new local {self.cluster_type} cluster.")
+            raise RuntimeError(
+                f"Failed to deploy a new local {self.cluster_type} cluster."
+            )
 
     def _deactivate(self):
         self._client = set_dask_client(self._initial_client)
@@ -380,7 +383,9 @@ class Serial:
         self.deactivate()
 
 
-def set_dask_client(client="auto", new_cluster=None, force_new=False, **cluster_options):
+def set_dask_client(
+    client="auto", new_cluster=None, force_new=False, **cluster_options
+):
     """Set the Dask-Distributed client.
 
     Parameters

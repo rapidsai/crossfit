@@ -9,7 +9,9 @@ from crossfit.data.sparse.dispatch import CrossSparse
 
 
 class CPSparseMatrixBackend(SparseMatrixBackend):
-    def __init__(self, idx_ptr: cp.ndarray, col_idx: cp.ndarray, data: cp.ndarray, shape=None):
+    def __init__(
+        self, idx_ptr: cp.ndarray, col_idx: cp.ndarray, data: cp.ndarray, shape=None
+    ):
         if shape is None:
             if len(col_idx):
                 M = col_idx.max() + 1
@@ -49,7 +51,9 @@ class CPSparseMatrixBackend(SparseMatrixBackend):
             if isinstance(matrix, list):
                 matrix = cp.asarray(matrix, dtype=object).astype(cp.float32)
             matrix = cp.atleast_2d(matrix)
-            if not cp.issubdtype(matrix.dtype, cp.number) or cp.issubdtype(matrix.dtype, cp.bool_):
+            if not cp.issubdtype(matrix.dtype, cp.number) or cp.issubdtype(
+                matrix.dtype, cp.bool_
+            ):
                 raise ValueError("Input must be numeric")
             elif matrix.ndim != 2:
                 raise ValueError("Input arrays need to be 1D or 2D.")
@@ -79,7 +83,9 @@ class CPSparseMatrixBackend(SparseMatrixBackend):
                 data = cp.ones_like(col_idx, dtype=dtype)
             else:
                 data = cp.fromiter(
-                    itertools.chain.from_iterable(data), dtype=dtype, count=idx_ptr[-1].item()
+                    itertools.chain.from_iterable(data),
+                    dtype=dtype,
+                    count=idx_ptr[-1].item(),
                 )
                 if keep_zeros:
                     data += 1 - data[cp.isfinite(data)].min()
@@ -93,7 +99,9 @@ class CPSparseMatrixBackend(SparseMatrixBackend):
         return instance
 
     def tocsr(self, copy=False):
-        return sp.csr_matrix((self.data, self.col_idx, self.idx_ptr), copy=copy, shape=self.shape)
+        return sp.csr_matrix(
+            (self.data, self.col_idx, self.idx_ptr), copy=copy, shape=self.shape
+        )
 
     def todense(self):
         return cp.asarray(self.tocsr().todense())
@@ -153,11 +161,16 @@ class CPSparseMatrixBackend(SparseMatrixBackend):
         return MaskedArray(data, mask)
 
     def lookup(self, indices):
-        from crossfit.backend.cupy.kernels import _numba_lookup, determine_blocks_threads
+        from crossfit.backend.cupy.kernels import (
+            _numba_lookup,
+            determine_blocks_threads,
+        )
 
         vals = cp.zeros_like(indices)
         blocks, threads = determine_blocks_threads(indices.shape[0])
-        _numba_lookup[blocks, threads](self.idx_ptr, self.col_idx, self.data, indices, vals)
+        _numba_lookup[blocks, threads](
+            self.idx_ptr, self.col_idx, self.data, indices, vals
+        )
         return cp.asarray(vals)
 
     def rank_top_k(self, k=None) -> MaskedArray:

@@ -1,9 +1,9 @@
 import numpy as np
 
+from crossfit.data.array.masked import MaskedArray
 from crossfit.metric.ranking.base import SparseBinaryLabels
 from crossfit.metric.ranking.precision import Precision
 from crossfit.metric.ranking.recall import Recall
-from crossfit.data.array.masked import MaskedArray
 
 
 class F1(Precision, Recall):

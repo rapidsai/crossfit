@@ -1,9 +1,14 @@
-from crossfit.data.array.dispatch import crossarray
 import numpy as np
 
+from crossfit.data.array.dispatch import crossarray
 from crossfit.data.array.masked import MaskedArray
+from crossfit.data.sparse.ranking import (
+    Rankings,
+    SparseBinaryLabels,
+    SparseLabels,
+    SparseRankings,
+)
 from crossfit.metric.continuous.mean import Mean
-from crossfit.data.sparse.ranking import SparseBinaryLabels, SparseLabels, Rankings, SparseRankings
 
 
 class RankingMetric(Mean):
@@ -27,11 +32,15 @@ class RankingMetric(Mean):
     def _bootstrap_ci(cls, scores, n_bootstrap_samples, confidence):
         if not isinstance(n_bootstrap_samples, int) or n_bootstrap_samples <= 1:
             raise ValueError("n_bootstrap_samples must be int > 1")
-        elif not isinstance(confidence, float) or confidence <= 0.0 or confidence >= 1.0:
+        elif (
+            not isinstance(confidence, float) or confidence <= 0.0 or confidence >= 1.0
+        ):
             raise ValueError("Confidence must be float and 0 < confidence < 1")
 
         if len(scores):
-            resamples = np.random.choice(scores, (len(scores), n_bootstrap_samples), replace=True)
+            resamples = np.random.choice(
+                scores, (len(scores), n_bootstrap_samples), replace=True
+            )
             bootstrap_means = resamples.mean(axis=0)
 
             # Compute "percentile bootstrap"
@@ -77,7 +86,9 @@ class RankingMetric(Mean):
             elif handling == "propagate":
                 return scores
             else:
-                raise ValueError('nan_handling must be "propagate", "drop" or "zerofill"')
+                raise ValueError(
+                    'nan_handling must be "propagate", "drop" or "zerofill"'
+                )
 
     def name(self):
         if self._k is None:

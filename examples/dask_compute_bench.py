@@ -1,13 +1,12 @@
 import time
 
 import dask
+from dask_cuda import LocalCUDACluster
+from distributed import Client, LocalCluster
 
 from crossfit.calculate.frame import MetricFrame
 from crossfit.dask.calculate import calculate_per_col as calculate_dask
 from crossfit.stats.continuous.stats import ContinuousStats
-
-from dask_cuda import LocalCUDACluster
-from distributed import Client, LocalCluster
 
 # Benchmark assumes Criteo dataset.
 # Low-cardinality columns:

@@ -36,7 +36,9 @@ class _CrossSparseDispatch(Dispatch, SparseMatrixProtocol):
         return cross_cls.from_matrix(matrix, keep_zeros=keep_zeros)
 
     @classmethod
-    def from_lil(cls, rows, data=None, dtype="float32", keep_zeros=False) -> SparseMatrixProtocol:
+    def from_lil(
+        cls, rows, data=None, dtype="float32", keep_zeros=False
+    ) -> SparseMatrixProtocol:
         cross_cls = CrossSparse(rows)
 
         return cross_cls.from_lil(rows, data=data, dtype=dtype, keep_zeros=keep_zeros)

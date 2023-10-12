@@ -1,6 +1,5 @@
-import pytest
-
 import numpy as np
+import pytest
 
 from crossfit.backend.pandas.dataframe import PandasDataFrame
 from crossfit.data.dataframe.core import ArrayBundle
