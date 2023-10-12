@@ -3,14 +3,14 @@ import numpy as np
 import dask.dataframe as dd
 
 import crossfit as cf
-from crossfit.reports.data_overview.report import (
+from crossfit.report.data_overview.report import (
     ContinuousMetrics,
     CategoricalMetrics,
     data_overview_report,
     DataOverviewReport,
 )
-from crossfit.reports.data_overview.visualization.facets import FacetsOverview
-from crossfit.backends.dask.aggregate import aggregate
+from crossfit.report.data_overview.visualization.facets import FacetsOverview
+from crossfit.backend.dask.aggregate import aggregate
 
 from tests.utils import sample_df
 
