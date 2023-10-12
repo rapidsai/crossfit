@@ -2,7 +2,9 @@ import types
 from collections import defaultdict, namedtuple
 from functools import wraps
 
+import numpy as np
 from crossfit.data.dataframe.core import FrameBackend
+from crossfit.data.array.conversion import convert_array
 
 
 def pre_processing(func):
@@ -37,9 +39,17 @@ class Aggregator:
         groupby=None,
         per_column=False,
         axis=0,
+<<<<<<< HEAD
     ):
         if aggs and not isinstance(aggs, dict):
             aggs = {type(aggs).__name__: aggs}
+=======
+        name=None,
+    ):
+        if aggs and not isinstance(aggs, dict):
+            name = name if name is not None else type(aggs).__name__
+            aggs = {name: aggs}
+>>>>>>> ae26d71e43324c3f1921a758052cf090422b40b8
         self.aggs = aggs
         self.pre = pre
         self.post_group = post_group
@@ -139,18 +149,29 @@ class Aggregator:
             keys = list(present_dict.keys())
 
             if isinstance(keys[0], str):
+<<<<<<< HEAD
                 return pd.DataFrame(present_dict)
+=======
+                # return pd.DataFrame(present_dict)
+                result = {k: convert_array(v, np.ndarray) for k, v in present_dict.items()}
+
+                return pd.DataFrame.from_dict(result, orient="index").T
+>>>>>>> ae26d71e43324c3f1921a758052cf090422b40b8
 
             groupings = {"&".join(k.grouping) if k.grouping else None for k in keys}
             columns = {k.column for k in keys}
 
             if columns and groupings != {None}:
                 for k, v in present_dict.items():
+<<<<<<< HEAD
                     grouping = (
                         "&".join(k.grouping)
                         if isinstance(k.grouping, tuple)
                         else k.grouping
                     )
+=======
+                    grouping = "&".join(k.grouping) if isinstance(k.grouping, tuple) else k.grouping
+>>>>>>> ae26d71e43324c3f1921a758052cf090422b40b8
                     if isinstance(k.group, tuple):
                         if len(k.group) > 1:
                             group = "&".join([str(i) for i in k.group])
@@ -167,10 +188,21 @@ class Aggregator:
                         )
                     else:
                         new[(grouping, group, k.column)].update({k.name: v})
+<<<<<<< HEAD
                 index = pd.MultiIndex.from_tuples(
                     new.keys(), names=("grouping", "group", "column")
                 )
                 return pd.DataFrame.from_records(list(new.values()), index=index)
+=======
+                index = pd.MultiIndex.from_tuples(new.keys(), names=("grouping", "group", "column"))
+                output = pd.DataFrame.from_records(list(new.values()), index=index)
+
+                if columns == {None}:
+                    output.index = output.index.droplevel("column")
+
+                return output
+
+>>>>>>> ae26d71e43324c3f1921a758052cf090422b40b8
             elif columns:
                 new = defaultdict(dict)
                 for k, v in present_dict.items():
@@ -207,6 +239,7 @@ class Aggregator:
 
 
 def present_state_dict(state, key=None):
+<<<<<<< HEAD
 
     result = {}
     for k in state.keys():
@@ -218,6 +251,26 @@ def present_state_dict(state, key=None):
             assert isinstance(k, str)
             _k = metric_key(
                 key.name + "." + k,
+=======
+    result = {}
+    for k in state.keys():
+        if isinstance(k, MetricKey) or key is None:
+            _k = k
+        else:
+            # TODO: Why is this needed?
+            if not isinstance(key, MetricKey) and isinstance(key, tuple):
+                key = MetricKey(*key)
+            assert isinstance(key, MetricKey)
+            assert isinstance(k, str)
+
+            if key.name:
+                name = key.name + "." + k
+            else:
+                name = k
+
+            _k = metric_key(
+                name,
+>>>>>>> ae26d71e43324c3f1921a758052cf090422b40b8
                 column=key.column,
                 grouping=key.grouping,
                 group=key.group,
@@ -234,6 +287,12 @@ def present_state_dict(state, key=None):
         else:
             result[_k] = state[k]
 
+<<<<<<< HEAD
+=======
+    # TODO: Does this need to be here?
+    # result = {k: convert_array(v, np.ndarray) for k, v in result.items()}
+
+>>>>>>> ae26d71e43324c3f1921a758052cf090422b40b8
     return result
 
 

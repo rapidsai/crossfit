@@ -113,9 +113,7 @@ class ArrayConverter:
             to_types = dispatch_utils.supports(to_)
 
             if from_types and to_types:
-                types = [
-                    t for t in set(product(from_types, to_types)) if len(set(t)) > 1
-                ]
+                types = [t for t in set(product(from_types, to_types)) if len(set(t)) > 1]
 
                 for from_t, to_t in types:
                     if from_t in conversions:
