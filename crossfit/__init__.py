@@ -43,5 +43,5 @@ try:
         "MultiDataset",
         "IRDataset",
     ])
-except ImportError:
+except ImportError as e:
     pass

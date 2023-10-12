@@ -16,7 +16,7 @@ except ImportError:
 
 
 try:
-    from crossfit.backend.torch.op.embed import Tokenizer
+    from crossfit.op.tokenize import Tokenizer
     
     __all__.append("Tokenizer")
 except ImportError:

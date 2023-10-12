@@ -3,7 +3,7 @@ import numpy as np
 
 from crossfit.data.array.masked import MaskedArray
 from crossfit.metric.continuous.mean import Mean
-from crossfit.data.sparse.ranking import SparseBinaryLabels, SparseLabels, Rankings
+from crossfit.data.sparse.ranking import SparseBinaryLabels, SparseLabels, Rankings, SparseRankings
 
 
 class RankingMetric(Mean):
