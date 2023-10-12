@@ -9,12 +9,18 @@ class _CrossFrameDispatch(Dispatch):
             return data
 
         # TODO: Fix this
-
-        from crossfit.backend.cudf.dataframe import CudfDataFrame
         from crossfit.backend.pandas.dataframe import PandasDataFrame
         from crossfit.backend.dask.dataframe import DaskDataFrame
+        
+        backends = [PandasDataFrame, DaskDataFrame]
+        
 
-        backends = [PandasDataFrame, DaskDataFrame, CudfDataFrame]
+        try:
+            from crossfit.backend.cudf.dataframe import CudfDataFrame
+            backends.append(CudfDataFrame)
+        except ImportError:
+            pass    
+
 
         for backend in backends:
             if isinstance(data, getattr(backend._lib(), "DataFrame")):
