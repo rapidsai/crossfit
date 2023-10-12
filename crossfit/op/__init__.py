@@ -1,6 +1,5 @@
 from crossfit.op.base import Op
 from crossfit.op.combinators import Sequential
-from crossfit.op.tokenize import Tokenizer
 
 
 __all__ = [
