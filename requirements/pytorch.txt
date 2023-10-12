@@ -1,2 +1,5 @@
 torch>=1.0
 transformers
+curated-transformers
+bitsandbytes
+beir
