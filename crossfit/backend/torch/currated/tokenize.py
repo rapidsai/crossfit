@@ -33,7 +33,16 @@ class CurratedTokenizer(_TokenizerOp):
         cols=None,
         revision: str = "main",
     ) -> "CurratedTokenizer":
-        tokenizer = AutoTokenizer.from_hf_hub(name=name, revision=revision)
+        try:
+            tokenizer = AutoTokenizer.from_hf_hub(name=name, revision=revision)
+        except Exception as e:
+            if "llama" in name:
+                raise Exception(
+                    "Couldn't access model, make sure you are logged in + have access to the model"
+                    + "Find instructions at: https://huggingface.co/meta-llama/Llama-2-7b-hf"
+                )
+
+            raise e
 
         return cls(tokenizer, cols=cols)
 

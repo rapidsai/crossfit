@@ -1,6 +1,7 @@
 import inspect
-from typing import Optional
+from typing import Dict, List, Generic, Union, TypeVar
 import uuid
+from typing_utils import get_args
 
 import dask.dataframe as dd
 import pandas as pd
@@ -73,6 +74,15 @@ class Op:
 
         return output
 
+    def _call_df(self, data, *args, partition_info=None, **kwargs):
+        params = inspect.signature(self.call).parameters
+        if "partition_info" in params:
+            output = self.call(data, *args, partition_info=partition_info, **kwargs)
+        else:
+            output = self.call(data, *args, **kwargs)
+
+        return output
+
     def __call__(self, data, *args, partition_info=None, **kwargs):
         if isinstance(data, dd.DataFrame):
             return self.call_dask(data, *args, **kwargs)
@@ -88,12 +98,7 @@ class Op:
             else:
                 inputs = self.pre(inputs)
 
-        params = inspect.signature(self.call).parameters
-        if "partition_info" in params:
-            output = self.call(inputs, *args, partition_info=partition_info, **kwargs)
-        else:
-            output = self.call(inputs, *args, **kwargs)
-
+        output = self._call_df(inputs, *args, partition_info=partition_info, **kwargs)
         if self.post is not None:
             params = inspect.signature(self.post).parameters
             if "partition_info" in params:
@@ -115,47 +120,65 @@ class Op:
         return output
 
 
-class ColumnOp(Op):
+DtypeT = TypeVar("DtypeT")
+
+
+class ColumnOp(Op, Generic[DtypeT]):
     def __init__(
         self,
-        input_col: str,
-        dtype: str,
-        output_col: Optional[str] = None,
+        cols: Union[str, List[str], Dict[str, str]],
+        output_dtype: DtypeT = None,
         keep_cols=None,
     ):
-        super().__init__(
-            pre=self.get_col, post=self.produce_output, keep_cols=keep_cols
-        )
-        self.input_col = input_col
-        self.output_col = output_col or input_col
-        self.dtype = dtype
+        super().__init__(keep_cols=keep_cols)
+        self.cols = [cols] if isinstance(cols, str) else cols
 
-    def get_col(self, data):
-        return data[self.input_col]
+        if output_dtype is None:
+            # Infer output dtype from generic
+            generics = get_args(self.__orig_bases__[0])
+            if isinstance(generics, tuple):
+                output_dtype = generics[0].__name__
+                if output_dtype == "float":
+                    output_dtype = "float32"
+                if output_dtype == "int":
+                    output_dtype = "int32"
+            else:
+                raise ValueError("Could not infer output_dtype, please specify it.")
 
-    def produce_output(self, col):
-        import cudf
+        self.output_dtype = output_dtype
 
-        # TODO: Add support for pandas
-        df = cudf.DataFrame()
-        df[self.output_col] = col
+    def _call_df(self, data, *args, partition_info=None, **kwargs):
+        output = self.create_df()
 
-        return df
+        if self.cols is None:
+            if not str(type(data)).endswith("Series"):
+                raise ValueError("data must be a Series")
 
-    def _build_dask_meta(self, data):
-        output = {col: data[col].dtype for col in self.keep_cols}
-        meta = self.meta()
+            return self.call(data, *args, partition_info=partition_info, **kwargs)
 
-        if not isinstance(meta, dict):
-            meta = {self.output_col: meta}
+        for col in self.cols:
+            if col not in data.columns:
+                raise ValueError(f"Column {col} not found in data")
 
-        if meta:
-            output.update(meta)
+            col_out = self.call(data[col])
+            output[self._construct_name(col)] = col_out
 
         return output
 
+    def _construct_name(self, col_name):
+        if isinstance(self.cols, dict):
+            return self.cols[col_name]
+
+        return col_name
+
     def meta(self):
-        return self.dtype
+        if not self.cols:
+            return self.output_dtype
+
+        if isinstance(self.cols, dict):
+            return {self.cols[col]: self.output_dtype for col in self.cols}
+
+        return {col: self.output_dtype for col in self.cols}
 
 
 class Repartition(Op):

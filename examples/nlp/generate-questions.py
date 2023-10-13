@@ -1,37 +1,23 @@
-from typing import Optional
-
 import crossfit as cf
 from crossfit.backend.torch import CurratedTokenizer, CuratedGenerator
 
 
-class QueryPrompt(cf.ColumnOp):
-    def __init__(
-        self,
-        input_col: str,
-        output_col: Optional[str] = None,
-        keep_cols=None,
-        doc_name: str = "Document",
-        query_name: str = "Relevant query",
-    ):
-        super().__init__(
-            input_col=input_col, dtype="str", output_col=output_col, keep_cols=keep_cols
-        )
-        self.doc_name = doc_name
-        self.query_name = query_name
+class QueryPrompt(cf.ColumnOp[str]):
+    doc_name: str = "Document"
+    query_name: str = "Relevant query"
 
     def call(self, data):
         return f"{self.doc_name}: \n\n" + data + f"\n\n{self.query_name}: \n\n"
 
 
-def main(model="tiiuae/falcon-7b-instruct", dataset="beir/quora", overwrite=True):
-    # model = "meta-llama/Llama-2-7b-hf"
+def main(model="meta-llama/Llama-2-7b-hf", dataset="beir/quora", overwrite=True):
     dataset: cf.IRDataset = cf.load_dataset(dataset, overwrite=False)
 
     pipe = cf.Sequential(
-        QueryPrompt("text"),
+        QueryPrompt(cols="text"),
         CurratedTokenizer.from_hf_hub(name=model, cols=["text"]),
         # cf.Repartition(50_000),
-        CuratedGenerator(model, batch_size=16, batch_steps=10, output_col="answer"),
+        CuratedGenerator(model, batch_size=32, batch_steps=10, output_col="answer"),
         keep_cols=["index", "_id", "text"],
     )
 
