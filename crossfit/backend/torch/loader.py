@@ -51,6 +51,7 @@ class InMemoryLoader:
         batch = {
             key: val[self.current_idx : end] for key, val in self.tensor_dict.items()
         }
+
         if self.max_seq_len is not None:
             batch = {key: val[:, : self.max_seq_len] for key, val in batch.items()}
 

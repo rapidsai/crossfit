@@ -9,3 +9,12 @@ __all__ = [
     "SortedSeqLoader",
     "TorchExactSearch",
 ]
+
+
+try:
+    from crossfit.backend.torch.currated.generate import CuratedGenerator
+    from crossfit.backend.torch.currated.tokenize import CurratedTokenizer
+
+    __all__ += ["CuratedGenerator", "CurratedTokenizer"]
+except ImportError:
+    pass

@@ -3,8 +3,7 @@ from typing import Optional
 import cudf
 import cupy as cp
 import torch
-from cudf.core.subword_tokenizer import _cast_to_appropriate_type
-from curated_transformers.tokenizers import Tokenizer
+from curated_transformers.tokenizers import Tokenizer, AutoTokenizer
 
 from crossfit.backend.cudf.series import create_list_series_from_2d_ar
 from crossfit.data.array.conversion import convert_array
@@ -18,19 +17,31 @@ class CurratedTokenizer(_TokenizerOp):
         cols=None,
         keep_cols=None,
         pre=None,
+        pad_left=False,
         max_length: Optional[int] = None,
     ):
         super().__init__(pre=pre, cols=cols, keep_cols=keep_cols)
         self.tokenizer = tokenizer
         self.max_length = max_length
+        self.pad_left = pad_left
+
+    @classmethod
+    def from_hf_hub(
+        cls,
+        *,
+        name: str,
+        cols=None,
+        revision: str = "main",
+    ) -> "CurratedTokenizer":
+        tokenizer = AutoTokenizer.from_hf_hub(name=name, revision=revision)
+
+        return cls(tokenizer, cols=cols)
 
     def tokenize_strings(self, sentences):
         pieces = self.tokenizer(sentences.to_arrow().to_pylist())
-
-        ids = pieces.padded_tensor(pad_left=True, device="cuda")
-        attention_mask = pieces.attention_mask(
-            pad_left=True, device="cuda"
-        ).bool_mask.to(torch.int8)
+        ids = pieces.padded_tensor(device="cuda", pad_left=self.pad_left)
+        mask = pieces.attention_mask(device="cuda", pad_left=self.pad_left)
+        attention_mask = mask.bool_mask.to(torch.int8)
 
         return {
             "input_ids": convert_array(ids, cp.ndarray),

@@ -29,6 +29,10 @@ class CuratedGenerator(Op):
         self,
         model_name: str,
         config=GreedyGeneratorConfig(),
+        output_col: str = "text",
+        batch_size: int = 32,
+        batch_steps: int = 20,
+        quantization_config=BitsAndBytesConfig.for_4bit(),
         pre=None,
         cols=False,
         keep_cols=None,
@@ -36,26 +40,38 @@ class CuratedGenerator(Op):
         super().__init__(pre=pre, cols=cols, keep_cols=keep_cols)
         self.model_name = model_name
         self.config = config
+        self.quantization_config = quantization_config
+        self.output_col = output_col
+        self.batch_size = batch_size
+        self.batch_steps = batch_steps
 
     def setup(self):
-        quantization_config = BitsAndBytesConfig.for_4bit()
-
         self.generator = AutoGenerator.from_hf_hub(
             name=self.model_name,
             device=torch.device("cuda"),
-            quantization_config=quantization_config,
+            quantization_config=self.quantization_config,
         )
         self.config = get_config(self.generator, self.config)
 
-    def call(self, data, partition_info=None):
-        model = self.generator.generator.inner.model
-        tokenizer = self.generator.generator.tokenizer
-
-        outputs = PartitionGenerator(tokenizer, BatchGenerator(model))(
-            data, config=self.config
+    def call(self, data):
+        generator = PartitionGenerator(
+            self.generator.generator.tokenizer,
+            BatchGenerator(self.generator.generator.inner.model),
+        )
+        outputs = generator(
+            data,
+            config=self.config,
+            batch_size=self.batch_size,
+            max_steps=self.batch_steps,
         )
 
-        # TODO: Implement the rest
+        output = self.create_df()
+        output[self.output_col] = self.create_series(outputs)
+
+        return output
+
+    def meta(self):
+        return {self.output_col: "str"}
 
 
 class BatchGenerator(Generator):
@@ -92,19 +108,27 @@ class BatchGenerator(Generator):
         state.tokenizer = self.tokenizer
 
         for i in range(max_steps):
-            if cache is None and i == 0 and generated_ids is not None:
+            if i == 0 and cache is None and generated_ids is not None:
                 ids = torch.concat([state.prompt_ids, state.generated_ids], 1)
             else:
                 ids = state.last_step_ids
 
             with torch.no_grad():
-                output = self.model(
-                    ids,
-                    attention_mask=state.attention_mask,
-                    cache=state.cache,
-                    store_cache=True,
-                    positions=state.positions,
-                )
+                try:
+                    output = self.model(
+                        ids,
+                        attention_mask=state.attention_mask,
+                        cache=state.cache,
+                        store_cache=True,
+                        positions=state.positions,
+                    )
+                except Exception as e:
+                    print(
+                        ids.shape,
+                        state.attention_mask.bool_mask.shape,
+                        state.cache[0].key.shape,
+                    )
+                    raise e
 
             state.step(
                 cache=output.cache,
@@ -132,7 +156,7 @@ class PartitionCache:
 
         return self
 
-    def pop(self, num: int, device="cuda"):
+    def pop(self, num: int, max_seq_len: Optional[int] = None, device="cuda"):
         if not self.cache:
             return None
 
@@ -172,18 +196,33 @@ class PartitionCache:
                 if right[0].key.size(0) > 0:
                     self.cache.append(right)
 
+        pad_kwargs = dict(dim=2, min_length=max_seq_len - 1)
         if len(outputs) == 1:
-            return outputs[0]
-
-        output = []
-
-        for i in range(len(outputs[0])):
-            output.append(
-                KeyValueCache(
-                    key=pad_and_stack([o[i].key for o in outputs]),
-                    value=pad_and_stack([o[i].value for o in outputs]),
+            output = outputs[0]
+        else:
+            output = []
+            for i in range(len(outputs[0])):
+                output.append(
+                    KeyValueCache(
+                        key=pad_and_stack([o[i].key for o in outputs], **pad_kwargs),
+                        value=pad_and_stack(
+                            [o[i].value for o in outputs], **pad_kwargs
+                        ),
+                    )
                 )
-            )
+
+        if max_seq_len:
+            output = [
+                KeyValueCache(
+                    key=pad_and_stack(
+                        [c.key[:, :, : max_seq_len - 1, :]], **pad_kwargs
+                    ),
+                    value=pad_and_stack(
+                        [c.value[:, :, : max_seq_len - 1, :]], **pad_kwargs
+                    ),
+                )
+                for c in output
+            ]
 
         return output
 
@@ -205,29 +244,30 @@ class PartitionGenerator(StringGenerator):
         :returns:
             Strings generated for the prompts.
         """
-
-        df["attention_mask"] = df["attention_mask"]
-
         completed_ids, completed_seq_ids = [], []
         self.inner.tokenizer = self.tokenizer
-
         num_samples = df["input_ids"].size
         i, n_tokens_generated, n_samples_done = 0, 0, 0
         it, n_batches = 0, 0
 
-        df["index"] = df.index
+        if "index" not in df.columns:
+            df["index"] = df.index
+        partition = df[["input_ids", "attention_mask", "index"]]
 
         current_cache, next_cache = PartitionCache(), PartitionCache()
 
         with tqdm(total=num_samples, desc="Generating...", dynamic_ncols=True) as pbar:
             while n_samples_done < num_samples:
                 results_list: List[Results] = []
-                for batch in InMemoryLoader(df, batch_size=batch_size):
+                for batch in InMemoryLoader(partition, batch_size=batch_size):
                     ids = batch["input_ids"]
                     _batch_size = ids.size(0)
-                    attention_mask = AttentionMask(
-                        batch["attention_mask"].to(torch.bool)
-                    )
+
+                    max_seq_len = (ids != 0).sum(axis=1).max()
+                    ids = ids[:, :max_seq_len]
+                    mask = batch["attention_mask"].to(torch.bool)[:, :max_seq_len]
+                    attention_mask = AttentionMask(mask)
+                    cache = current_cache.pop(_batch_size, max_seq_len=max_seq_len)
 
                     for generation_step in self.inner.generate_df(
                         ids=ids,
@@ -235,7 +275,7 @@ class PartitionGenerator(StringGenerator):
                         config=config,
                         generated_ids=batch.get("generated_ids"),
                         index=batch["index"],
-                        cache=current_cache.pop(_batch_size),
+                        cache=cache,
                         max_steps=max_steps,
                     ):
                         n_tokens_generated += _batch_size
@@ -275,7 +315,7 @@ class PartitionGenerator(StringGenerator):
                     )
 
                 if results_list:
-                    df = {
+                    partition = {
                         "input_ids": pad_and_stack(
                             [r.prompt_ids for r in results_list]
                         ),
@@ -364,9 +404,6 @@ class CuDFGeneratorState(Generic[CacheT]):
             *Shape:* ``(batch_size, seq_len)``
         """
         device = prompt_ids.device
-        assert (
-            attention_mask.device == device
-        ), f"Attention mask device '{attention_mask.device}' is not same as prompt ids device '{prompt_ids.device}'"
         self.attention_mask = attention_mask
         self.positions = attention_mask.bool_mask.int().cumsum(-1) - 1
         self.cache = cache
@@ -516,21 +553,30 @@ class CuDFGeneratorState(Generic[CacheT]):
         )
 
 
-def pad_and_stack(tensor_list):
-    # Find the maximum size along the last dimension
-    max_size = max(tensor.shape[1] for tensor in tensor_list)
+def pad_and_stack(tensor_list, dim=1, min_length=None):
+    # Find the maximum size along the specified dimension
+    max_size = max(tensor.shape[dim] for tensor in tensor_list)
+    max_size = max_size if min_length is None else max(max_size, min_length)
 
     # Initialize a list to store the padded tensors
     padded_tensors = []
 
     for tensor in tensor_list:
         # Calculate the amount of padding needed for this tensor
-        padding_needed = max_size - tensor.shape[1]
+        padding_needed = max_size - tensor.shape[dim]
+
+        # Build the padding tuple
+        # Here, we pad the 3rd dimension (0-based index 2)
+        # with 0s on the left and padding_needed on the right
+        pad = tuple(
+            0 if i != dim else padding_needed for i in range(len(tensor.shape) * 2)
+        )
 
         # Apply the padding
-        padded_tensor = F.pad(tensor, pad=(0, padding_needed), mode="constant", value=0)
+        padded_tensor = F.pad(tensor, pad=pad, mode="constant", value=0)
 
         # Add the padded tensor to the list
         padded_tensors.append(padded_tensor)
 
-    return torch.concat(padded_tensors)
+    # Stack along the specified dimension
+    return torch.cat(padded_tensors, dim=0)
