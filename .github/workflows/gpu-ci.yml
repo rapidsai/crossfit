@@ -3,7 +3,7 @@ name: GPU CI
 on:
   workflow_dispatch:
   push:
-    branches: 
+    branches:
       - main
       - "pull-request/[0-9]+"
     tags:
@@ -13,14 +13,18 @@ jobs:
   gpu-ci:
     runs-on: linux-amd64-gpu-p100-latest-1
     container:
-      image: nvcr.io/nvidia/merlin/merlin-pytorch:nightly
+      image: nvcr.io/nvstaging/merlin/merlin-ci-runner:latest
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }}
       options: --shm-size=1G
+      credentials:
+        username: $oauthtoken
+        password: ${{ secrets.NGC_TOKEN }}
+
     steps:
-    - uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-    - name: Run tests
-      run: |
-        pytest tests/
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Run tests
+        run: |
+          pytest tests/
