@@ -11,7 +11,7 @@ on:
 
 jobs:
   gpu-ci:
-    runs-on: linux-amd64-gpu-p100-latest-1
+    runs-on: linux-amd64-gpu-v100-latest-1
     container:
       image: nvcr.io/nvidia/pytorch:23.09-py3
       env:
