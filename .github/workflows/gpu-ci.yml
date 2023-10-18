@@ -27,4 +27,6 @@ jobs:
           fetch-depth: 0
       - name: Run tests
         run: |
+          python -m pip install -r requirements/base.txt
+          python -m pip install -r requirements/pytorch.txt
           pytest tests/
