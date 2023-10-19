@@ -1,5 +1,7 @@
 import pytest
 
+beir = pytest.importorskip("beir")
+
 import crossfit as cf
 from crossfit.dataset.beir.raw import BEIR_DATASETS
 
@@ -8,6 +10,7 @@ DATASETS.discard("cqadupstack")
 DATASETS.discard("germanquad")
 
 
+@pytest.mark.multigpu
 @pytest.mark.parametrize("dataset", DATASETS)
 def test_load_beir(dataset):
     data = cf.load_dataset(f"beir/{dataset}", tiny_sample=True)

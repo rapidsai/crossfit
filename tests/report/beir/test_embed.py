@@ -1,10 +1,11 @@
-import cupy as cp
-import numpy as np
 import pytest
+
+cp = pytest.importorskip("cupy")
+
+import numpy as np
 
 import crossfit as cf
 from crossfit.dataset.beir.raw import BEIR_DATASETS
-from crossfit.op.vector_search import _per_dim_ddf
 
 DATASETS = set(BEIR_DATASETS.keys())
 DATASETS.discard("cqadupstack")

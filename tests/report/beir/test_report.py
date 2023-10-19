@@ -1,5 +1,6 @@
 import pytest
 
+beir = pytest.importorskip("beir")
 
 import crossfit as cf
 from crossfit.dataset.beir.raw import BEIR_DATASETS
@@ -23,7 +24,9 @@ def test_beir_report(dataset, model_name="all-MiniLM-L6-v2", k=10):
         )
 
     expected_columns = [
-        f"{metric}@{k}" for metric in ["NDCG", "Recall", "Precision"] for k in [1, 3, 5, 10]
+        f"{metric}@{k}"
+        for metric in ["NDCG", "Recall", "Precision"]
+        for k in [1, 3, 5, 10]
     ]
     expected_indices = [
         ("split", "test"),
