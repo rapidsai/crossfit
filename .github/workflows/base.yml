@@ -28,5 +28,5 @@ jobs:
         pip install -e '.[dev]'
     - name: Run tests
       run: |
-        pytest --cov="crossfit"
+        pytest -m "not singlegpu and not multigpu" --cov="crossfit"
 
