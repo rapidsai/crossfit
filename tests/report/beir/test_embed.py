@@ -19,12 +19,12 @@ DATASETS.discard("trec-covid")
 @pytest.mark.singlegpu
 def test_embed_multi_gpu(
     model_name="all-MiniLM-L6-v2",
-    rmm_pool_size="12GB",
+    mem_size=12,
     k=10,
 ):
-    model = cf.SentenceTransformerModel(model_name)
+    model = cf.SentenceTransformerModel(model_name, max_mem_gb=mem_size)
     vector_search = cf.TorchExactSearch(k=k)
-    with cf.Distributed(rmm_pool_size=rmm_pool_size, n_workers=1):
+    with cf.Distributed(rmm_pool_size=f"{mem_size}GB", n_workers=1):
         for dataset in DATASETS:
             embeds = cf.embed(
                 dataset,
@@ -44,12 +44,12 @@ def test_embed_multi_gpu(
 #@pytest.mark.multigpu
 #def test_embed_multi_gpu(
 #    model_name="all-MiniLM-L6-v2",
-#    rmm_pool_size="24GB",
+#    mem_size=24,
 #    k=10,
 #):
-#    model = cf.SentenceTransformerModel(model_name)
+#    model = cf.SentenceTransformerModel(model_name, max_mem_gb=mem_size)
 #    vector_search = cf.TorchExactSearch(k=k)
-#    with cf.Distributed(rmm_pool_size=rmm_pool_size, n_workers=2):
+#    with cf.Distributed(rmm_pool_size=f"{mem_size}GB", n_workers=2):
 #        for dataset in DATASETS:
 #            embeds = cf.embed(
 #                dataset,
