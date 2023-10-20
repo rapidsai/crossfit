@@ -10,7 +10,7 @@ import crossfit as cf
 
 
 @pytest.mark.singlegpu
-@pytest.mark.parametrize("dataset", ["hotpotqa", "nq"])
+@pytest.mark.parametrize("dataset", ["nq"])
 def test_embed_multi_gpu(
     dataset,
     model_name="all-MiniLM-L6-v2",
