@@ -105,4 +105,4 @@ class SentenceTransformerModel(HFModel):
         return SentenceTransformer(self.path_or_name, device="cuda").to(device)
 
     def load_cfg(self):
-        return AutoConfig.from_pretrained("sentence-transformers/" + self.path_or_name)
+        return AutoConfig.from_pretrained(self.path_or_name)
