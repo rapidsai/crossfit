@@ -1,8 +1,7 @@
-from pathlib import Path
 import shutil
+from pathlib import Path
 
 from crossfit.dataset.beir.raw import download_all_sampled
-
 
 current_file_path = Path(__file__).parent.resolve()
 

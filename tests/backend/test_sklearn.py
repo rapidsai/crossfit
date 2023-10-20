@@ -1,12 +1,10 @@
-import pytest
-
 import numpy as np
+import pytest
 from sklearn import metrics
-from sklearn.utils.multiclass import type_of_target
 from sklearn.utils._array_api import get_namespace
+from sklearn.utils.multiclass import type_of_target
 
 from crossfit.data import crossarray, np_backend_dispatch
-
 
 arr1 = [1, 2, 3]
 arr2 = [4, 5, 6]

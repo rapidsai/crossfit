@@ -3,8 +3,8 @@ import pytest
 pytest.importorskip("cupy")
 
 from crossfit.data.sparse.ranking import SparseBinaryLabels, SparseRankings
-from crossfit.metric.ranking import FirstRelevantRank, MeanRanks, ReciprocalRank
-
+from crossfit.metric.ranking import (FirstRelevantRank, MeanRanks,
+                                     ReciprocalRank)
 
 y1 = [0, 5]
 y2 = [8, 9]
@@ -34,7 +34,9 @@ class TestReciprocalRank:
     def test_masked_score(self, k, y_gold, y_pred, valid, expect):
         y_gold = SparseBinaryLabels.from_positive_indices(y_gold)
         y_pred = SparseRankings.from_ranked_indices(y_pred, valid_items=valid)
-        pred = ReciprocalRank(k).score(y_gold, y_pred, nan_handling="propagate").tolist()
+        pred = (
+            ReciprocalRank(k).score(y_gold, y_pred, nan_handling="propagate").tolist()
+        )
 
         assert pred == pytest.approx(expect, nan_ok=True)
 
@@ -61,7 +63,9 @@ class TestReciprocalRank:
                 y_pred = SparseRankings.from_ranked_indices(y_pred)
         else:
             y_pred = SparseRankings.from_ranked_indices(y_pred)
-        pred = ReciprocalRank(k).score(y_gold, y_pred, nan_handling="propagate").tolist()
+        pred = (
+            ReciprocalRank(k).score(y_gold, y_pred, nan_handling="propagate").tolist()
+        )
 
         assert pred == pytest.approx(expect, nan_ok=True)
 
@@ -107,6 +111,8 @@ class TestFirstRelevantRank:
                 y_pred = SparseRankings.from_ranked_indices(y_pred)
         else:
             y_pred = SparseRankings.from_ranked_indices(y_pred)
-        pred = FirstRelevantRank().score(y_gold, y_pred, nan_handling="propagate").tolist()
+        pred = (
+            FirstRelevantRank().score(y_gold, y_pred, nan_handling="propagate").tolist()
+        )
 
         assert pred == pytest.approx(expect, nan_ok=True)

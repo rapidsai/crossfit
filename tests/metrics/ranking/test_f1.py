@@ -5,7 +5,6 @@ pytest.importorskip("cupy")
 from crossfit.data.sparse.ranking import SparseBinaryLabels, SparseRankings
 from crossfit.metric.ranking import F1
 
-
 y1 = [0, 5]
 y2 = [8, 9]
 y3 = []

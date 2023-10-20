@@ -3,18 +3,12 @@ import pytest
 pytest.importorskip("cupy")
 
 import numpy as np
-
-from crossfit.data.sparse.ranking import (
-    SparseBinaryLabels,
-    SparseNumericLabels,
-    SparseRankings,
-    Rankings,
-)
-from crossfit.metric.ranking import DCG, NDCG
-
-from tests.pytrec_utils import create_qrel, create_run, create_results
 from pytrec_eval import RelevanceEvaluator
 
+from crossfit.data.sparse.ranking import (Rankings, SparseBinaryLabels,
+                                          SparseNumericLabels, SparseRankings)
+from crossfit.metric.ranking import DCG, NDCG
+from tests.pytrec_utils import create_qrel, create_results, create_run
 
 y1 = [0, 5]
 y2 = [8, 9]
@@ -73,7 +67,12 @@ class TestNDCG:
             (y3, rn1, [float("nan")], {}),
             (y3, r3, [float("nan")], {}),
             (yn1, [rn1, rn2], [5.616107762 / 8.501497843, 1.0], {}),
-            ([yn1, yn2], [rn1, rn2], [5.616107762 / 8.501497843, 8.656170245 / 9.033953658], {}),
+            (
+                [yn1, yn2],
+                [rn1, rn2],
+                [5.616107762 / 8.501497843, 8.656170245 / 9.033953658],
+                {},
+            ),
         ],
     )
     def test_numeric_score(self, y_gold, y_pred, expect, params):
@@ -83,7 +82,11 @@ class TestNDCG:
                 y_pred = SparseRankings.from_ranked_indices(y_pred)
         else:
             y_pred = SparseRankings.from_ranked_indices(y_pred)
-        pred = NDCG(3, **params, log_base="e").score(y_gold, y_pred, nan_handling="propagate").tolist()
+        pred = (
+            NDCG(3, **params, log_base="e")
+            .score(y_gold, y_pred, nan_handling="propagate")
+            .tolist()
+        )
         assert pred == pytest.approx(expect, nan_ok=True)
 
     @pytest.mark.parametrize(
@@ -93,7 +96,12 @@ class TestNDCG:
             (y6, rn1, [1.0], {}),
             (y1, r4, [0.0], {}),
             (y6, rn2, [1.631586747 / 2.352934268], {}),
-            ([y1, y6], [r1, rn2], [1.956593383 / 2.352934268, 1.631586747 / 2.352934268], {}),
+            (
+                [y1, y6],
+                [r1, rn2],
+                [1.956593383 / 2.352934268, 1.631586747 / 2.352934268],
+                {},
+            ),
         ],
     )
     def test_binary_score(self, y_gold, y_pred, expect, params):
@@ -104,7 +112,11 @@ class TestNDCG:
                 y_pred = SparseRankings.from_ranked_indices(y_pred)
         else:
             y_pred = SparseRankings.from_ranked_indices(y_pred)
-        pred = NDCG(10, **params, log_base="e").score(y_gold, y_pred, nan_handling="propagate").tolist()
+        pred = (
+            NDCG(10, **params, log_base="e")
+            .score(y_gold, y_pred, nan_handling="propagate")
+            .tolist()
+        )
 
         assert pred == pytest.approx(expect, nan_ok=True)
 
@@ -114,26 +126,41 @@ class TestNDCG:
             # All-zero relevance
             (
                 np.array([[0, 0, 0, 0, 0], [0, 0, 0, 0, 0]], dtype=np.int32),
-                np.array([[0.1, 0.2, 0.3, 0.4, 0.5], [0.6, 0.7, 0.8, 0.9, 1.0]], dtype=np.float32),
+                np.array(
+                    [[0.1, 0.2, 0.3, 0.4, 0.5], [0.6, 0.7, 0.8, 0.9, 1.0]],
+                    dtype=np.float32,
+                ),
             ),
             # All-one relevance
             (
                 np.array([[1, 1, 1, 1, 1], [1, 1, 1, 1, 1]], dtype=np.int32),
-                np.array([[0.1, 0.2, 0.3, 0.4, 0.5], [0.6, 0.7, 0.8, 0.9, 1.0]], dtype=np.float32),
+                np.array(
+                    [[0.1, 0.2, 0.3, 0.4, 0.5], [0.6, 0.7, 0.8, 0.9, 1.0]],
+                    dtype=np.float32,
+                ),
             ),
             # Non-continuous relevance
             (
                 np.array([[0, 1, 0, 1, 0], [1, 0, 1, 0, 1]], dtype=np.int32),
-                np.array([[0.1, 0.2, 0.3, 0.4, 0.5], [0.6, 0.7, 0.8, 0.9, 1.0]], dtype=np.float32),
+                np.array(
+                    [[0.1, 0.2, 0.3, 0.4, 0.5], [0.6, 0.7, 0.8, 0.9, 1.0]],
+                    dtype=np.float32,
+                ),
             ),
             # Empty inputs
             (np.array([[], []], dtype=np.int32), np.array([[], []], dtype=np.float32)),
             # Single-element lists
-            (np.array([[1], [0]], dtype=np.int32), np.array([[0.1], [0.9]], dtype=np.float32)),
+            (
+                np.array([[1], [0]], dtype=np.int32),
+                np.array([[0.1], [0.9]], dtype=np.float32),
+            ),
             # Non-binary relevance
             (
                 np.array([[3, 2, 1, 0, 0], [0, 0, 1, 0, 2]], dtype=np.int32),
-                np.array([[0.1, 0.2, 0.3, 0.4, 0.5], [0.6, 0.7, 0.8, 0.9, 1.0]], dtype=np.float32),
+                np.array(
+                    [[0.1, 0.2, 0.3, 0.4, 0.5], [0.6, 0.7, 0.8, 0.9, 1.0]],
+                    dtype=np.float32,
+                ),
             ),
         ],
     )
@@ -150,4 +177,6 @@ class TestNDCG:
 
         for query_id, metrics in results.items():
             for metric_name, value in metrics.items():
-                assert value == pytest.approx(pytrec_result[query_id][metric_name], rel=1e-3)
+                assert value == pytest.approx(
+                    pytrec_result[query_id][metric_name], rel=1e-3
+                )

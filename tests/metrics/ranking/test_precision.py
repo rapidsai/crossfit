@@ -5,10 +5,10 @@ pytest.importorskip("cupy")
 import numpy as np
 from pytrec_eval import RelevanceEvaluator
 
-from crossfit.data.sparse.ranking import SparseBinaryLabels, SparseRankings, Rankings
+from crossfit.data.sparse.ranking import (Rankings, SparseBinaryLabels,
+                                          SparseRankings)
 from crossfit.metric.ranking import AP, Precision
-from tests.pytrec_utils import create_qrel, create_run, create_results
-
+from tests.pytrec_utils import create_qrel, create_results, create_run
 
 y1 = [0, 5]
 y2 = [8, 9]
@@ -63,22 +63,34 @@ class TestPrecision:
             # All-zero relevance
             (
                 np.array([[0, 0, 0, 0, 0], [0, 0, 0, 0, 0]], dtype=np.int32),
-                np.array([[0.1, 0.2, 0.3, 0.4, 0.5], [0.6, 0.7, 0.8, 0.9, 1.0]], dtype=np.float32),
+                np.array(
+                    [[0.1, 0.2, 0.3, 0.4, 0.5], [0.6, 0.7, 0.8, 0.9, 1.0]],
+                    dtype=np.float32,
+                ),
             ),
             # All-one relevance
             (
                 np.array([[1, 1, 1, 1, 1], [1, 1, 1, 1, 1]], dtype=np.int32),
-                np.array([[0.1, 0.2, 0.3, 0.4, 0.5], [0.6, 0.7, 0.8, 0.9, 1.0]], dtype=np.float32),
+                np.array(
+                    [[0.1, 0.2, 0.3, 0.4, 0.5], [0.6, 0.7, 0.8, 0.9, 1.0]],
+                    dtype=np.float32,
+                ),
             ),
             # Non-continuous relevance
             (
                 np.array([[0, 1, 0, 1, 0], [1, 0, 1, 0, 1]], dtype=np.int32),
-                np.array([[0.1, 0.2, 0.3, 0.4, 0.5], [0.6, 0.7, 0.8, 0.9, 1.0]], dtype=np.float32),
+                np.array(
+                    [[0.1, 0.2, 0.3, 0.4, 0.5], [0.6, 0.7, 0.8, 0.9, 1.0]],
+                    dtype=np.float32,
+                ),
             ),
             # Empty inputs
             (np.array([[], []], dtype=np.int32), np.array([[], []], dtype=np.float32)),
             # Single-element lists
-            (np.array([[1], [0]], dtype=np.int32), np.array([[0.1], [0.9]], dtype=np.float32)),
+            (
+                np.array([[1], [0]], dtype=np.int32),
+                np.array([[0.1], [0.9]], dtype=np.float32),
+            ),
         ],
     )
     def test_pytrec_eval(self, obs, scores):
@@ -92,7 +104,9 @@ class TestPrecision:
 
         for query_id, metrics in results.items():
             for metric_name, value in metrics.items():
-                assert value == pytest.approx(pytrec_result[query_id][metric_name], rel=1e-3)
+                assert value == pytest.approx(
+                    pytrec_result[query_id][metric_name], rel=1e-3
+                )
 
 
 class TestTruncatedPrecision:
@@ -120,7 +134,11 @@ class TestTruncatedPrecision:
                 y_pred = SparseRankings.from_ranked_indices(y_pred)
         else:
             y_pred = SparseRankings.from_ranked_indices(y_pred)
-        pred = Precision(k, truncated=True).score(y_gold, y_pred, nan_handling="propagate").tolist()
+        pred = (
+            Precision(k, truncated=True)
+            .score(y_gold, y_pred, nan_handling="propagate")
+            .tolist()
+        )
 
         assert pred == pytest.approx(expect, nan_ok=True)
 
