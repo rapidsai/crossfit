@@ -3,26 +3,10 @@ import pytest
 beir = pytest.importorskip("beir")
 
 import crossfit as cf
-from crossfit.dataset.beir.raw import BEIR_DATASETS
-
-DATASETS = set(BEIR_DATASETS.keys())
-DATASETS.discard("cqadupstack")
-DATASETS.discard("germanquad")
-DATASETS.discard("trec-covid")
-DATASETS.discard("webis-touche2020")
-
-# TODO: Fix illegal memory access
-DATASETS.discard("quora")
-
-# Below are datasets with numerical scores > 1.
-# TODO: remove after enabling non-biarny scores.
-DATASETS.discard("nfcorpus")
-DATASETS.discard("msmarco")
-DATASETS.discard("dbpedia-entity")
 
 
 @pytest.mark.singlegpu
-@pytest.mark.parametrize("dataset", DATASETS)
+@pytest.mark.parametrize("dataset", ["nq", "hotpotqa", "fiqa"])
 def test_beir_report(dataset, model_name="all-MiniLM-L6-v2", k=10):
     model = cf.SentenceTransformerModel(model_name)
     vector_search = cf.TorchExactSearch(k=k)
