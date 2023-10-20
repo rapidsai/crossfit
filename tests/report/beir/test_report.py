@@ -20,7 +20,7 @@ DATASETS.discard("trec-covid")
 
 
 @pytest.mark.singlegpu
-def test_beir_report(model_name="all-MiniLM-L6-v2", mem_size=12, k=10):
+def test_beir_report(model_name="all-MiniLM-L6-v2", mem_size=16, k=10):
     model = cf.SentenceTransformerModel(model_name, max_mem_gb=mem_size)
     vector_search = cf.TorchExactSearch(k=k)
 

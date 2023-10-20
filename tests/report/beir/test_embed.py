@@ -19,7 +19,7 @@ DATASETS.discard("trec-covid")
 @pytest.mark.singlegpu
 def test_embed_multi_gpu(
     model_name="all-MiniLM-L6-v2",
-    mem_size=12,
+    mem_size=16,
     k=10,
 ):
     model = cf.SentenceTransformerModel(model_name, max_mem_gb=mem_size)
