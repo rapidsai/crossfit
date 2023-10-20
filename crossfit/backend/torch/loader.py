@@ -1,12 +1,12 @@
-from typing import Dict, overload
 from itertools import islice
+from typing import Dict, overload
 
 import torch
 
 from crossfit.backend.torch.model import Model
-from crossfit.data.dataframe.dispatch import CrossFrame
-from crossfit.data.array.dispatch import crossarray
 from crossfit.data.array.conversion import convert_array
+from crossfit.data.array.dispatch import crossarray
+from crossfit.data.dataframe.dispatch import CrossFrame
 
 
 class InMemoryLoader:
@@ -51,6 +51,7 @@ class InMemoryLoader:
         batch = {
             key: val[self.current_idx : end] for key, val in self.tensor_dict.items()
         }
+
         if self.max_seq_len is not None:
             batch = {key: val[:, : self.max_seq_len] for key, val in batch.items()}
 

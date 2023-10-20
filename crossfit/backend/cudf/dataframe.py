@@ -1,9 +1,8 @@
 from typing import Callable
 
-
+from crossfit.backend.pandas.dataframe import PandasDataFrame
 from crossfit.data.array.dispatch import crossarray
 from crossfit.data.dataframe.dispatch import CrossFrame
-from crossfit.backend.pandas.dataframe import PandasDataFrame
 
 
 class CudfDataFrame(PandasDataFrame):
@@ -24,7 +23,9 @@ class CudfDataFrame(PandasDataFrame):
             # Numba-compilation failed
             pass
         with crossarray:
-            return CrossFrame({k: func(v, *args, **kwargs) for k, v in self.data.items()}).cast()
+            return CrossFrame(
+                {k: func(v, *args, **kwargs) for k, v in self.data.items()}
+            ).cast()
 
 
 @CrossFrame.register_lazy("cupy")

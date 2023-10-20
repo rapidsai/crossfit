@@ -9,7 +9,6 @@ from crossfit.data.dataframe.dispatch import CrossFrame
 from crossfit.metric import *  # noqa
 from crossfit.op import *  # noqa
 
-
 __all__ = [
     "Aggregator",
     "backend",
@@ -27,21 +26,27 @@ __all__ = [
 
 
 try:
-    from crossfit.backend.torch import SentenceTransformerModel, TorchExactSearch, HFModel
+    from crossfit.backend.torch import (
+        HFModel,
+        SentenceTransformerModel,
+        TorchExactSearch,
+    )
+    from crossfit.dataset.base import IRDataset, MultiDataset
+    from crossfit.dataset.load import load_dataset
     from crossfit.report.beir.embed import embed
     from crossfit.report.beir.report import beir_report
-    from crossfit.dataset.load import load_dataset
-    from crossfit.dataset.base import IRDataset, MultiDataset
-    
-    __all__.extend([
-        "embed",
-        "beir_report",
-        "load_dataset",
-        "TorchExactSearch",
-        "SentenceTransformerModel",
-        "HFModel",    
-        "MultiDataset",
-        "IRDataset",
-    ])
+
+    __all__.extend(
+        [
+            "embed",
+            "beir_report",
+            "load_dataset",
+            "TorchExactSearch",
+            "SentenceTransformerModel",
+            "HFModel",
+            "MultiDataset",
+            "IRDataset",
+        ]
+    )
 except ImportError as e:
     pass

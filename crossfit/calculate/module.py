@@ -1,7 +1,6 @@
-from typing import Dict, List
-from dataclasses import field, MISSING, Field
 from copy import deepcopy
-
+from dataclasses import MISSING, Field, field
+from typing import Dict, List
 
 from typing_utils import get_origin
 

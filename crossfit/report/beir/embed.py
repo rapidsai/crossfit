@@ -3,11 +3,11 @@ import shutil
 from typing import Optional
 
 from crossfit import op
+from crossfit.backend.torch.model import Model
 from crossfit.dataset.base import Dataset, EmbeddingDatataset, IRDataset
 from crossfit.dataset.home import CF_HOME
 from crossfit.dataset.load import load_dataset
 from crossfit.op.vector_search import VectorSearchOp
-from crossfit.backend.torch.model import Model
 
 
 def embed(
@@ -26,7 +26,9 @@ def embed(
 
     out_dir = out_dir or CF_HOME
     processed_name = "processed-test" if tiny_sample else "processed"
-    emb_dir = os.path.join(out_dir, processed_name, "beir", dataset_name, "emb", model.path_or_name)
+    emb_dir = os.path.join(
+        out_dir, processed_name, "beir", dataset_name, "emb", model.path_or_name
+    )
 
     if os.path.exists(emb_dir):
         if overwrite:

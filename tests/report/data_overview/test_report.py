@@ -1,17 +1,16 @@
-import pandas as pd
-import numpy as np
 import dask.dataframe as dd
+import numpy as np
+import pandas as pd
 
 import crossfit as cf
+from crossfit.backend.dask.aggregate import aggregate
 from crossfit.report.data_overview.report import (
-    ContinuousMetrics,
     CategoricalMetrics,
-    data_overview_report,
+    ContinuousMetrics,
     DataOverviewReport,
+    data_overview_report,
 )
 from crossfit.report.data_overview.visualization.facets import FacetsOverview
-from crossfit.backend.dask.aggregate import aggregate
-
 from tests.utils import sample_df
 
 

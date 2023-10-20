@@ -3,20 +3,26 @@ from typing import List, Optional
 import cudf
 import cupy as cp
 import dask_cudf
-from cuml.preprocessing import LabelEncoder
 import numpy as np
+from cuml.preprocessing import LabelEncoder
 
 from crossfit.backend.dask.aggregate import aggregate
-from crossfit.data.sparse.dispatch import CrossSparse
-from crossfit.data.array.dispatch import crossarray
-from crossfit.dataset.base import EmbeddingDatataset
-from crossfit.report.beir.embed import embed
-from crossfit.calculate.aggregate import Aggregator
-from crossfit.metric.continuous.mean import Mean
-from crossfit.metric.ranking import NDCG, Precision, Recall, SparseBinaryLabels, SparseRankings
-from crossfit.report.base import Report
-from crossfit.op.vector_search import VectorSearchOp
 from crossfit.backend.torch.model import Model
+from crossfit.calculate.aggregate import Aggregator
+from crossfit.data.array.dispatch import crossarray
+from crossfit.data.sparse.dispatch import CrossSparse
+from crossfit.dataset.base import EmbeddingDatataset
+from crossfit.metric.continuous.mean import Mean
+from crossfit.metric.ranking import (
+    NDCG,
+    Precision,
+    Recall,
+    SparseBinaryLabels,
+    SparseRankings,
+)
+from crossfit.op.vector_search import VectorSearchOp
+from crossfit.report.base import Report
+from crossfit.report.beir.embed import embed
 
 
 class BeirMetricAggregator(Aggregator):
@@ -29,14 +35,22 @@ class BeirMetricAggregator(Aggregator):
         groupby=None,
         metrics=[NDCG, Precision, Recall],
     ):
-        super().__init__(None, pre=pre, post_group=post_group, post=post, groupby=groupby)
+        super().__init__(
+            None, pre=pre, post_group=post_group, post=post, groupby=groupby
+        )
         self.ks = ks
         self.metrics = metrics
 
     def prepare(self, df):
-        encoder = self.create_label_encoder(df, ["corpus-index-pred", "corpus-index-obs"])
-        obs_csr = self.create_csr_matrix(df["corpus-index-obs"], df["score-obs"], encoder)
-        pred_csr = self.create_csr_matrix(df["corpus-index-pred"], df["score-pred"], encoder)
+        encoder = self.create_label_encoder(
+            df, ["corpus-index-pred", "corpus-index-obs"]
+        )
+        obs_csr = self.create_csr_matrix(
+            df["corpus-index-obs"], df["score-obs"], encoder
+        )
+        pred_csr = self.create_csr_matrix(
+            df["corpus-index-pred"], df["score-pred"], encoder
+        )
 
         # TODO: Fix dispatch
         labels = SparseBinaryLabels(CrossSparse.from_matrix(obs_csr))
@@ -108,7 +122,11 @@ def join_predictions(data, predictions):
 
     predictions = predictions.set_index("query-index")
     merged = observed.merge(
-        predictions, left_index=True, right_index=True, how="left", suffixes=("-obs", "-pred")
+        predictions,
+        left_index=True,
+        right_index=True,
+        how="left",
+        suffixes=("-obs", "-pred"),
     ).rename(columns={"split-obs": "split"})
 
     output = merged.reset_index()
@@ -140,7 +158,9 @@ class BeirReport(Report):
 
             # Sort the @k values within each group
             for metric, columns in grouped_columns.items():
-                grouped_columns[metric] = sorted(columns, key=lambda x: int(x.split("@")[-1]))
+                grouped_columns[metric] = sorted(
+                    columns, key=lambda x: int(x.split("@")[-1])
+                )
 
             # Print table for each metric type
             for metric, columns in grouped_columns.items():

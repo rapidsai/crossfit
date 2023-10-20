@@ -1,9 +1,10 @@
 import warnings
-from crossfit.data.array.masked import MaskedArray
+
 import numpy as np
 
-from crossfit.data.sparse.dispatch import CrossSparse, SparseMatrixProtocol
 from crossfit.data.array.dispatch import crossarray
+from crossfit.data.array.masked import MaskedArray
+from crossfit.data.sparse.dispatch import CrossSparse, SparseMatrixProtocol
 
 
 class SparseLabels:
@@ -33,7 +34,9 @@ class SparseLabels:
         return MaskedArray(retrieved, indices.mask)
 
     def as_rankings(self):
-        return SparseRankings.from_scores(self._labels.tocsr(copy=True), warn_empty=False)
+        return SparseRankings.from_scores(
+            self._labels.tocsr(copy=True), warn_empty=False
+        )
 
     @property
     def labels(self) -> SparseMatrixProtocol:
@@ -154,7 +157,8 @@ class Rankings:
         if np.issubdtype(dtype, np.floating):
             if not np.all(np.isfinite(arr)):
                 warnings.warn(
-                    "Input contains NaN or Inf entries which will be ignored.", InvalidValuesWarning
+                    "Input contains NaN or Inf entries which will be ignored.",
+                    InvalidValuesWarning,
                 )
                 arr[~np.isfinite(arr)] = np.NINF
         elif not np.issubdtype(dtype, np.integer):
@@ -175,12 +179,19 @@ class Rankings:
 
     @classmethod
     def from_scores(
-        cls, raw_scores, valid_items=None, invalid_items=None, warn_empty=True, k_max=None
+        cls,
+        raw_scores,
+        valid_items=None,
+        invalid_items=None,
+        warn_empty=True,
+        k_max=None,
     ):
         raw_scores = cls._verify_input(raw_scores, dtype=np.floating)
 
         if valid_items is not None:
-            invalid_idx = CrossSparse.from_nonzero_indices(invalid_items).csr.toarray() == 0
+            invalid_idx = (
+                CrossSparse.from_nonzero_indices(invalid_items).csr.toarray() == 0
+            )
             raw_scores -= np.inf * invalid_idx
         if invalid_items is not None:
             invalid_items = CrossSparse.from_nonzero_indices(invalid_items).csr
@@ -226,7 +237,8 @@ class SparseRankings(Rankings):
             indices.difference(invalid_items)
         if not indices.isfinite():
             warnings.warn(
-                "Input contains NaN or Inf entries which will be ignored.", InvalidValuesWarning
+                "Input contains NaN or Inf entries which will be ignored.",
+                InvalidValuesWarning,
             )
             indices.remove_infinite()
         n_empty_rows = indices.count_empty_rows()
@@ -265,7 +277,9 @@ class SparseRankings(Rankings):
         return cls(indices, valid_items, invalid_items)
 
     @classmethod
-    def from_scores(cls, raw_scores, valid_items=None, invalid_items=None, warn_empty=True):
+    def from_scores(
+        cls, raw_scores, valid_items=None, invalid_items=None, warn_empty=True
+    ):
         """
         Construct a rankings instance from raw scores where each item's score is specified.
         Items will be ranked in descending order (higher scores meaning better).
@@ -312,7 +326,9 @@ def topk(x, k, return_scores=False):
 
         # stable argsort in descending order
         top_idx_local = top_k_partition.shape[1] - 1
-        top_idx_local -= np.fliplr(np.argsort(np.fliplr(top_k_partition), axis=-1, kind="stable"))
+        top_idx_local -= np.fliplr(
+            np.argsort(np.fliplr(top_k_partition), axis=-1, kind="stable")
+        )
 
         # sort the top partition
         top_idx = np.take_along_axis(index_array, top_idx_local, axis=-1)

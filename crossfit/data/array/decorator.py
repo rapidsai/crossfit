@@ -1,18 +1,18 @@
-from typing import Set, TypeVar, Union, Optional, List
-from copy import deepcopy
-import sys
 import ast
-from pathlib import Path
 import functools
 import inspect
+import sys
 import types
+from copy import deepcopy
 from itertools import zip_longest
+from pathlib import Path
+from typing import List, Optional, Set, TypeVar, Union
 
 import astunparse
 import numpy as np
 
-from crossfit.array import numpy as cnp, np_backend_dispatch
-
+from crossfit.array import np_backend_dispatch
+from crossfit.array import numpy as cnp
 
 _CALL_HANDLER_ID = "__crossfit_call_handler__"
 _CLOSURE_WRAPPER_ID = "__crossfit_closure_wrapper__"

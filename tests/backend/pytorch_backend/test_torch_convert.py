@@ -1,6 +1,5 @@
-import pytest
-
 import numpy as np
+import pytest
 import torch
 
 from crossfit.data import convert_array

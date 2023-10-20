@@ -1,7 +1,7 @@
 import logging
 
 from crossfit.data.array import conversion
-from crossfit.data.array.dispatch import np_backend_dispatch, ArrayBackend
+from crossfit.data.array.dispatch import ArrayBackend, np_backend_dispatch
 
 try:
     import torch

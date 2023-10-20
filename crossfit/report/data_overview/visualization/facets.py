@@ -3,7 +3,6 @@ import os
 
 from tensorflow_metadata.proto.v0 import statistics_pb2
 
-
 STATS_FILE_NAME = "stats.pb"
 
 

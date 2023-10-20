@@ -1,5 +1,5 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 from crossfit.metric.base import CrossMetric, state
 
@@ -52,7 +52,9 @@ class ValueCounts(CrossMetric):
             rsuffix="_r",
             how="outer",
         ).fillna(0)
-        combined = (combined_frame["count_l"] + combined_frame["count_r"]).astype("int64")
+        combined = (combined_frame["count_l"] + combined_frame["count_r"]).astype(
+            "int64"
+        )
 
         return ValueCounts(values=combined.index._data, counts=combined.values)
 

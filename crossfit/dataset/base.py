@@ -65,7 +65,9 @@ class MultiDataset(FromDirMixin):
         val: Optional[Union[Dataset, str]] = None,
         test: Optional[Union[Dataset, str]] = None,
     ):
-        self.train: Optional[Dataset] = Dataset(train) if isinstance(train, str) else train
+        self.train: Optional[Dataset] = (
+            Dataset(train) if isinstance(train, str) else train
+        )
         self.val: Optional[Dataset] = Dataset(val) if isinstance(val, str) else val
         self.test: Optional[Dataset] = Dataset(test) if isinstance(test, str) else test
 
@@ -81,10 +83,14 @@ class IRDataset(MultiDataset):
         query: Optional[Union[Dataset, str]] = None,
         item: Optional[Union[Dataset, str]] = None,
     ):
-        self.train: Optional[Dataset] = Dataset(train) if isinstance(train, str) else train
+        self.train: Optional[Dataset] = (
+            Dataset(train) if isinstance(train, str) else train
+        )
         self.val: Optional[Dataset] = Dataset(val) if isinstance(val, str) else val
         self.test: Optional[Dataset] = Dataset(test) if isinstance(test, str) else test
-        self.query: Optional[Dataset] = Dataset(query) if isinstance(query, str) else query
+        self.query: Optional[Dataset] = (
+            Dataset(query) if isinstance(query, str) else query
+        )
         self.item: Optional[Dataset] = Dataset(item) if isinstance(item, str) else item
 
 

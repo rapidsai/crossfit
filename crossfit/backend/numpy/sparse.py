@@ -1,16 +1,18 @@
 import itertools
-from crossfit.data.array.masked import MaskedArray
 
+import numba
 import numpy as np
 import scipy.sparse as sp
-import numba
 
-from crossfit.data.sparse.dispatch import CrossSparse
+from crossfit.data.array.masked import MaskedArray
 from crossfit.data.sparse.core import SparseMatrixBackend
+from crossfit.data.sparse.dispatch import CrossSparse
 
 
 class NPSparseMatrixBackend(SparseMatrixBackend):
-    def __init__(self, idx_ptr: np.ndarray, col_idx: np.ndarray, data: np.ndarray, shape=None):
+    def __init__(
+        self, idx_ptr: np.ndarray, col_idx: np.ndarray, data: np.ndarray, shape=None
+    ):
         if shape is None:
             if len(col_idx):
                 M = col_idx.max() + 1
@@ -48,7 +50,9 @@ class NPSparseMatrixBackend(SparseMatrixBackend):
             if isinstance(matrix, list):
                 matrix = np.asarray(matrix, dtype=object).astype(np.float32)
             matrix = np.atleast_2d(matrix)
-            if not np.issubdtype(matrix.dtype, np.number) or np.issubdtype(matrix.dtype, np.bool_):
+            if not np.issubdtype(matrix.dtype, np.number) or np.issubdtype(
+                matrix.dtype, np.bool_
+            ):
                 raise ValueError("Input must be numeric")
             elif matrix.ndim != 2:
                 raise ValueError("Input arrays need to be 1D or 2D.")
@@ -71,7 +75,9 @@ class NPSparseMatrixBackend(SparseMatrixBackend):
             rows = [rows]
         idx_ptr = np.asarray([0] + [len(x) for x in rows], dtype=int).cumsum()
         try:
-            col_idx = np.fromiter(itertools.chain.from_iterable(rows), dtype=int, count=idx_ptr[-1])
+            col_idx = np.fromiter(
+                itertools.chain.from_iterable(rows), dtype=int, count=idx_ptr[-1]
+            )
             if data is None:
                 data = np.ones_like(col_idx, dtype=dtype)
             else:
@@ -90,7 +96,9 @@ class NPSparseMatrixBackend(SparseMatrixBackend):
         return instance
 
     def tocsr(self, copy=False):
-        return sp.csr_matrix((self.data, self.col_idx, self.idx_ptr), copy=copy, shape=self.shape)
+        return sp.csr_matrix(
+            (self.data, self.col_idx, self.idx_ptr), copy=copy, shape=self.shape
+        )
 
     def todense(self):
         return np.asarray(self.tocsr().todense())
@@ -108,7 +116,9 @@ class NPSparseMatrixBackend(SparseMatrixBackend):
     def _setop(self, other, mode):
         if self.shape[0] != other.shape[0]:
             raise ValueError("Matrices need to have the same number of rows!")
-        _numba_setop(self.idx_ptr, self.col_idx, self.data, other.idx_ptr, other.col_idx, mode)
+        _numba_setop(
+            self.idx_ptr, self.col_idx, self.data, other.idx_ptr, other.col_idx, mode
+        )
         self.eliminate_zeros()
 
     def sort(self):
@@ -192,13 +202,17 @@ def _numba_sort(idx_ptr, col_idx, data):
 
 
 @numba.njit(parallel=True)
-def _numba_setop(self_idx_ptr, self_col_idx, self_data, other_idx_ptr, other_col_idx, intersect):
+def _numba_setop(
+    self_idx_ptr, self_col_idx, self_data, other_idx_ptr, other_col_idx, intersect
+):
     for i in numba.prange(len(self_idx_ptr) - 1):
         ss, se = self_idx_ptr[i], self_idx_ptr[i + 1]
         os, oe = other_idx_ptr[i], other_idx_ptr[i + 1]
 
         left_idx = np.searchsorted(other_col_idx[os:oe], self_col_idx[ss:se])
-        right_idx = np.searchsorted(other_col_idx[os:oe], self_col_idx[ss:se], side="right")
+        right_idx = np.searchsorted(
+            other_col_idx[os:oe], self_col_idx[ss:se], side="right"
+        )
         if intersect:
             found = left_idx == right_idx
         else:

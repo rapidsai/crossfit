@@ -66,7 +66,9 @@ def _numba_sort(idx_ptr, col_idx, data):
 
 
 @cuda.jit
-def _numba_setop(self_idx_ptr, self_col_idx, self_data, other_idx_ptr, other_col_idx, intersect):
+def _numba_setop(
+    self_idx_ptr, self_col_idx, self_data, other_idx_ptr, other_col_idx, intersect
+):
     i = cuda.grid(1)
 
     if i < len(self_idx_ptr) - 1:
