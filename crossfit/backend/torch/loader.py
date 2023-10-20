@@ -112,14 +112,16 @@ class SortedSeqLoader(InMemoryLoader):
 
         def batch_seq_len(batch_size):
             end = self.current_idx + batch_size
-            return min(
-                self.tensor_dict["seq_length"][end - 1], self.model.max_seq_length()
+            return int(
+                min(
+                    self.tensor_dict["seq_length"][end - 1], self.model.max_seq_length()
+                )
             )
 
         while (
             self.current_idx + batch_size
         ) < self.num_rows and self.model.estimate_memory(
-            int(batch_seq_len(batch_size)), batch_size
+            batch_seq_len(batch_size), batch_size
         ) < (
             (self.model.max_mem_gb * 1024)
         ):
