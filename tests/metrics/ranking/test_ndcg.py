@@ -1,4 +1,7 @@
 import pytest
+
+pytest.importorskip("cupy")
+
 import numpy as np
 
 from crossfit.data.sparse.ranking import (

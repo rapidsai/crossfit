@@ -1,4 +1,7 @@
 import pytest
+
+pytest.importorskip("cupy")
+
 import numpy as np
 from pytrec_eval import RelevanceEvaluator
 

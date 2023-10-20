@@ -1,5 +1,7 @@
 import pytest
 
+pytest.importorskip("cupy")
+
 from crossfit.data.sparse.ranking import SparseBinaryLabels, SparseRankings
 from crossfit.metric.ranking import FirstRelevantRank, MeanRanks, ReciprocalRank
 
