@@ -17,7 +17,7 @@ class Embedder(Op):
         pre=None,
         cols=False,
         keep_cols=None,
-        batch_size=256,
+        batch_size=1024,
         max_mem: str = "16GB",
         sorted_data_loader: bool = True,
     ):
