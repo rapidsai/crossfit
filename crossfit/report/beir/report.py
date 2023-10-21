@@ -13,7 +13,7 @@ from crossfit.dataset.base import EmbeddingDatataset
 from crossfit.report.beir.embed import embed
 from crossfit.calculate.aggregate import Aggregator
 from crossfit.metric.continuous.mean import Mean
-from crossfit.metric.ranking import NDCG, Precision, Recall, SparseBinaryLabels, SparseRankings
+from crossfit.metric.ranking import NDCG, Precision, Recall, SparseBinaryLabels, SparseNumericLabels, SparseRankings
 from crossfit.report.base import Report
 from crossfit.op.vector_search import VectorSearchOp
 from crossfit.backend.torch.model import Model
@@ -39,8 +39,8 @@ class BeirMetricAggregator(Aggregator):
         pred_csr = self.create_csr_matrix(df["corpus-index-pred"], df["score-pred"], encoder)
 
         # TODO: Fix dispatch
-        labels = SparseBinaryLabels(CrossSparse.from_matrix(obs_csr))
-        rankings = SparseRankings(CrossSparse.from_matrix(pred_csr))
+        labels = SparseNumericLabels.from_matrix(obs_csr)
+        rankings = SparseRankings.from_scores(pred_csr)
 
         outputs = {}
         with crossarray:
@@ -50,7 +50,6 @@ class BeirMetricAggregator(Aggregator):
                     result = metric_at_k.score(labels, rankings)
 
                     # TODO: Does this make sense?
-                    result = np.nan_to_num(result)
                     result = np.where(result > 1, 1, result)
 
                     outputs[metric_at_k.name()] = Mean.from_array(result, axis=0)
