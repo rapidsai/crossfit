@@ -17,13 +17,13 @@ class Embedder(Op):
         pre=None,
         cols=False,
         keep_cols=None,
-        default_batch_size=1024,
+        batch_size=1024,
         max_mem: str = "16GB",
         sorted_data_loader: bool = True,
     ):
         super().__init__(pre=pre, cols=cols, keep_cols=keep_cols)
         self.model = model
-        self.batch_size = default_batch_size
+        self.batch_size = batch_size
         self.max_mem = max_mem
         self.max_mem_gb = int(self.max_mem.split("GB")[0]) / 2.5
         self.sorted_data_loader = sorted_data_loader

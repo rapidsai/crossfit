@@ -1,6 +1,5 @@
-import pytest
-
 import numpy as np
+import pytest
 
 from crossfit.backend.pandas.dataframe import PandasDataFrame
 from crossfit.data.dataframe.core import ArrayBundle
@@ -8,7 +7,6 @@ from crossfit.data.dataframe.dispatch import CrossFrame
 
 
 def test_pandas_frame():
-
     arr1 = np.arange(10)
     arr2 = np.ones(10)
     arr3 = np.array(["cat", "dog"] * 5)

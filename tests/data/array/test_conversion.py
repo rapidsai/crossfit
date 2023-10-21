@@ -1,6 +1,5 @@
-import pytest
-
 import numpy as np
+import pytest
 
 from crossfit.data import convert_array
 
