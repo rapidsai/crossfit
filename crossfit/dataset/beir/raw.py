@@ -236,7 +236,12 @@ def sample_raw(name, out_dir=None, overwrite=False, sample_size=100, blocksize=2
     import cudf
     import dask_cudf
 
-    full_path = download_raw(name, overwrite=overwrite)
+    # if we are running tests with `pytest tests/`, use testdata.
+    testdata_dir = os.path.join(os.getcwd(), "tests", "testdata", "beir", name)
+    if os.path.exists(testdata_dir):
+        full_path = testdata_dir
+    else:
+        full_path = download_raw(name, overwrite=overwrite)
 
     out_dir = out_dir or CF_HOME
     sampled_dir = os.path.join(out_dir, "sampled")
