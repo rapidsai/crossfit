@@ -1,47 +1,25 @@
 from numba import cuda
 
 
-@cuda.jit(device=True)
-def cuda_searchsorted(arr, val, side):
-    """
-    Binary search on a sorted array.
-
-    ======  ============================
-    `side`  returned index `i` satisfies
-    ======  ============================
-    0       ``arr[i-1] < val <= arr[i]``
-    1       ``arr[i-1] <= val < arr[i]``
-    ======  ============================
-    """
-    left = 0
-    right = len(arr)
-    while left < right:
-        mid = (left + right) // 2
-        if arr[mid] < val or (side == 1 and arr[mid] <= val):
-            left = mid + 1
-        else:
-            right = mid
-    return left
-
-
 @cuda.jit
 def _numba_lookup(A_indptr, A_cols, A_data, B, vals):
     i = cuda.grid(1)
 
-    n_rows_a = len(A_indptr) - 1
-    if n_rows_a == len(B):
-        ind_start, ind_end = A_indptr[i], A_indptr[i + 1]
-        for j in range(B.shape[1]):
-            left_idx = cuda_searchsorted(A_cols[ind_start:ind_end], B[i][j], 0)
-            right_idx = cuda_searchsorted(A_cols[ind_start:ind_end], B[i][j], 1)
-            if left_idx != right_idx:
-                vals[i][j] = A_data[ind_start:ind_end][left_idx]
-    else:
-        for j in range(B.shape[1]):
-            left_idx = cuda_searchsorted(A_cols, B[i][j], 0)
-            right_idx = cuda_searchsorted(A_cols, B[i][j], 1)
-            if left_idx != right_idx:
-                vals[i][j] = A_data[left_idx]
+    if i < B.shape[0]:
+        n_rows_a = len(A_indptr) - 1
+        if n_rows_a == len(B):
+            ind_start, ind_end = A_indptr[i], A_indptr[i + 1]
+            for j in range(B.shape[1]):
+                for k in range(ind_start, ind_end):
+                    if A_cols[k] == B[i][j]:
+                        vals[i][j] = A_data[k]
+                        break
+        else:
+            for j in range(B.shape[1]):
+                for k in range(len(A_cols)):
+                    if A_cols[k] == B[i][j]:
+                        vals[i][j] = A_data[k]
+                        break
 
 
 @cuda.jit
@@ -74,15 +52,12 @@ def _numba_setop(self_idx_ptr, self_col_idx, self_data, other_idx_ptr, other_col
         os, oe = other_idx_ptr[i], other_idx_ptr[i + 1]
 
         for j in range(ss, se):
-            left_idx = cuda_searchsorted(other_col_idx[os:oe], self_col_idx[j], 0)
-            right_idx = cuda_searchsorted(other_col_idx[os:oe], self_col_idx[j], 1)
-
-            if intersect:
-                found = left_idx == right_idx
-            else:
-                found = left_idx != right_idx
-
-            if found:
+            found = False
+            for k in range(os, oe):
+                if self_col_idx[j] == other_col_idx[k]:
+                    found = True
+                    break
+            if (intersect and not found) or (not intersect and found):
                 self_data[j] = 0
 
 

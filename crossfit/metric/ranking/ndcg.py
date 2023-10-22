@@ -38,4 +38,11 @@ class NDCG(DCG):
         ideal_labels = y_true.get_labels_for(y_true.as_rankings(), self._k)
         idcg = self._dcg(y_true, ideal_labels)
 
+        ndcg = dcg / idcg
+
+        if idcg.shape[0] == 1 and ndcg.shape[0] > 1:
+            idcg = np.ones_like(ndcg) * idcg
+
+        ndcg[idcg == 0] = np.NaN
+
         return dcg / idcg

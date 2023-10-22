@@ -49,9 +49,6 @@ class BeirMetricAggregator(Aggregator):
                     metric_at_k = metric(k=k)
                     result = metric_at_k.score(labels, rankings)
 
-                    # TODO: Does this make sense?
-                    result = np.where(result > 1, 1, result)
-
                     outputs[metric_at_k.name()] = Mean.from_array(result, axis=0)
 
         return outputs
