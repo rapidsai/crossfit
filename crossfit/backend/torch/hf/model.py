@@ -104,12 +104,12 @@ class HFModel(Model):
 
 class SentenceTransformerModel(HFModel):
     def load_model(self, device="cuda"):
-        model = AutoModel.from_pretrained(self.path_or_name)
+        model = AutoModel.from_pretrained(self.path_or_name).to(device)
         if device == "cuda":
             try:
                 from optimum.bettertransformer import BetterTransformer
 
-                model = BetterTransformer.transform(model.to(torch.float16)).to(device)
+                model = BetterTransformer.transform(model.to(torch.float16))
             except ImportError:
                 logging.warning(
                     "Loading embedding model without BetterTransformer. "
