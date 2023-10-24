@@ -117,7 +117,7 @@ class SentenceTransformerModel(HFModel):
                 )
         return model
 
-    def get_sentence_embedding(self, inputs, outputs):
+    def get_embedding(self, inputs, outputs):
         embeddings = self.average_pool(
             outputs["last_hidden_state"], inputs["attention_mask"]
         )

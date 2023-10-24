@@ -52,7 +52,7 @@ class Embedder(Op):
         all_embeddings_ls = []
         model = self.model.get_model(self)
         for features, outputs in loader.map(lambda batch: (batch, model(**batch))):
-            sentence_embedding = self.model.get_sentence_embedding(features, outputs)
+            sentence_embedding = self.model.get_embedding(features, outputs)
             all_embeddings_ls.append(sentence_embedding)
 
         out = cudf.DataFrame(index=index)
