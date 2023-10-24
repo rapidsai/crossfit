@@ -6,6 +6,8 @@ import joblib
 
 import numpy as np
 import torch
+import torch.nn.functional as F
+from optimum.bettertransformer import BetterTransformer
 from tqdm import tqdm
 from transformers import AutoConfig, AutoModel, AutoTokenizer
 from sklearn.linear_model import LinearRegression
@@ -100,9 +102,26 @@ class HFModel(Model):
 
 class SentenceTransformerModel(HFModel):
     def load_model(self, device="cuda"):
-        from sentence_transformers import SentenceTransformer
+        model = AutoModel.from_pretrained(self.path_or_name)
+        if device == "cuda":
+            model = BetterTransformer.transform(model.to(torch.float16)).to(device)
+        return model
 
-        return SentenceTransformer(self.path_or_name, device="cuda").to(device)
+    def get_sentence_embedding(self, inputs, outputs):
+        embeddings = self.average_pool(
+            outputs["last_hidden_state"], inputs['attention_mask']
+        )
+        embeddings = F.normalize(embeddings, p=2, dim=1)
+        return embeddings
+
+    @staticmethod
+    def average_pool(
+        last_hidden_states: torch.Tensor, attention_mask: torch.Tensor
+    ) -> torch.Tensor:
+        last_hidden = last_hidden_states.masked_fill(
+            ~attention_mask[..., None].bool(), 0.0
+        )
+        return last_hidden.sum(dim=1) / attention_mask.sum(dim=1)[..., None]
 
     def load_cfg(self):
         return AutoConfig.from_pretrained("sentence-transformers/" + self.path_or_name)
