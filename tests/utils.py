@@ -1,7 +1,7 @@
-import pytest
 from collections.abc import Mapping
 
 import pandas as pd
+import pytest
 
 try:
     import cudf

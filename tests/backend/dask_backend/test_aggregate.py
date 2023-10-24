@@ -2,9 +2,8 @@ import dask.dataframe as dd
 
 from crossfit.calculate.aggregate import Aggregator, metric_key
 from crossfit.data.dataframe.dispatch import CrossFrame
-from crossfit.metric.continuous.range import Range
 from crossfit.metric import Mean
-
+from crossfit.metric.continuous.range import Range
 from tests.utils import is_leaf_node_instance_of, sample_df
 
 

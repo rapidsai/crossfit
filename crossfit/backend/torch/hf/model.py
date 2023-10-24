@@ -106,4 +106,4 @@ class SentenceTransformerModel(HFModel):
 
     @lru_cache(maxsize=1)
     def load_cfg(self):
-        return AutoConfig.from_pretrained("sentence-transformers/" + self.path_or_name)
+        return AutoConfig.from_pretrained(self.path_or_name)
