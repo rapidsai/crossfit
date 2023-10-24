@@ -89,9 +89,7 @@ class SortedSeqLoader(InMemoryLoader):
         self.sorted_indices = seq_length.argsort()
         frame = frame.apply(lambda x: x[self.sorted_indices])
         frame = frame.assign(seq_length=seq_length[self.sorted_indices])
-
         super().__init__(frame, initial_batch_size, progress_bar=progress_bar)
-        self.splits = self._find_optimal_splits()
 
     def sort_column(self, col):
         indices = convert_array(self.sorted_indices, type(col))
@@ -106,89 +104,45 @@ class SortedSeqLoader(InMemoryLoader):
         return output
 
     def __next__(self):
-        if self.current_idx >= len(self.splits):
+        if self.current_idx >= self.num_rows:
+            self.current_idx = 0
             raise StopIteration
 
-        if self.current_idx == 0:
-            start = 0
-        else:
-            start = self.splits[self.current_idx - 1]
-        end = min(self.splits[self.current_idx], self.num_rows)
-        _tokens = self.tensor_dict["seq_length"]
+        batch_size = 1
+
+        def batch_seq_len(batch_size):
+            end = self.current_idx + batch_size
+            return int(
+                min(
+                    self.tensor_dict["seq_length"][end - 1], self.model.max_seq_length()
+                )
+            )
+
+        while (
+            self.current_idx + batch_size
+        ) < self.num_rows and self.model.estimate_memory(
+            batch_seq_len(batch_size), batch_size
+        ) < (
+            (self.model.max_mem_gb * 1024)
+        ):
+            batch_size += 1
+
+        end = batch_size + self.current_idx
 
         batch = {
-            key: val[start:end]
+            key: val[self.current_idx : end]
             for key, val in self.tensor_dict.items()
             if key not in self.to_ignore
         }
-        clip_len = min(_tokens[end - 1], self.model.max_seq_length())
-        batch = {key: val[:, :clip_len] for key, val in batch.items()}
+        max_seq_len = batch_seq_len(batch_size)
+        batch = {key: val[:, :max_seq_len] for key, val in batch.items()}
 
-        self.current_idx += 1
+        self.current_idx += batch_size
 
         for fn in self._to_map:
             batch = fn(batch)
 
         if self.progress_bar is not None:
-            self.progress_bar.update(end - start)
+            self.progress_bar.update(batch_size)
 
         return batch
-
-    def _find_optimal_splits(self):
-        splits = []
-        i = 0
-        doubling_factor = 2
-        max_doubling_attempts, max_steps = 8, 8
-        dynamic_step_size = self.batch_size
-        decreasing_attempts = 0
-
-        num_tokens = self.tensor_dict["seq_length"]
-        max_seq_length = self.model.max_seq_length()
-
-        while i < len(num_tokens):
-            best_fit_e_ind = (
-                i + self.batch_size
-            )  # Initialize to at least initial_batch_size
-
-            # Try aggressive doubling first
-            for doubling_i in range(max_doubling_attempts):
-                tentative_e_ind = (
-                    i + best_fit_e_ind * doubling_factor
-                )  # Double the last best fit
-                tentative_e_ind = min(tentative_e_ind, len(num_tokens))
-                max_token = int(num_tokens[tentative_e_ind - 1])
-                est_memory = self.model.estimate_memory(
-                    max_token, int(tentative_e_ind - i)
-                )
-
-                if est_memory <= self.model.max_mem_gb:
-                    best_fit_e_ind = tentative_e_ind
-                else:
-                    max_doubling_attempts = doubling_i  # Reduce max doubling attempts
-                    break  # Exit loop if we exceed memory limit
-
-            for _ in range(max_steps):
-                tentative_e_ind = (
-                    best_fit_e_ind + dynamic_step_size
-                )  # Add dynamic step size
-                tentative_e_ind = min(tentative_e_ind, len(num_tokens))
-                max_token = int(num_tokens[tentative_e_ind - 1])
-
-                est_memory = self.model.estimate_memory(
-                    max_token, int(tentative_e_ind - i)
-                )
-                # The closer we are to the end, the more we penalize the batch size
-                penalty_factor = 1 + 5.0 * ((max_token / max_seq_length) ** 2)
-                est_memory *= penalty_factor
-
-                if est_memory <= self.model.max_mem_gb:
-                    best_fit_e_ind = tentative_e_ind
-                    break
-                else:
-                    dynamic_step_size //= 2  # halve the step size
-                    decreasing_attempts += 1
-
-            splits.append(best_fit_e_ind)
-            i = best_fit_e_ind  # Move to the next batch
-
-        return splits
