@@ -1,7 +1,12 @@
 import numpy as np
 
-from crossfit.metric.ranking.base import BinaryRankingMetric, SparseBinaryLabels, SparseLabels
+from crossfit.data.array.conversion import convert_array
 from crossfit.data.array.masked import MaskedArray
+from crossfit.metric.ranking.base import (
+    BinaryRankingMetric,
+    SparseBinaryLabels,
+    SparseLabels,
+)
 
 
 class Precision(BinaryRankingMetric):
@@ -12,7 +17,9 @@ class Precision(BinaryRankingMetric):
     def _precision(self, y_true: SparseLabels, y_pred_labels: MaskedArray):
         n_pos = y_true.get_n_positives(y_pred_labels.shape[0])
         n_relevant = np.sum(
-            (y_pred_labels.data[:, : self._k] >= 1) & (~y_pred_labels.mask[:, : self._k]), axis=-1
+            (y_pred_labels.data[:, : self._k] == 1)
+            & (~y_pred_labels.mask[:, : self._k]),
+            axis=-1,
         )
 
         if self._truncated:
@@ -38,16 +45,18 @@ class Precision(BinaryRankingMetric):
 
 
 class AP(BinaryRankingMetric):
-    def _score(self, y_true: SparseBinaryLabels, y_pred_labels: MaskedArray):
+    def _score(self, y_true: SparseLabels, y_pred_labels: MaskedArray):
         n_pos = y_true.get_n_positives(y_pred_labels.shape[0])
         labels = y_pred_labels[:, : self._k].filled(0)
 
         ranks = np.arange(1, labels.shape[1] + 1, dtype=float).reshape(1, -1)
+        ranks = convert_array(ranks, type(y_pred_labels.data))
 
-        precision = np.cumsum(labels, axis=-1) / ranks
+        relevant = labels >= 1
+        precision = np.cumsum(relevant, axis=-1) / ranks
 
         scores = np.zeros_like(n_pos, dtype=float)
-        scores[n_pos > 0] = np.sum(precision * labels, axis=-1)[n_pos > 0] / np.clip(
+        scores[n_pos > 0] = np.sum(precision * relevant, axis=-1)[n_pos > 0] / np.clip(
             n_pos[n_pos > 0], None, self._k
         )
         scores[n_pos == 0] = np.NaN

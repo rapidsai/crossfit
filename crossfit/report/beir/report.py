@@ -13,7 +13,7 @@ from crossfit.dataset.base import EmbeddingDatataset
 from crossfit.report.beir.embed import embed
 from crossfit.calculate.aggregate import Aggregator
 from crossfit.metric.continuous.mean import Mean
-from crossfit.metric.ranking import NDCG, Precision, Recall, SparseBinaryLabels, SparseNumericLabels, SparseRankings
+from crossfit.metric.ranking import AP, NDCG, Precision, Recall, SparseBinaryLabels, SparseNumericLabels, SparseRankings
 from crossfit.report.base import Report
 from crossfit.op.vector_search import VectorSearchOp
 from crossfit.backend.torch.model import Model
@@ -27,7 +27,7 @@ class BeirMetricAggregator(Aggregator):
         post_group=None,
         post=None,
         groupby=None,
-        metrics=[NDCG, Precision, Recall],
+        metrics=[NDCG, AP, Precision, Recall],
     ):
         super().__init__(None, pre=pre, post_group=post_group, post=post, groupby=groupby)
         self.ks = ks

@@ -15,7 +15,9 @@ from crossfit.report.beir.report import (create_csr_matrix,
 
 @pytest.mark.singlegpu
 @pytest.mark.parametrize("dataset", ["nq"])
-def test_beir_report(dataset, model_name="all-MiniLM-L6-v2", k=10):
+def test_beir_report(
+    dataset, model_name="sentence-transformers/all-MiniLM-L6-v2", k=10
+):
     model = cf.SentenceTransformerModel(model_name)
     vector_search = cf.TorchExactSearch(k=k)
     report = cf.beir_report(
@@ -28,7 +30,7 @@ def test_beir_report(dataset, model_name="all-MiniLM-L6-v2", k=10):
 
     expected_columns = [
         f"{metric}@{k}"
-        for metric in ["NDCG", "Recall", "Precision"]
+        for metric in ["NDCG", "Recall", "Precision", "AP"]
         for k in [1, 3, 5, 10]
     ]
     expected_indices = [
@@ -44,7 +46,7 @@ def test_beir_report(dataset, model_name="all-MiniLM-L6-v2", k=10):
 
 @pytest.mark.singlegpu
 @pytest.mark.parametrize("dataset", ["hotpotqa"])
-def test_no_invalid_scores(dataset, model_name="all-MiniLM-L6-v2", k=10):
+def test_no_invalid_scores(dataset, model_name="sentence-transformers/all-MiniLM-L6-v2", k=10):
     model = cf.SentenceTransformerModel(model_name)
     vector_search = cf.TorchExactSearch(k=k)
     embeds = cf.embed(
