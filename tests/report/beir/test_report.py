@@ -7,7 +7,9 @@ import crossfit as cf
 
 @pytest.mark.singlegpu
 @pytest.mark.parametrize("dataset", ["hotpotqa", "nq"])
-def test_beir_report(dataset, model_name="all-MiniLM-L6-v2", k=10):
+def test_beir_report(
+    dataset, model_name="sentence-transformers/all-MiniLM-L6-v2", k=10
+):
     model = cf.SentenceTransformerModel(model_name)
     vector_search = cf.TorchExactSearch(k=k)
     report = cf.beir_report(
