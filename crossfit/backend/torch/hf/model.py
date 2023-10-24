@@ -1,5 +1,6 @@
 from functools import lru_cache
 import gc
+import logging
 import os
 from crossfit.dataset.home import CF_HOME
 import joblib
@@ -7,11 +8,12 @@ import joblib
 import numpy as np
 import torch
 import torch.nn.functional as F
-from optimum.bettertransformer import BetterTransformer
 from tqdm import tqdm
 from transformers import AutoConfig, AutoModel, AutoTokenizer
 from sklearn.linear_model import LinearRegression
 from crossfit.backend.torch.model import Model
+
+logger = logging.getLogger(__name__)
 
 
 class HFModel(Model):
@@ -104,12 +106,20 @@ class SentenceTransformerModel(HFModel):
     def load_model(self, device="cuda"):
         model = AutoModel.from_pretrained(self.path_or_name)
         if device == "cuda":
-            model = BetterTransformer.transform(model.to(torch.float16)).to(device)
+            try:
+                from optimum.bettertransformer import BetterTransformer
+
+                model = BetterTransformer.transform(model.to(torch.float16)).to(device)
+            except ImportError:
+                logging.warning(
+                    "Loading embedding model without BetterTransformer. "
+                    "Install the 'optimum' to make embedding inference faster.  "
+                )
         return model
 
     def get_sentence_embedding(self, inputs, outputs):
         embeddings = self.average_pool(
-            outputs["last_hidden_state"], inputs['attention_mask']
+            outputs["last_hidden_state"], inputs["attention_mask"]
         )
         embeddings = F.normalize(embeddings, p=2, dim=1)
         return embeddings
