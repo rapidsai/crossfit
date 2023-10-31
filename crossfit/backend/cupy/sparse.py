@@ -122,7 +122,7 @@ class CPSparseMatrixBackend(SparseMatrixBackend):
     def sort(self):
         from crossfit.backend.cupy.kernels import _numba_sort, determine_blocks_threads
 
-        blocks, threads = determine_blocks_threads(len(self.idx_ptr))
+        blocks, threads = determine_blocks_threads(len(self.idx_ptr) - 1)
         _numba_sort[blocks, threads](self.idx_ptr, self.col_idx, self.data)
 
     def intersection(self, other):

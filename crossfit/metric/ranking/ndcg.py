@@ -9,7 +9,7 @@ class DCG(RankingMetric):
     SCALERS = {"identity": lambda x: x, "power": lambda x: np.power(x, 2) - 1}
     LOGS = {"2": lambda x: np.log2(x), "e": lambda x: np.log(x)}
 
-    def __init__(self, k=None, relevance_scaling="identity", log_base="e"):
+    def __init__(self, k=None, relevance_scaling="identity", log_base="2"):
         self._k = k
         if relevance_scaling not in self.SCALERS:
             raise ValueError("Relevance scaling must be 'identity' or 'power'.")
@@ -37,5 +37,12 @@ class NDCG(DCG):
         dcg = self._dcg(y_true, y_pred_labels)
         ideal_labels = y_true.get_labels_for(y_true.as_rankings(), self._k)
         idcg = self._dcg(y_true, ideal_labels)
+
+        ndcg = dcg / idcg
+
+        if idcg.shape[0] == 1 and ndcg.shape[0] > 1:
+            idcg = np.ones_like(ndcg) * idcg
+
+        ndcg[idcg == 0] = np.NaN
 
         return dcg / idcg
