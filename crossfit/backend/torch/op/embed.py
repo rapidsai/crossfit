@@ -50,8 +50,10 @@ class Embedder(Op):
             )
 
         all_embeddings_ls = []
-        for output in loader.map(self.model.get_model(self)):
-            all_embeddings_ls.append(output["sentence_embedding"])
+        model = self.model.get_model(self)
+        for features, outputs in loader.map(lambda batch: (batch, model(**batch))):
+            sentence_embedding = self.model.get_embedding(features, outputs)
+            all_embeddings_ls.append(sentence_embedding)
 
         out = cudf.DataFrame(index=index)
         embedding = cp.asarray(torch.vstack(all_embeddings_ls))

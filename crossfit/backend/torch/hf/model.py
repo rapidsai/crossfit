@@ -1,15 +1,19 @@
 from functools import lru_cache
 import gc
+import logging
 import os
 from crossfit.dataset.home import CF_HOME
 import joblib
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 from tqdm import tqdm
 from transformers import AutoConfig, AutoModel, AutoTokenizer
 from sklearn.linear_model import LinearRegression
 from crossfit.backend.torch.model import Model
+
+logger = logging.getLogger(__name__)
 
 
 class HFModel(Model):
@@ -67,7 +71,7 @@ class HFModel(Model):
                 }
 
                 try:
-                    outputs = model(batch)
+                    outputs = model(**batch)
                     memory_used = torch.cuda.max_memory_allocated() / (1024**2)  # Convert to MB
                     X.append([batch_size, seq_len, seq_len**2])
                     y.append(memory_used)
@@ -100,9 +104,34 @@ class HFModel(Model):
 
 class SentenceTransformerModel(HFModel):
     def load_model(self, device="cuda"):
-        from sentence_transformers import SentenceTransformer
+        model = AutoModel.from_pretrained(self.path_or_name).to(device)
+        if device == "cuda":
+            try:
+                from optimum.bettertransformer import BetterTransformer
 
-        return SentenceTransformer(self.path_or_name, device="cuda").to(device)
+                model = BetterTransformer.transform(model.to(torch.float16))
+            except ImportError:
+                logging.warning(
+                    "Loading embedding model without BetterTransformer. "
+                    "Install the 'optimum' to make embedding inference faster.  "
+                )
+        return model
+
+    def get_embedding(self, inputs, outputs):
+        embeddings = self.average_pool(
+            outputs["last_hidden_state"], inputs["attention_mask"]
+        )
+        embeddings = F.normalize(embeddings, p=2, dim=1)
+        return embeddings
+
+    @staticmethod
+    def average_pool(
+        last_hidden_states: torch.Tensor, attention_mask: torch.Tensor
+    ) -> torch.Tensor:
+        last_hidden = last_hidden_states.masked_fill(
+            ~attention_mask[..., None].bool(), 0.0
+        )
+        return last_hidden.sum(dim=1) / attention_mask.sum(dim=1)[..., None]
 
     def load_cfg(self):
         return AutoConfig.from_pretrained(self.path_or_name)
