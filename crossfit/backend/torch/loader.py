@@ -86,7 +86,7 @@ class SortedSeqLoader(InMemoryLoader):
 
         frame = CrossFrame(data).cast(torch.Tensor)
         seq_length = (frame[sort_key] != 0).sum(axis=1)
-        self.sorted_indices = seq_length.argsort()
+        self.sorted_indices = seq_length.argsort(descending=True)
         frame = frame.apply(lambda x: x[self.sorted_indices])
         frame = frame.assign(seq_length=seq_length[self.sorted_indices])
 
@@ -121,7 +121,9 @@ class SortedSeqLoader(InMemoryLoader):
             for key, val in self.tensor_dict.items()
             if key not in self.to_ignore
         }
-        clip_len = min(_tokens[end - 1], self.model.max_seq_length())
+        clip_len = min(
+            max(_tokens[start], _tokens[end - 1]), self.model.max_seq_length()
+        )
         batch = {key: val[:, :clip_len] for key, val in batch.items()}
 
         self.current_idx += 1
