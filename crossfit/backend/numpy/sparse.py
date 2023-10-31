@@ -168,16 +168,18 @@ def _numba_lookup(A_indptr, A_cols, A_data, B):
     if n_rows_a == len(B):
         for i in numba.prange(B.shape[0]):
             ind_start, ind_end = A_indptr[i], A_indptr[i + 1]
-            left_idx = np.searchsorted(A_cols[ind_start:ind_end], B[i])
-            right_idx = np.searchsorted(A_cols[ind_start:ind_end], B[i], side="right")
-            found = left_idx != right_idx
-            vals[i][found] = A_data[ind_start:ind_end][left_idx[found]]
+            for j in range(len(B[i])):
+                for k in range(ind_start, ind_end):
+                    if A_cols[k] == B[i][j]:
+                        vals[i][j] = A_data[k]
+                        break
     else:
         for i in numba.prange(B.shape[0]):
-            left_idx = np.searchsorted(A_cols, B[i])
-            right_idx = np.searchsorted(A_cols, B[i], side="right")
-            found = left_idx != right_idx
-            vals[i][found] = A_data[left_idx[found]]
+            for j in range(len(B[i])):
+                for k in range(len(A_cols)):
+                    if A_cols[k] == B[i][j]:
+                        vals[i][j] = A_data[k]
+                        break
 
     return vals
 
@@ -197,13 +199,14 @@ def _numba_setop(self_idx_ptr, self_col_idx, self_data, other_idx_ptr, other_col
         ss, se = self_idx_ptr[i], self_idx_ptr[i + 1]
         os, oe = other_idx_ptr[i], other_idx_ptr[i + 1]
 
-        left_idx = np.searchsorted(other_col_idx[os:oe], self_col_idx[ss:se])
-        right_idx = np.searchsorted(other_col_idx[os:oe], self_col_idx[ss:se], side="right")
-        if intersect:
-            found = left_idx == right_idx
-        else:
-            found = left_idx != right_idx
-        self_data[ss:se][found] = 0
+        for j in range(ss, se):
+            found = False
+            for k in range(os, oe):
+                if self_col_idx[j] == other_col_idx[k]:
+                    found = True
+                    break
+            if (intersect and not found) or (not intersect and found):
+                self_data[j] = 0
 
 
 @numba.njit

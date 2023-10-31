@@ -13,7 +13,7 @@ from crossfit.dataset.base import EmbeddingDatataset
 from crossfit.report.beir.embed import embed
 from crossfit.calculate.aggregate import Aggregator
 from crossfit.metric.continuous.mean import Mean
-from crossfit.metric.ranking import AP, NDCG, Precision, Recall, SparseBinaryLabels, SparseRankings
+from crossfit.metric.ranking import AP, NDCG, Precision, Recall, SparseBinaryLabels, SparseNumericLabels, SparseRankings
 from crossfit.report.base import Report
 from crossfit.op.vector_search import VectorSearchOp
 from crossfit.backend.torch.model import Model
@@ -34,13 +34,13 @@ class BeirMetricAggregator(Aggregator):
         self.metrics = metrics
 
     def prepare(self, df):
-        encoder = self.create_label_encoder(df, ["corpus-index-pred", "corpus-index-obs"])
-        obs_csr = self.create_csr_matrix(df["corpus-index-obs"], df["score-obs"], encoder)
-        pred_csr = self.create_csr_matrix(df["corpus-index-pred"], df["score-pred"], encoder)
+        encoder = create_label_encoder(df, ["corpus-index-pred", "corpus-index-obs"])
+        obs_csr = create_csr_matrix(df["corpus-index-obs"], df["score-obs"], encoder)
+        pred_csr = create_csr_matrix(df["corpus-index-pred"], df["score-pred"], encoder)
 
         # TODO: Fix dispatch
-        labels = SparseBinaryLabels(CrossSparse.from_matrix(obs_csr))
-        rankings = SparseRankings(CrossSparse.from_matrix(pred_csr))
+        labels = SparseNumericLabels.from_matrix(obs_csr)
+        rankings = SparseRankings.from_scores(pred_csr)
 
         outputs = {}
         with crossarray:
@@ -49,42 +49,40 @@ class BeirMetricAggregator(Aggregator):
                     metric_at_k = metric(k=k)
                     result = metric_at_k.score(labels, rankings)
 
-                    # TODO: Does this make sense?
-                    result = np.nan_to_num(result)
-                    result = np.where(result > 1, 1, result)
-
                     outputs[metric_at_k.name()] = Mean.from_array(result, axis=0)
 
         return outputs
 
-    def create_label_encoder(self, df, cols) -> LabelEncoder:
-        # Extract leaves (flattened arrays)
-        _leaves = []
 
-        for col in cols:
-            _leaves.append(df[col].list.leaves)
+def create_label_encoder(df, cols) -> LabelEncoder:
+    # Extract leaves (flattened arrays)
+    _leaves = []
 
-        # Concatenate and get unique values for fit_transform
-        all_ids = cudf.concat(_leaves).unique()
+    for col in cols:
+        _leaves.append(df[col].list.leaves)
 
-        # Label Encoding
-        le = LabelEncoder()
-        le.fit(all_ids)
+    # Concatenate and get unique values for fit_transform
+    all_ids = cudf.concat(_leaves).unique()
 
-        return le
+    # Label Encoding
+    le = LabelEncoder()
+    le.fit(all_ids)
 
-    def create_csr_matrix(self, ids, scores, label_encoder: LabelEncoder):
-        num_rows = scores.size
-        num_columns = label_encoder.classes_.shape[0]
+    return le
 
-        values = scores.list.leaves.values.astype(cp.float32)
-        indices = label_encoder.transform(ids.list.leaves).values
-        indptr = scores.list._column.offsets.values
-        sparse_matrix = cp.sparse.csr_matrix(
-            (values, indices, indptr), shape=(num_rows, num_columns)
-        )
 
-        return sparse_matrix
+def create_csr_matrix(ids, scores, label_encoder: LabelEncoder):
+    num_rows = scores.size
+    num_columns = label_encoder.classes_.shape[0]
+
+    values = scores.list.leaves.values.astype(cp.float32)
+    indices = label_encoder.transform(ids.list.leaves).values
+    indptr = scores.list._column.offsets.values
+    sparse_matrix = cp.sparse.csr_matrix(
+        (values, indices, indptr), shape=(num_rows, num_columns)
+    )
+
+    return sparse_matrix
 
 
 def join_predictions(data, predictions):

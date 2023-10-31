@@ -105,7 +105,6 @@ class TestNDCG:
         ],
     )
     def test_binary_score(self, y_gold, y_pred, expect, params):
-        print(y_gold, y_pred)
         y_gold = SparseBinaryLabels.from_positive_indices(y_gold)
         if len(y_pred) == 0 or [] in y_pred:
             with pytest.warns(UserWarning):
