@@ -10,6 +10,9 @@ from crossfit.backend.torch.model import Model
 from crossfit.backend.torch.loader import SortedSeqLoader, InMemoryLoader
 
 
+DEFAULT_BATCH_SIZE = 256
+
+
 class Embedder(Op):
     def __init__(
         self,
@@ -17,7 +20,7 @@ class Embedder(Op):
         pre=None,
         cols=False,
         keep_cols=None,
-        batch_size=1024,
+        batch_size: int = DEFAULT_BATCH_SIZE,
         max_mem: str = "16GB",
         sorted_data_loader: bool = True,
     ):

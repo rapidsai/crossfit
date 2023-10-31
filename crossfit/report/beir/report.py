@@ -13,10 +13,19 @@ from crossfit.dataset.base import EmbeddingDatataset
 from crossfit.report.beir.embed import embed
 from crossfit.calculate.aggregate import Aggregator
 from crossfit.metric.continuous.mean import Mean
-from crossfit.metric.ranking import AP, NDCG, Precision, Recall, SparseBinaryLabels, SparseNumericLabels, SparseRankings
+from crossfit.metric.ranking import (
+    AP,
+    NDCG,
+    Precision,
+    Recall,
+    SparseBinaryLabels,
+    SparseNumericLabels,
+    SparseRankings,
+)
 from crossfit.report.base import Report
 from crossfit.op.vector_search import VectorSearchOp
 from crossfit.backend.torch.model import Model
+from crossfit.backend.torch.op.embed import DEFAULT_BATCH_SIZE
 
 
 class BeirMetricAggregator(Aggregator):
@@ -29,7 +38,9 @@ class BeirMetricAggregator(Aggregator):
         groupby=None,
         metrics=[NDCG, AP, Precision, Recall],
     ):
-        super().__init__(None, pre=pre, post_group=post_group, post=post, groupby=groupby)
+        super().__init__(
+            None, pre=pre, post_group=post_group, post=post, groupby=groupby
+        )
         self.ks = ks
         self.metrics = metrics
 
@@ -106,7 +117,11 @@ def join_predictions(data, predictions):
 
     predictions = predictions.set_index("query-index")
     merged = observed.merge(
-        predictions, left_index=True, right_index=True, how="left", suffixes=("-obs", "-pred")
+        predictions,
+        left_index=True,
+        right_index=True,
+        how="left",
+        suffixes=("-obs", "-pred"),
     ).rename(columns={"split-obs": "split"})
 
     output = merged.reset_index()
@@ -138,7 +153,9 @@ class BeirReport(Report):
 
             # Sort the @k values within each group
             for metric, columns in grouped_columns.items():
-                grouped_columns[metric] = sorted(columns, key=lambda x: int(x.split("@")[-1]))
+                grouped_columns[metric] = sorted(
+                    columns, key=lambda x: int(x.split("@")[-1])
+                )
 
             # Print table for each metric type
             for metric, columns in grouped_columns.items():
@@ -163,6 +180,7 @@ def beir_report(
     groupby=["split"],
     tiny_sample=False,
     sorted_data_loader: bool = True,
+    batch_size: int = DEFAULT_BATCH_SIZE,
 ) -> BeirReport:
     embeddings: EmbeddingDatataset = embed(
         dataset_name,
@@ -173,6 +191,7 @@ def beir_report(
         vector_search=vector_search,
         tiny_sample=tiny_sample,
         sorted_data_loader=sorted_data_loader,
+        batch_size=batch_size,
     )
 
     observations = []
