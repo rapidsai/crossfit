@@ -1,5 +1,6 @@
 from typing import Dict, overload
 from itertools import islice
+import warnings
 
 import torch
 
@@ -116,23 +117,37 @@ class SortedSeqLoader(InMemoryLoader):
             start = 0
         else:
             start = self.splits[self.current_idx - 1]
-        end = min(self.splits[self.current_idx], self.num_rows)
+
         _tokens = self.tensor_dict["seq_length"]
 
-        batch = {
-            key: val[start:end]
-            for key, val in self.tensor_dict.items()
-            if key not in self.to_ignore
-        }
-        clip_len = min(
-            max(_tokens[start], _tokens[end - 1]), self.model.max_seq_length()
-        )
-        batch = {key: val[:, :clip_len] for key, val in batch.items()}
+        end = min(self.splits[self.current_idx], self.num_rows)
+        while end > start:
+            try:
+                batch = {
+                    key: val[start:end]
+                    for key, val in self.tensor_dict.items()
+                    if key not in self.to_ignore
+                }
+                clip_len = min(
+                    max(_tokens[start], _tokens[end - 1]), self.model.max_seq_length()
+                )
+                batch = {key: val[:, :clip_len] for key, val in batch.items()}
+
+                for fn in self._to_map:
+                    batch = fn(batch)
+
+                break
+            except torch.cuda.OutOfMemoryError as e:
+                mid = start + (end - start) // 2
+                warnings.warn(
+                    f"Not enough memeory for a batch size of {end - start}. "
+                    f"Retrying with a new batch size of {mid - start}. "
+                    f"Consider setting initial batch size to {mid - start}."
+                )
+                self.splits.insert(self.current_idx, mid)
+                end = min(self.splits[self.current_idx], self.num_rows)
 
         self.current_idx += 1
-
-        for fn in self._to_map:
-            batch = fn(batch)
 
         if self.progress_bar is not None:
             self.progress_bar.update(end - start)
