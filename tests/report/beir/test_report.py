@@ -3,7 +3,10 @@ import pytest
 pytest.importorskip("cupy")
 beir = pytest.importorskip("beir")
 
+import gc
+
 import numpy as np
+import torch
 
 import crossfit as cf
 from crossfit.data.sparse.ranking import SparseNumericLabels, SparseRankings
@@ -16,12 +19,12 @@ from crossfit.report.beir.report import (
 
 
 @pytest.mark.singlegpu
-@pytest.mark.parametrize("dataset", ["nq", "hotpotqa", "fiqa"])
+@pytest.mark.parametrize("dataset", ["fiqa", "hotpotqa", "nq"])
 def test_beir_report(
     dataset,
     model_name="sentence-transformers/all-MiniLM-L6-v2",
     k=10,
-    batch_size=128,
+    batch_size=32,
 ):
     model = cf.SentenceTransformerModel(model_name)
     vector_search = cf.TorchExactSearch(k=k)
@@ -51,12 +54,12 @@ def test_beir_report(
 
 
 @pytest.mark.singlegpu
-@pytest.mark.parametrize("dataset", ["nq", "hotpotqa", "fiqa"])
+@pytest.mark.parametrize("dataset", ["fiqa", "hotpotqa", "nq"])
 def test_no_invalid_scores(
     dataset,
     model_name="sentence-transformers/all-MiniLM-L6-v2",
-    k=10,
-    batch_size=128,
+    k=5,
+    batch_size=32,
 ):
     model = cf.SentenceTransformerModel(model_name)
     vector_search = cf.TorchExactSearch(k=k)
@@ -70,7 +73,13 @@ def test_no_invalid_scores(
     )
     test = embeds.data.test.ddf()
     test["split"] = "test"
+
     df = join_predictions(test, embeds.predictions).compute()
+
+    del test
+    del embeds
+    gc.collect()
+    torch.cuda.empty_cache()
 
     encoder = create_label_encoder(df, ["corpus-index-pred", "corpus-index-obs"])
     obs_csr = create_csr_matrix(df["corpus-index-obs"], df["score-obs"], encoder)

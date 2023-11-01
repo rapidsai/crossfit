@@ -10,12 +10,12 @@ import crossfit as cf
 
 
 @pytest.mark.singlegpu
-@pytest.mark.parametrize("dataset", ["nq", "hotpotqa", "fiqa"])
+@pytest.mark.parametrize("dataset", ["fiqa", "hotpotqa", "nq"])
 def test_embed_multi_gpu(
     dataset,
     model_name="sentence-transformers/all-MiniLM-L6-v2",
     k=10,
-    batch_size=128,
+    batch_size=64,
 ):
     model = cf.SentenceTransformerModel(model_name)
     vector_search = cf.TorchExactSearch(k=k)

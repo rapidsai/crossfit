@@ -1,3 +1,4 @@
+import gc
 from typing import List, Optional
 
 import cudf
@@ -5,6 +6,7 @@ import cupy as cp
 import dask_cudf
 from cuml.preprocessing import LabelEncoder
 import numpy as np
+import torch
 
 from crossfit.backend.dask.aggregate import aggregate
 from crossfit.data.sparse.dispatch import CrossSparse
@@ -192,6 +194,11 @@ def beir_report(
 
     data = dask_cudf.concat(observations)
     joined = join_predictions(data, embeddings.predictions)
+
+    del data
+    del embeddings
+    gc.collect()
+    torch.cuda.empty_cache()
 
     aggregator = BeirMetricAggregator(ks)
     aggregator = Aggregator(aggregator, groupby=groupby, name="")
