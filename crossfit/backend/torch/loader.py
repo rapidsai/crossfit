@@ -9,6 +9,9 @@ from crossfit.data.array.dispatch import crossarray
 from crossfit.data.array.conversion import convert_array
 
 
+DEFAULT_BATCH_SIZE = 512
+
+
 class InMemoryLoader:
     @overload
     def __init__(
@@ -75,7 +78,7 @@ class SortedSeqLoader(InMemoryLoader):
         data: CrossFrame,
         model: Model,
         sort_key: str = "input_ids",
-        initial_batch_size: int = 512,
+        initial_batch_size: int = DEFAULT_BATCH_SIZE,
         to_ignore=None,
         progress_bar=None,
     ):

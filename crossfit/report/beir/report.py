@@ -17,6 +17,7 @@ from crossfit.metric.ranking import AP, NDCG, Precision, Recall, SparseBinaryLab
 from crossfit.report.base import Report
 from crossfit.op.vector_search import VectorSearchOp
 from crossfit.backend.torch.model import Model
+from crossfit.backend.torch.loader import DEFAULT_BATCH_SIZE
 
 
 class BeirMetricAggregator(Aggregator):
@@ -163,6 +164,7 @@ def beir_report(
     groupby=["split"],
     tiny_sample=False,
     sorted_data_loader: bool = True,
+    batch_size: int = DEFAULT_BATCH_SIZE,
 ) -> BeirReport:
     embeddings: EmbeddingDatataset = embed(
         dataset_name,
@@ -173,6 +175,7 @@ def beir_report(
         vector_search=vector_search,
         tiny_sample=tiny_sample,
         sorted_data_loader=sorted_data_loader,
+        batch_size=batch_size,
     )
 
     observations = []
