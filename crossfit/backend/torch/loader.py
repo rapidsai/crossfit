@@ -1,5 +1,6 @@
 from typing import Dict, overload
 from itertools import islice
+import warnings
 
 import torch
 
@@ -7,6 +8,9 @@ from crossfit.backend.torch.model import Model
 from crossfit.data.dataframe.dispatch import CrossFrame
 from crossfit.data.array.dispatch import crossarray
 from crossfit.data.array.conversion import convert_array
+
+
+DEFAULT_BATCH_SIZE = 512
 
 
 class InMemoryLoader:
@@ -75,7 +79,7 @@ class SortedSeqLoader(InMemoryLoader):
         data: CrossFrame,
         model: Model,
         sort_key: str = "input_ids",
-        initial_batch_size: int = 512,
+        initial_batch_size: int = DEFAULT_BATCH_SIZE,
         to_ignore=None,
         progress_bar=None,
     ):
@@ -86,7 +90,7 @@ class SortedSeqLoader(InMemoryLoader):
 
         frame = CrossFrame(data).cast(torch.Tensor)
         seq_length = (frame[sort_key] != 0).sum(axis=1)
-        self.sorted_indices = seq_length.argsort()
+        self.sorted_indices = seq_length.argsort(descending=True)
         frame = frame.apply(lambda x: x[self.sorted_indices])
         frame = frame.assign(seq_length=seq_length[self.sorted_indices])
 
@@ -113,21 +117,37 @@ class SortedSeqLoader(InMemoryLoader):
             start = 0
         else:
             start = self.splits[self.current_idx - 1]
-        end = min(self.splits[self.current_idx], self.num_rows)
+
         _tokens = self.tensor_dict["seq_length"]
 
-        batch = {
-            key: val[start:end]
-            for key, val in self.tensor_dict.items()
-            if key not in self.to_ignore
-        }
-        clip_len = min(_tokens[end - 1], self.model.max_seq_length())
-        batch = {key: val[:, :clip_len] for key, val in batch.items()}
+        end = min(self.splits[self.current_idx], self.num_rows)
+        while end > start:
+            try:
+                batch = {
+                    key: val[start:end]
+                    for key, val in self.tensor_dict.items()
+                    if key not in self.to_ignore
+                }
+                clip_len = min(
+                    max(_tokens[start], _tokens[end - 1]), self.model.max_seq_length()
+                )
+                batch = {key: val[:, :clip_len] for key, val in batch.items()}
+
+                for fn in self._to_map:
+                    batch = fn(batch)
+
+                break
+            except torch.cuda.OutOfMemoryError as e:
+                mid = start + (end - start) // 2
+                warnings.warn(
+                    f"Not enough memeory for a batch size of {end - start}. "
+                    f"Retrying with a new batch size of {mid - start}. "
+                    f"Consider setting initial batch size to {mid - start}."
+                )
+                self.splits.insert(self.current_idx, mid)
+                end = min(self.splits[self.current_idx], self.num_rows)
 
         self.current_idx += 1
-
-        for fn in self._to_map:
-            batch = fn(batch)
 
         if self.progress_bar is not None:
             self.progress_bar.update(end - start)

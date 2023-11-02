@@ -7,7 +7,7 @@ import torch
 from crossfit.op.base import Op
 from crossfit.backend.cudf.series import create_list_series_from_2d_ar
 from crossfit.backend.torch.model import Model
-from crossfit.backend.torch.loader import SortedSeqLoader, InMemoryLoader
+from crossfit.backend.torch.loader import DEFAULT_BATCH_SIZE, SortedSeqLoader, InMemoryLoader
 
 
 class Embedder(Op):
@@ -17,7 +17,7 @@ class Embedder(Op):
         pre=None,
         cols=False,
         keep_cols=None,
-        batch_size=1024,
+        batch_size: int = DEFAULT_BATCH_SIZE,
         max_mem: str = "16GB",
         sorted_data_loader: bool = True,
     ):

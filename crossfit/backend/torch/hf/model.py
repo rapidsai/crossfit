@@ -57,32 +57,49 @@ class HFModel(Model):
         y = []
 
         max_seq = self.max_seq_length()
-        for batch_size in tqdm(range(1, 2048, 256)):
-            for seq_len in list(range(16, max_seq, 64)) + [max_seq]:
+        for batch_size in tqdm(range(2048, 0, -256)):
+            if batch_size <= 0:
+                continue
+
+            for seq_len in range(max_seq, 0, -64):
+                if seq_len <= 0:
+                    continue
+
                 torch.cuda.reset_peak_memory_stats()
 
                 batch = {
-                    "input_ids": torch.randint(1, 501, (batch_size, seq_len)).to(device=device),
-                    "attention_mask": torch.ones((batch_size, seq_len)).to(device=device),
+                    "input_ids": torch.randint(1, 501, (batch_size, seq_len)).to(
+                        device=device
+                    ),
+                    "attention_mask": torch.ones((batch_size, seq_len)).to(
+                        device=device
+                    ),
                 }
 
                 try:
                     outputs = model(batch)
-                    memory_used = torch.cuda.max_memory_allocated() / (1024**2)  # Convert to MB
+                    memory_used = torch.cuda.max_memory_allocated() / (
+                        1024**2
+                    )  # Convert to MB
                     X.append([batch_size, seq_len, seq_len**2])
                     y.append(memory_used)
 
                 except RuntimeError as e:
                     if "out of memory" in str(e):
-                        torch.cuda.empty_cache()
+                        pass
                     else:
                         raise e
+                finally:
+                    del batch
+                    if "outputs" in vars():
+                        del outputs
+                    gc.collect()
+                    torch.cuda.empty_cache()
 
         self.mem = LinearRegression().fit(np.array(X), np.array(y))
         os.makedirs(cache_dir, exist_ok=True)
         joblib.dump(self.mem, mem_model_path)
 
-        del outputs
         if remove_model:
             del model
         gc.collect()
