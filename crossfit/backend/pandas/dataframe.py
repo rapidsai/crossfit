@@ -36,7 +36,7 @@ class PandasDataFrame(FrameBackend):
         if len(frames) == 0:
             raise TypeError(f"Expected non-empty list, got {frames}")
         for frame in frames:
-            if type(frame) is cls:
+            if type(frame) is not cls:
                 raise TypeError(f"All frames should be type {cls}, got {type(frame)}")
 
         return cls(

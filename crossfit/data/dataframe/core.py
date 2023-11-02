@@ -366,7 +366,7 @@ class ArrayBundle(FrameBackend):
         if axis == 0:
             columns = frames[0].columns
             for frame in frames:
-                if type(frame) is cls:
+                if type(frame) is not cls:
                     raise TypeError(f"All frames should be type {cls}, got {type(frame)}")
                 if columns != frame.columns:
                     raise TypeError("Cannot concatenat misaligned columns")
@@ -379,7 +379,7 @@ class ArrayBundle(FrameBackend):
             columns = set()
             combined = {}
             for frame in frames:
-                if type(frame) is cls:
+                if type(frame) is not cls:
                     raise TypeError(f"All frames should be type {cls}, got {type(frame)}")
                 _columns = set(frame.columns)
                 if _columns.intersection(columns):
