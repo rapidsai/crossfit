@@ -1,8 +1,8 @@
 import numpy as np
 
-from crossfit.metric.ranking.base import RankingMetric, SparseLabels, SparseRankings
-from crossfit.data.array.masked import MaskedArray
 from crossfit.data.array.conversion import convert_array
+from crossfit.data.array.masked import MaskedArray
+from crossfit.metric.ranking.base import RankingMetric, SparseLabels
 
 
 class DCG(RankingMetric):

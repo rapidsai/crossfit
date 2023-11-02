@@ -3,12 +3,11 @@ import os
 
 from tensorflow_metadata.proto.v0 import statistics_pb2
 
-
 STATS_FILE_NAME = "stats.pb"
 
 
 def _maybe_to_pandas(data):
-    # Utility to covert cudf data to pandas (for now)
+    # Utility to convert cudf data to pandas (for now)
     if hasattr(data, "to_pandas"):
         return data.to_pandas()
     return data

@@ -1,18 +1,18 @@
-from typing import Set, TypeVar, Union, Optional, List
-from copy import deepcopy
-import sys
 import ast
-from pathlib import Path
 import functools
 import inspect
+import sys
 import types
+from copy import deepcopy
 from itertools import zip_longest
+from pathlib import Path
+from typing import List, Optional, Set, TypeVar, Union
 
 import astunparse
 import numpy as np
 
-from crossfit.array import numpy as cnp, np_backend_dispatch
-
+from crossfit.array import np_backend_dispatch
+from crossfit.array import numpy as cnp
 
 _CALL_HANDLER_ID = "__crossfit_call_handler__"
 _CLOSURE_WRAPPER_ID = "__crossfit_closure_wrapper__"
@@ -58,9 +58,7 @@ def crossnp(func: FuncType, with_cache=True, validate_array_type=None) -> FuncTy
     if isinstance(func, np.ufunc) or func.__module__ == "numpy":
         return getattr(cnp, func.__name__)
 
-    cross_func = _compiler(
-        func, with_cache=with_cache, validate_array_type=validate_array_type
-    )
+    cross_func = _compiler(func, with_cache=with_cache, validate_array_type=validate_array_type)
 
     if func == cross_func:
         func.__np__ = func
@@ -94,9 +92,7 @@ class _AstModule(ast.NodeTransformer):
         from this AST. Default is None.
     """
 
-    def __init__(
-        self, to_check: str, module: types.ModuleType, node: Optional[ast.AST] = None
-    ):
+    def __init__(self, to_check: str, module: types.ModuleType, node: Optional[ast.AST] = None):
         self.to_check = to_check
         self.module = module
         self.aliases: Set[str] = set()
@@ -118,9 +114,7 @@ class _AstModule(ast.NodeTransformer):
         bool
             True if the node is a call to the module, False otherwise.
         """
-        if isinstance(node.func, ast.Attribute) and isinstance(
-            node.func.value, ast.Name
-        ):
+        if isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name):
             if node.func.value.id in self.aliases:
                 return True
 
@@ -213,9 +207,7 @@ class _CrossNPAstTransformer(ast.NodeTransformer):
         self.file_ast = ast.parse(open(inspect.getsourcefile(py_module)).read())
         self.numpy_module = _AstModule("numpy", self.py_module, node=self.file_ast)
         self.output = output
-        self.output_name = (
-            getattr(output.names[0], "asname", None) or output.names[0].name
-        )
+        self.output_name = getattr(output.names[0], "asname", None) or output.names[0].name
 
     def __call__(
         self, node_or_fn: Union[ast.AST, types.FunctionType], validate_array_type=None
@@ -249,9 +241,7 @@ class _CrossNPAstTransformer(ast.NodeTransformer):
         self._validate_array_type = _validate_temp
 
         if not _compare_ast(orig, output):
-            output.body[0].name = _cross_np_name(
-                output.body[0].name, self.py_module.__name__
-            )
+            output.body[0].name = _cross_np_name(output.body[0].name, self.py_module.__name__)
             output.body[0].body.insert(0, self.output)
             output = ast.fix_missing_locations(output)
 
@@ -300,9 +290,7 @@ class _CrossNPAstTransformer(ast.NodeTransformer):
                     if fn_name not in backend:
                         # TODO: Show how to add the function to the backend
                         framework = array_type.__module__.split(".")[0]
-                        raise ValueError(
-                            f"Function {fn_name} is not supported by {framework}"
-                        )
+                        raise ValueError(f"Function {fn_name} is not supported by {framework}")
         else:
             if isinstance(node.func, ast.Name):
                 _maybe_transformed = self._maybe_compile(node.func.id)
@@ -431,12 +419,10 @@ class _CrossNPCompiler:
 
         self.non_np.add(fn)
 
-        # TODO: Should we throw an ecxeption here?
+        # TODO: Should we throw an exception here?
         return fn
 
-    def to_crossnp_fn(
-        self, fn: types.FunctionType, ast_node: ast.AST
-    ) -> types.FunctionType:
+    def to_crossnp_fn(self, fn: types.FunctionType, ast_node: ast.AST) -> types.FunctionType:
         """
         Compile a transformed node to a function.
 
@@ -621,11 +607,7 @@ def _wrap_ast_for_fn_with_closure_vars(
 
 def _find_function_code(code: types.CodeType, fn_name: str):
     """Finds the code object within `code` corresponding to `fn_name`."""
-    code = [
-        const
-        for const in code.co_consts
-        if inspect.iscode(const) and const.co_name == fn_name
-    ]
+    code = [const for const in code.co_consts if inspect.iscode(const) and const.co_name == fn_name]
     assert len(code) == 1, f"Couldn't find function code for {fn_name!r}."
     return code[0]
 

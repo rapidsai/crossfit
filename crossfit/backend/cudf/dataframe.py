@@ -1,9 +1,8 @@
 from typing import Callable
 
-
+from crossfit.backend.pandas.dataframe import PandasDataFrame
 from crossfit.data.array.dispatch import crossarray
 from crossfit.data.dataframe.dispatch import CrossFrame
-from crossfit.backend.pandas.dataframe import PandasDataFrame
 
 
 class CudfDataFrame(PandasDataFrame):

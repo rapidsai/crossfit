@@ -2,11 +2,7 @@ import numpy as np
 
 from crossfit.data.array.conversion import convert_array
 from crossfit.data.array.masked import MaskedArray
-from crossfit.metric.ranking.base import (
-    BinaryRankingMetric,
-    SparseBinaryLabels,
-    SparseLabels,
-)
+from crossfit.metric.ranking.base import BinaryRankingMetric, SparseLabels
 
 
 class Precision(BinaryRankingMetric):
@@ -17,8 +13,7 @@ class Precision(BinaryRankingMetric):
     def _precision(self, y_true: SparseLabels, y_pred_labels: MaskedArray):
         n_pos = y_true.get_n_positives(y_pred_labels.shape[0])
         n_relevant = np.sum(
-            (y_pred_labels.data[:, : self._k] == 1)
-            & (~y_pred_labels.mask[:, : self._k]),
+            (y_pred_labels.data[:, : self._k] == 1) & (~y_pred_labels.mask[:, : self._k]),
             axis=-1,
         )
 

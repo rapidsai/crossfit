@@ -1,6 +1,6 @@
 import numpy as np
 
-from crossfit.data.array.dispatch import with_dispatch, np_backend_dispatch
+from crossfit.data.array.dispatch import np_backend_dispatch, with_dispatch
 
 dtype = with_dispatch(np.dtype)
 errstate = np.errstate

@@ -1,6 +1,5 @@
 import functools as ft
 
-
 from crossfit.metric.base import CrossMetric, state
 
 

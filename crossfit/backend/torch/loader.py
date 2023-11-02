@@ -1,23 +1,20 @@
-from typing import Dict, overload
-from itertools import islice
 import warnings
+from itertools import islice
+from typing import Dict, overload
 
 import torch
 
 from crossfit.backend.torch.model import Model
-from crossfit.data.dataframe.dispatch import CrossFrame
-from crossfit.data.array.dispatch import crossarray
 from crossfit.data.array.conversion import convert_array
-
+from crossfit.data.array.dispatch import crossarray
+from crossfit.data.dataframe.dispatch import CrossFrame
 
 DEFAULT_BATCH_SIZE = 512
 
 
 class InMemoryLoader:
     @overload
-    def __init__(
-        self, data: Dict[str, torch.Tensor], batch_size: int, progress_bar=None
-    ):
+    def __init__(self, data: Dict[str, torch.Tensor], batch_size: int, progress_bar=None):
         ...
 
     @overload
@@ -52,9 +49,7 @@ class InMemoryLoader:
         batch_size = self.batch_size
         end = batch_size + self.current_idx
 
-        batch = {
-            key: val[self.current_idx : end] for key, val in self.tensor_dict.items()
-        }
+        batch = {key: val[self.current_idx : end] for key, val in self.tensor_dict.items()}
         if self.max_seq_len is not None:
             batch = {key: val[:, : self.max_seq_len] for key, val in batch.items()}
 
@@ -128,19 +123,17 @@ class SortedSeqLoader(InMemoryLoader):
                     for key, val in self.tensor_dict.items()
                     if key not in self.to_ignore
                 }
-                clip_len = min(
-                    max(_tokens[start], _tokens[end - 1]), self.model.max_seq_length()
-                )
+                clip_len = min(max(_tokens[start], _tokens[end - 1]), self.model.max_seq_length())
                 batch = {key: val[:, :clip_len] for key, val in batch.items()}
 
                 for fn in self._to_map:
                     batch = fn(batch)
 
                 break
-            except torch.cuda.OutOfMemoryError as e:
+            except torch.cuda.OutOfMemoryError:
                 mid = start + (end - start) // 2
                 warnings.warn(
-                    f"Not enough memeory for a batch size of {end - start}. "
+                    f"Not enough memory for a batch size of {end - start}. "
                     f"Retrying with a new batch size of {mid - start}. "
                     f"Consider setting initial batch size to {mid - start}."
                 )
@@ -166,20 +159,14 @@ class SortedSeqLoader(InMemoryLoader):
         max_seq_length = self.model.max_seq_length()
 
         while i < len(num_tokens):
-            best_fit_e_ind = (
-                i + self.batch_size
-            )  # Initialize to at least initial_batch_size
+            best_fit_e_ind = i + self.batch_size  # Initialize to at least initial_batch_size
 
             # Try aggressive doubling first
             for doubling_i in range(max_doubling_attempts):
-                tentative_e_ind = (
-                    i + best_fit_e_ind * doubling_factor
-                )  # Double the last best fit
+                tentative_e_ind = i + best_fit_e_ind * doubling_factor  # Double the last best fit
                 tentative_e_ind = min(tentative_e_ind, len(num_tokens))
                 max_token = int(num_tokens[tentative_e_ind - 1])
-                est_memory = self.model.estimate_memory(
-                    max_token, int(tentative_e_ind - i)
-                )
+                est_memory = self.model.estimate_memory(max_token, int(tentative_e_ind - i))
 
                 if est_memory <= self.model.max_mem_gb:
                     best_fit_e_ind = tentative_e_ind
@@ -188,15 +175,11 @@ class SortedSeqLoader(InMemoryLoader):
                     break  # Exit loop if we exceed memory limit
 
             for _ in range(max_steps):
-                tentative_e_ind = (
-                    best_fit_e_ind + dynamic_step_size
-                )  # Add dynamic step size
+                tentative_e_ind = best_fit_e_ind + dynamic_step_size  # Add dynamic step size
                 tentative_e_ind = min(tentative_e_ind, len(num_tokens))
                 max_token = int(num_tokens[tentative_e_ind - 1])
 
-                est_memory = self.model.estimate_memory(
-                    max_token, int(tentative_e_ind - i)
-                )
+                est_memory = self.model.estimate_memory(max_token, int(tentative_e_ind - i))
                 # The closer we are to the end, the more we penalize the batch size
                 penalty_factor = 1 + 5.0 * ((max_token / max_seq_length) ** 2)
                 est_memory *= penalty_factor
