@@ -8,15 +8,20 @@ import numpy as np
 import crossfit as cf
 from crossfit.data.sparse.ranking import SparseNumericLabels, SparseRankings
 from crossfit.metric.ranking import NDCG
-from crossfit.report.beir.report import (create_csr_matrix,
-                                         create_label_encoder,
-                                         join_predictions)
+from crossfit.report.beir.report import (
+    create_csr_matrix,
+    create_label_encoder,
+    join_predictions,
+)
 
 
 @pytest.mark.singlegpu
-@pytest.mark.parametrize("dataset", ["nq"])
+@pytest.mark.parametrize("dataset", ["fiqa", "hotpotqa", "nq"])
 def test_beir_report(
-    dataset, model_name="sentence-transformers/all-MiniLM-L6-v2", k=10
+    dataset,
+    model_name="sentence-transformers/all-MiniLM-L6-v2",
+    k=10,
+    batch_size=8,
 ):
     model = cf.SentenceTransformerModel(model_name)
     vector_search = cf.TorchExactSearch(k=k)
@@ -26,6 +31,7 @@ def test_beir_report(
         vector_search=vector_search,
         overwrite=True,
         tiny_sample=True,
+        batch_size=batch_size,
     )
 
     expected_columns = [
@@ -45,8 +51,13 @@ def test_beir_report(
 
 
 @pytest.mark.singlegpu
-@pytest.mark.parametrize("dataset", ["hotpotqa"])
-def test_no_invalid_scores(dataset, model_name="sentence-transformers/all-MiniLM-L6-v2", k=10):
+@pytest.mark.parametrize("dataset", ["fiqa", "hotpotqa", "nq"])
+def test_no_invalid_scores(
+    dataset,
+    model_name="sentence-transformers/all-MiniLM-L6-v2",
+    k=5,
+    batch_size=8,
+):
     model = cf.SentenceTransformerModel(model_name)
     vector_search = cf.TorchExactSearch(k=k)
     embeds = cf.embed(
@@ -55,9 +66,11 @@ def test_no_invalid_scores(dataset, model_name="sentence-transformers/all-MiniLM
         vector_search=vector_search,
         overwrite=True,
         tiny_sample=True,
+        batch_size=batch_size,
     )
     test = embeds.data.test.ddf()
     test["split"] = "test"
+
     df = join_predictions(test, embeds.predictions).compute()
 
     encoder = create_label_encoder(df, ["corpus-index-pred", "corpus-index-obs"])
