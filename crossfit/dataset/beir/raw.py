@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Dict, List, Union
 
 from beir import util
+
 from crossfit.dataset.home import CF_HOME
 
 

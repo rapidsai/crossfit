@@ -2,11 +2,8 @@ import pytest
 
 beir = pytest.importorskip("beir")
 
-import os
-import random
-
-import crossfit as cf
-from crossfit.dataset.beir.raw import BEIR_DATASETS
+import crossfit as cf  # noqa: E402
+from crossfit.dataset.beir.raw import BEIR_DATASETS  # noqa: E402
 
 DATASETS = set(BEIR_DATASETS.keys())
 DATASETS.discard("cqadupstack")

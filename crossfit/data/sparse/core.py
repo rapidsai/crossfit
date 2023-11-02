@@ -74,7 +74,8 @@ class SparseMatrixProtocol(Protocol):
 
 class SparseMatrixBackend:
     """
-    Stores sparse matrix data in unsorted CSR format (i.e., column indices in each row are unsorted).
+    Stores sparse matrix data in unsorted CSR format (i.e., column indices in each row are
+    unsorted).
     """
 
     def __init__(self, idx_ptr, col_idx, data, shape=None):

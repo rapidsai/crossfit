@@ -2,13 +2,12 @@ import pytest
 
 pytest.importorskip("cupy")
 
-import numpy as np
-from pytrec_eval import RelevanceEvaluator
+import numpy as np  # noqa: E402
+from pytrec_eval import RelevanceEvaluator  # noqa: E402
 
-from crossfit.data.sparse.ranking import (Rankings, SparseBinaryLabels,
-                                          SparseRankings)
-from crossfit.metric.ranking import AP, Precision
-from tests.pytrec_utils import create_qrel, create_results, create_run
+from crossfit.data.sparse.ranking import Rankings, SparseBinaryLabels, SparseRankings  # noqa: E402
+from crossfit.metric.ranking import AP, Precision  # noqa: E402
+from tests.pytrec_utils import create_qrel, create_results, create_run  # noqa: E402
 
 y1 = [0, 5]
 y2 = [8, 9]
@@ -104,9 +103,7 @@ class TestPrecision:
 
         for query_id, metrics in results.items():
             for metric_name, value in metrics.items():
-                assert value == pytest.approx(
-                    pytrec_result[query_id][metric_name], rel=1e-3
-                )
+                assert value == pytest.approx(pytrec_result[query_id][metric_name], rel=1e-3)
 
 
 class TestTruncatedPrecision:
@@ -134,11 +131,7 @@ class TestTruncatedPrecision:
                 y_pred = SparseRankings.from_ranked_indices(y_pred)
         else:
             y_pred = SparseRankings.from_ranked_indices(y_pred)
-        pred = (
-            Precision(k, truncated=True)
-            .score(y_gold, y_pred, nan_handling="propagate")
-            .tolist()
-        )
+        pred = Precision(k, truncated=True).score(y_gold, y_pred, nan_handling="propagate").tolist()
 
         assert pred == pytest.approx(expect, nan_ok=True)
 

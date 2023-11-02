@@ -3,9 +3,6 @@ from dataclasses import dataclass
 from typing import Dict, Optional, Union
 
 import dask_cudf
-from cuml.dask.neighbors import NearestNeighbors
-
-from crossfit.backend.cudf.series import create_list_series_from_2d_ar
 
 _SPLIT_ALIASES = {
     "val": ["validation", "valid", "dev"],
