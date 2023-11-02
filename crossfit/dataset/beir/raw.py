@@ -262,7 +262,10 @@ def sample_raw(name, out_dir=None, overwrite=False, sample_size=100, blocksize=2
         sampled_ids = qrels_df["query-id"].drop_duplicates().sample(n=n)
         sampled_query_ids.update(list(sampled_ids.to_pandas()))
         qrel_dfs[qrels_file] = qrels_df[qrels_df["query-id"].isin(sampled_query_ids)]
-        sampled_corpus_id.update(list(qrel_dfs[qrels_file]["corpus-id"].to_pandas()))
+        # Filter out zero scores to reduce the corpus sample size.
+        # Score is implicitly assumed to be zero if not in qrels.
+        corpus_ids = qrel_dfs[qrels_file][qrel_dfs[qrels_file]["score"] > 0]["corpus-id"]
+        sampled_corpus_id.update(list(corpus_ids.to_pandas()))
 
     queries_df = dask_cudf.read_json(
         os.path.join(full_path, "queries.jsonl"),
@@ -304,7 +307,7 @@ def download_all(out_dir=None):
 
 def download_all_sampled(out_dir=None):
     for dataset in BEIR_DATASETS:
-        if dataset in {"cqadupstack", "germanquad"}:
+        if dataset in {"cqadupstack", "germanquad", "trec-covid"}:
             continue
 
         print(f"Sampling {dataset}")
