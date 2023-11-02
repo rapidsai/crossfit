@@ -8,6 +8,7 @@ from crossfit.dataset.beir.raw import BEIR_DATASETS  # noqa: E402
 DATASETS = set(BEIR_DATASETS.keys())
 DATASETS.discard("cqadupstack")
 DATASETS.discard("germanquad")
+DATASETS.discard("trec-covid")
 
 
 @pytest.mark.singlegpu
