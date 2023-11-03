@@ -1,3 +1,5 @@
+# flake8: noqa
+
 from crossfit import backend, metric, op
 from crossfit.backend.dask.cluster import Distributed, Serial
 from crossfit.calculate.aggregate import Aggregator
@@ -6,9 +8,8 @@ from crossfit.data.array.conversion import convert_array
 from crossfit.data.array.dispatch import crossarray
 from crossfit.data.dataframe.core import FrameBackend
 from crossfit.data.dataframe.dispatch import CrossFrame
-from crossfit.metric import *  # noqa
-from crossfit.op import *  # noqa
-
+from crossfit.metric import *
+from crossfit.op import *
 
 __all__ = [
     "Aggregator",
@@ -27,21 +28,23 @@ __all__ = [
 
 
 try:
-    from crossfit.backend.torch import SentenceTransformerModel, TorchExactSearch, HFModel
+    from crossfit.backend.torch import HFModel, SentenceTransformerModel, TorchExactSearch
+    from crossfit.dataset.base import IRDataset, MultiDataset
+    from crossfit.dataset.load import load_dataset
     from crossfit.report.beir.embed import embed
     from crossfit.report.beir.report import beir_report
-    from crossfit.dataset.load import load_dataset
-    from crossfit.dataset.base import IRDataset, MultiDataset
-    
-    __all__.extend([
-        "embed",
-        "beir_report",
-        "load_dataset",
-        "TorchExactSearch",
-        "SentenceTransformerModel",
-        "HFModel",    
-        "MultiDataset",
-        "IRDataset",
-    ])
+
+    __all__.extend(
+        [
+            "embed",
+            "beir_report",
+            "load_dataset",
+            "TorchExactSearch",
+            "SentenceTransformerModel",
+            "HFModel",
+            "MultiDataset",
+            "IRDataset",
+        ]
+    )
 except ImportError as e:
     pass

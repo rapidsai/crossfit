@@ -1,12 +1,12 @@
 import itertools
-from crossfit.data.array.masked import MaskedArray
 
+import numba
 import numpy as np
 import scipy.sparse as sp
-import numba
 
-from crossfit.data.sparse.dispatch import CrossSparse
+from crossfit.data.array.masked import MaskedArray
 from crossfit.data.sparse.core import SparseMatrixBackend
+from crossfit.data.sparse.dispatch import CrossSparse
 
 
 class NPSparseMatrixBackend(SparseMatrixBackend):

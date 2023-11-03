@@ -2,8 +2,8 @@ import pytest
 
 pytest.importorskip("cupy")
 
-from crossfit.data.sparse.ranking import SparseBinaryLabels, SparseRankings
-from crossfit.metric.ranking import F1
+from crossfit.data.sparse.ranking import SparseBinaryLabels, SparseRankings  # noqa: E402
+from crossfit.metric.ranking import F1  # noqa: E402
 
 y1 = [0, 5]
 y2 = [8, 9]

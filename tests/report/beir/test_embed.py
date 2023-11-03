@@ -2,11 +2,7 @@ import pytest
 
 cp = pytest.importorskip("cupy")
 
-import random
-
-import numpy as np
-
-import crossfit as cf
+import crossfit as cf  # noqa: E402
 
 
 @pytest.mark.singlegpu
@@ -29,7 +25,5 @@ def test_embed_multi_gpu(
     )
     embeds = embeds.predictions.ddf().compute().to_pandas()
 
-    assert set(embeds.columns) == set(
-        ["corpus-index", "score", "query-id", "query-index"]
-    )
+    assert set(embeds.columns) == set(["corpus-index", "score", "query-id", "query-index"])
     assert embeds["query-index"].nunique() == embeds["query-id"].nunique()

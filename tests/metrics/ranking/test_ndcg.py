@@ -2,13 +2,17 @@ import pytest
 
 pytest.importorskip("cupy")
 
-import numpy as np
-from pytrec_eval import RelevanceEvaluator
+import numpy as np  # noqa: E402
+from pytrec_eval import RelevanceEvaluator  # noqa: E402
 
-from crossfit.data.sparse.ranking import (Rankings, SparseBinaryLabels,
-                                          SparseNumericLabels, SparseRankings)
-from crossfit.metric.ranking import DCG, NDCG
-from tests.pytrec_utils import create_qrel, create_results, create_run
+from crossfit.data.sparse.ranking import (  # noqa: E402
+    Rankings,
+    SparseBinaryLabels,
+    SparseNumericLabels,
+    SparseRankings,
+)
+from crossfit.metric.ranking import DCG, NDCG  # noqa: E402
+from tests.pytrec_utils import create_qrel, create_results, create_run  # noqa: E402
 
 y1 = [0, 5]
 y2 = [8, 9]
@@ -83,9 +87,7 @@ class TestNDCG:
         else:
             y_pred = SparseRankings.from_ranked_indices(y_pred)
         pred = (
-            NDCG(3, **params, log_base="e")
-            .score(y_gold, y_pred, nan_handling="propagate")
-            .tolist()
+            NDCG(3, **params, log_base="e").score(y_gold, y_pred, nan_handling="propagate").tolist()
         )
         assert pred == pytest.approx(expect, nan_ok=True)
 
@@ -176,6 +178,4 @@ class TestNDCG:
 
         for query_id, metrics in results.items():
             for metric_name, value in metrics.items():
-                assert value == pytest.approx(
-                    pytrec_result[query_id][metric_name], rel=1e-3
-                )
+                assert value == pytest.approx(pytrec_result[query_id][metric_name], rel=1e-3)

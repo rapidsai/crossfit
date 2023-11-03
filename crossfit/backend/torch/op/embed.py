@@ -1,13 +1,13 @@
 import gc
 
-import cupy as cp
 import cudf
+import cupy as cp
 import torch
 
-from crossfit.op.base import Op
 from crossfit.backend.cudf.series import create_list_series_from_2d_ar
+from crossfit.backend.torch.loader import DEFAULT_BATCH_SIZE, InMemoryLoader, SortedSeqLoader
 from crossfit.backend.torch.model import Model
-from crossfit.backend.torch.loader import DEFAULT_BATCH_SIZE, SortedSeqLoader, InMemoryLoader
+from crossfit.op.base import Op
 
 
 class Embedder(Op):

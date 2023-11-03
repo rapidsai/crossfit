@@ -1,6 +1,7 @@
+# flake8: noqa
+
 from crossfit.op.base import Op
 from crossfit.op.combinators import Sequential
-
 
 __all__ = [
     "Op",
@@ -9,7 +10,7 @@ __all__ = [
 
 try:
     from crossfit.backend.torch.op.embed import Embedder
-    
+
     __all__.append("Embedder")
 except ImportError:
     pass
@@ -17,7 +18,7 @@ except ImportError:
 
 try:
     from crossfit.op.tokenize import Tokenizer
-    
+
     __all__.append("Tokenizer")
 except ImportError:
     pass
@@ -25,6 +26,7 @@ except ImportError:
 
 try:
     from crossfit.op.vector_search import CuMLANNSearch, CuMLExactSearch, RaftExactSearch
+
     __all__.extend(["CuMLANNSearch", "CuMLExactSearch", "RaftExactSearch"])
 except ImportError:
     pass

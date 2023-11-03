@@ -11,9 +11,7 @@ arr2 = [4, 5, 6]
 
 
 tensor_types = [
-    m
-    for m in np_backend_dispatch.supports
-    if not m.__module__.startswith(("cupy", "cudf"))
+    m for m in np_backend_dispatch.supports if not m.__module__.startswith(("cupy", "cudf"))
 ]
 
 

@@ -1,7 +1,7 @@
 import numpy as np
 
-from crossfit.metric.ranking.base import BinaryRankingMetric, SparseLabels
 from crossfit.data.array.masked import MaskedArray
+from crossfit.metric.ranking.base import BinaryRankingMetric, SparseLabels
 
 
 class Recall(BinaryRankingMetric):
@@ -12,7 +12,8 @@ class Recall(BinaryRankingMetric):
     def _recall(self, y_true: SparseLabels, y_pred_labels: MaskedArray):
         n_pos = y_true.get_n_positives(y_pred_labels.shape[0])
         n_relevant = np.sum(
-            (y_pred_labels.data[:, : self._k] >= 1) & (~y_pred_labels.mask[:, : self._k]), axis=-1
+            (y_pred_labels.data[:, : self._k] >= 1) & (~y_pred_labels.mask[:, : self._k]),
+            axis=-1,
         )
 
         scores = np.NaN * np.zeros_like(n_relevant, dtype=float)

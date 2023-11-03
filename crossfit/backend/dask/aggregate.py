@@ -1,8 +1,8 @@
 from functools import partial
 
+import dask.dataframe as dd
 from dask.delayed import Delayed
 from dask.highlevelgraph import HighLevelGraph
-import dask.dataframe as dd
 
 from crossfit.calculate.aggregate import Aggregator
 from crossfit.data.dataframe.dispatch import CrossFrame

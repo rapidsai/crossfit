@@ -1,5 +1,5 @@
-import cupy as cp
 import cudf
+import cupy as cp
 from cudf.core.column import as_column
 
 

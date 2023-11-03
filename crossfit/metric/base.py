@@ -3,9 +3,9 @@ import functools as ft
 
 import numpy as np
 
+from crossfit.calculate.aggregate import Aggregator
 from crossfit.calculate.module import CrossModule, state
 from crossfit.data import crossarray
-from crossfit.calculate.aggregate import Aggregator
 
 
 class CrossMetric(CrossModule, abc.ABC):

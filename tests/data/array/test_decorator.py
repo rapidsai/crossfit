@@ -13,9 +13,7 @@ def nesting_test(x, y):
     return test_utils.min_test(x, y) + max_test(x, y)
 
 
-@pytest.mark.parametrize(
-    "fn", [np.all, np.sum, np.mean, np.std, np.var, np.any, np.prod]
-)
+@pytest.mark.parametrize("fn", [np.all, np.sum, np.mean, np.std, np.var, np.any, np.prod])
 def test_simple_numpy_function_crossnp(fn):
     crossfn = crossarray(fn)
 

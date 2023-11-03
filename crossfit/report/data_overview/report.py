@@ -2,19 +2,15 @@ import functools as ft
 
 import numpy as np
 
-from crossfit.report.base import Report
+from crossfit.backend.dask.aggregate import aggregate
 from crossfit.calculate.aggregate import Aggregator
-from crossfit.metric.common import CommonStats
-from crossfit.metric.continuous.range import Range
-from crossfit.metric.continuous.moments import Moments
 from crossfit.metric.categorical.str_len import MeanStrLength
 from crossfit.metric.categorical.value_counts import ValueCounts
-from crossfit.report.data_overview.visualization.facets import (
-    visualize,
-    FacetsOverview,
-)
-
-from crossfit.backend.dask.aggregate import aggregate
+from crossfit.metric.common import CommonStats
+from crossfit.metric.continuous.moments import Moments
+from crossfit.metric.continuous.range import Range
+from crossfit.report.base import Report
+from crossfit.report.data_overview.visualization.facets import FacetsOverview, visualize
 
 
 class ContinuousMetrics(Aggregator):
