@@ -20,6 +20,7 @@ repos:
     rev: v2.2.6
     hooks:
     - id: codespell
+      exclude: tests/testdata
   # security
   - repo: https://github.com/PyCQA/bandit
     rev: 1.7.0
