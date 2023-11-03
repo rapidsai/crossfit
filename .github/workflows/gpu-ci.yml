@@ -8,6 +8,8 @@ on:
       - "pull-request/[0-9]+"
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+"
+  pull_request:
+  workflow_dispatch:
 
 jobs:
   gpu-ci:
@@ -55,3 +57,28 @@ jobs:
   #    - name: Run tests
   #      run: |
   #        pytest -m multigpu tests/
+
+  benchmarks:
+    runs-on: linux-amd64-gpu-p100-latest-1
+    container:
+      image: nvcr.io/nvidia/pytorch:23.09-py3
+      env:
+        NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }}
+      options: --shm-size=1G
+      credentials:
+        username: $oauthtoken
+        password: ${{ secrets.NGC_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: pip install -r requirements/dev.txt
+
+      - name: Run benchmarks
+        uses: CodSpeedHQ/action@v1
+        with:
+          token: ${{ secrets.CODSPEED_TOKEN }}
+          run: pytest tests/ --codspeed
