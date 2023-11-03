@@ -16,6 +16,7 @@ from crossfit.report.beir.report import (  # noqa: E402
 
 
 @pytest.mark.singlegpu
+@pytest.mark.benchmark
 @pytest.mark.parametrize("dataset", ["fiqa", "hotpotqa", "nq"])
 def test_beir_report(
     dataset,
