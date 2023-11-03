@@ -17,6 +17,6 @@ def test_convert_roundtrip(to_type):
     assert isinstance(converted, to_type)
 
     orig = convert_array(converted, np.ndarray)
-    assert type(orig) == np.ndarray
+    assert type(orig) is np.ndarray
 
     assert np.all(from_array == orig)

@@ -3,8 +3,9 @@ from collections import defaultdict, namedtuple
 from functools import wraps
 
 import numpy as np
-from crossfit.data.dataframe.core import FrameBackend
+
 from crossfit.data.array.conversion import convert_array
+from crossfit.data.dataframe.core import FrameBackend
 
 
 def pre_processing(func):

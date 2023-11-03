@@ -1,9 +1,10 @@
 import warnings
-from crossfit.data.array.masked import MaskedArray
+
 import numpy as np
 
-from crossfit.data.sparse.dispatch import CrossSparse, SparseMatrixProtocol
 from crossfit.data.array.dispatch import crossarray
+from crossfit.data.array.masked import MaskedArray
+from crossfit.data.sparse.dispatch import CrossSparse, SparseMatrixProtocol
 
 
 class SparseLabels:
@@ -42,21 +43,23 @@ class SparseLabels:
     @classmethod
     def from_positive_indices(cls, indices):
         """
-        Construct a binary labels instance from sparse data where only positive items are specified.
+        Construct a binary labels instance from sparse data where only positive items are specified
 
         Parameters
         ----------
         indices : array_like, one row per context (e.g., user or query)
-                Specifies positive indices for each sample. Must be 1D or 2D, but row lengths can differ.
+            Specifies positive indices for each sample. Must be 1D or 2D, but row lengths can
+            differ.
 
         Raises
         ------
         ValueError
-                if `indices` is of invalid shape, type or contains duplicate, negative or non-integer indices.
+            if `indices` is of invalid shape, type or contains duplicate, negative or non-integer
+            indices.
 
         Examples
         --------
-        >>> BinaryLabels.from_positive_indices([[1,2], [2]]) # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+        >>> BinaryLabels.from_positive_indices([[1,2], [2]])
         <rankereval.data.BinaryLabels...>
         """
         return cls(CrossSparse.from_nonzero_indices(indices))
@@ -64,21 +67,22 @@ class SparseLabels:
     @classmethod
     def from_matrix(cls, labels):
         """
-        Construct a binary labels instance from dense or sparse matrix where each item's label is specified.
+        Construct a binary labels instance from dense or sparse matrix where each item's label is
+        specified.
 
         Parameters
         ----------
         labels : 1D or 2D array, one row per context (e.g., user or query)
-                Contains binary labels for each item. Labels must be in {0, 1}.
+            Contains binary labels for each item. Labels must be in {0, 1}.
 
         Raises
         ------
         ValueError
-                if `labels` is of invalid shape, type or non-binary.
+            if `labels` is of invalid shape, type or non-binary.
 
         Examples
         --------
-        >>> BinaryLabels.from_matrix([[0, 1, 1], [0, 0, 1]]) # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+        >>> BinaryLabels.from_matrix([[0, 1, 1], [0, 0, 1]])
         <rankereval.data.BinaryLabels...>
         """
         return cls(CrossSparse.from_matrix(labels))
@@ -154,7 +158,8 @@ class Rankings:
         if np.issubdtype(dtype, np.floating):
             if not np.all(np.isfinite(arr)):
                 warnings.warn(
-                    "Input contains NaN or Inf entries which will be ignored.", InvalidValuesWarning
+                    "Input contains NaN or Inf entries which will be ignored.",
+                    InvalidValuesWarning,
                 )
                 arr[~np.isfinite(arr)] = np.NINF
         elif not np.issubdtype(dtype, np.integer):
@@ -175,7 +180,12 @@ class Rankings:
 
     @classmethod
     def from_scores(
-        cls, raw_scores, valid_items=None, invalid_items=None, warn_empty=True, k_max=None
+        cls,
+        raw_scores,
+        valid_items=None,
+        invalid_items=None,
+        warn_empty=True,
+        k_max=None,
     ):
         raw_scores = cls._verify_input(raw_scores, dtype=np.floating)
 
@@ -226,7 +236,8 @@ class SparseRankings(Rankings):
             indices.difference(invalid_items)
         if not indices.isfinite():
             warnings.warn(
-                "Input contains NaN or Inf entries which will be ignored.", InvalidValuesWarning
+                "Input contains NaN or Inf entries which will be ignored.",
+                InvalidValuesWarning,
             )
             indices.remove_infinite()
         n_empty_rows = indices.count_empty_rows()
@@ -247,18 +258,19 @@ class SparseRankings(Rankings):
         Parameters
         ----------
         indices : array_like, one row per ranking
-                Indices of items after ranking. Must be 1D or 2D, but row lengths can differ.
+            Indices of items after ranking. Must be 1D or 2D, but row lengths can differ.
         valid_items : array_like, one row per ranking
-                Indices of valid items (e.g., candidate set). Invalid items will be discarded from ranking.
+            Indices of valid items (e.g., candidate set). Invalid items will be discarded from
+            ranking.
 
         Raises
         ------
         ValueError
-                if `indices` or `valid_items` of invalid shape or type.
+            if `indices` or `valid_items` of invalid shape or type.
 
         Examples
         --------
-        >>> Rankings.from_ranked_indices([[5, 2], [4, 3, 1]]) # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+        >>> Rankings.from_ranked_indices([[5, 2], [4, 3, 1]])
         <rankereval.data.Rankings...>
         """
         indices = CrossSparse.from_lil(indices)
@@ -273,23 +285,24 @@ class SparseRankings(Rankings):
         Parameters
         ----------
         raw_scores : array_like, one row per ranking
-                Contains raw scores for each item. Must be 1D or 2D, but row lengths can differ.
+            Contains raw scores for each item. Must be 1D or 2D, but row lengths can differ.
         valid_items : array_like, one row per ranking
-                Indices of valid items (e.g., candidate set). Invalid items will be discarded from ranking.
+            Indices of valid items (e.g., candidate set). Invalid items will be discarded from
+            ranking.
 
         Raises
         ------
         ValueError
-                if `raw_scores` or `valid_items` of invalid shape or type.
+            if `raw_scores` or `valid_items` of invalid shape or type.
 
         Warns
         ------
         InvalidValuesWarning
-                if `raw_scores` contains non-finite values.
+            if `raw_scores` contains non-finite values.
 
         Examples
         --------
-        >>> Rankings.from_scores([[0.1, 0.5, 0.2], [0.4, 0.2, 0.5]]) # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+        >>> Rankings.from_scores([[0.1, 0.5, 0.2], [0.4, 0.2, 0.5]])
         <rankereval.data.Rankings...>
         """
         indices = CrossSparse.from_values(raw_scores, keep_zeros=True)

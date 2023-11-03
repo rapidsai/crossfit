@@ -1,9 +1,9 @@
-from crossfit.data.array.dispatch import crossarray
 import numpy as np
 
+from crossfit.data.array.dispatch import crossarray
 from crossfit.data.array.masked import MaskedArray
+from crossfit.data.sparse.ranking import Rankings, SparseBinaryLabels, SparseLabels
 from crossfit.metric.continuous.mean import Mean
-from crossfit.data.sparse.ranking import SparseBinaryLabels, SparseLabels, Rankings, SparseRankings
 
 
 class RankingMetric(Mean):

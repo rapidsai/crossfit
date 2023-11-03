@@ -1,16 +1,15 @@
-from typing import Callable, Optional, Any
-from contextvars import ContextVar
-import importlib
 import gc
+import importlib
 import warnings
+from contextvars import ContextVar
+from typing import Any, Callable, Optional
 
 import dask
-from dask.distributed import Client, get_client
-from dask.dataframe.optimize import optimize as dd_optimize
 import distributed
+from dask.dataframe.optimize import optimize as dd_optimize
+from dask.distributed import Client, get_client
 
 from crossfit.backend.gpu import HAS_GPU
-
 
 _crossfit_dask_client = ContextVar("_crossfit_dask_client", default="auto")
 
@@ -174,7 +173,7 @@ class Distributed:
     The easiest way to use `Distributed` is within a
     conventional `with` statement::
 
-        from merlin.core.utils import Disributed
+        from merlin.core.utils import Disrtibuted
 
         workflow = nvt.Workflow(["col"] >> ops.Normalize())
         dataset = nvt.Dataset(...)

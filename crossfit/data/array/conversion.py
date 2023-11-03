@@ -1,5 +1,5 @@
-from typing import Any, Type, TypeVar
 from itertools import product
+from typing import Any, Type, TypeVar
 
 import numpy as np
 from dask.utils import Dispatch

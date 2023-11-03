@@ -4,22 +4,20 @@ from typing import List, Optional
 import cudf
 import cupy as cp
 import dask_cudf
-from cuml.preprocessing import LabelEncoder
-import numpy as np
 import torch
+from cuml.preprocessing import LabelEncoder
 
 from crossfit.backend.dask.aggregate import aggregate
-from crossfit.data.sparse.dispatch import CrossSparse
+from crossfit.backend.torch.loader import DEFAULT_BATCH_SIZE
+from crossfit.backend.torch.model import Model
+from crossfit.calculate.aggregate import Aggregator
 from crossfit.data.array.dispatch import crossarray
 from crossfit.dataset.base import EmbeddingDatataset
-from crossfit.report.beir.embed import embed
-from crossfit.calculate.aggregate import Aggregator
 from crossfit.metric.continuous.mean import Mean
-from crossfit.metric.ranking import AP, NDCG, Precision, Recall, SparseBinaryLabels, SparseNumericLabels, SparseRankings
-from crossfit.report.base import Report
+from crossfit.metric.ranking import AP, NDCG, Precision, Recall, SparseNumericLabels, SparseRankings
 from crossfit.op.vector_search import VectorSearchOp
-from crossfit.backend.torch.model import Model
-from crossfit.backend.torch.loader import DEFAULT_BATCH_SIZE
+from crossfit.report.base import Report
+from crossfit.report.beir.embed import embed
 
 
 class BeirMetricAggregator(Aggregator):
@@ -81,9 +79,7 @@ def create_csr_matrix(ids, scores, label_encoder: LabelEncoder):
     values = scores.list.leaves.values.astype(cp.float32)
     indices = label_encoder.transform(ids.list.leaves).values
     indptr = scores.list._column.offsets.values
-    sparse_matrix = cp.sparse.csr_matrix(
-        (values, indices, indptr), shape=(num_rows, num_columns)
-    )
+    sparse_matrix = cp.sparse.csr_matrix((values, indices, indptr), shape=(num_rows, num_columns))
 
     return sparse_matrix
 
@@ -109,7 +105,11 @@ def join_predictions(data, predictions):
 
     predictions = predictions.set_index("query-index")
     merged = observed.merge(
-        predictions, left_index=True, right_index=True, how="left", suffixes=("-obs", "-pred")
+        predictions,
+        left_index=True,
+        right_index=True,
+        how="left",
+        suffixes=("-obs", "-pred"),
     ).rename(columns={"split-obs": "split"})
 
     output = merged.reset_index()
@@ -133,7 +133,7 @@ class BeirReport(Report):
         console.print(self.result_df)
 
         for i in range(len(self.result_df)):
-            console.rule(f": ".join(self.result_df.index[i]))
+            console.rule(": ".join(self.result_df.index[i]))
             grouped_columns = {}
             for col in self.result_df.columns:
                 metric_type = col.split("@")[0] if "@" in col else col

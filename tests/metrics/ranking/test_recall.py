@@ -2,13 +2,12 @@ import pytest
 
 pytest.importorskip("cupy")
 
-import numpy as np
-from pytrec_eval import RelevanceEvaluator
+import numpy as np  # noqa: E402
+from pytrec_eval import RelevanceEvaluator  # noqa: E402
 
-from crossfit.data.sparse.ranking import (Rankings, SparseBinaryLabels,
-                                          SparseRankings)
-from crossfit.metric.ranking import Recall
-from tests.pytrec_utils import create_qrel, create_results, create_run
+from crossfit.data.sparse.ranking import Rankings, SparseBinaryLabels, SparseRankings  # noqa: E402
+from crossfit.metric.ranking import Recall  # noqa: E402
+from tests.pytrec_utils import create_qrel, create_results, create_run  # noqa: E402
 
 y1 = [0, 5]
 y2 = [8, 9]
@@ -120,6 +119,4 @@ class TestRecall:
 
         for query_id, metrics in results.items():
             for metric_name, value in metrics.items():
-                assert value == pytest.approx(
-                    pytrec_result[query_id][metric_name], rel=1e-3
-                )
+                assert value == pytest.approx(pytrec_result[query_id][metric_name], rel=1e-3)

@@ -3,12 +3,12 @@ import pytest
 pytest.importorskip("cupy")
 beir = pytest.importorskip("beir")
 
-import numpy as np
+import numpy as np  # noqa: E402
 
-import crossfit as cf
-from crossfit.data.sparse.ranking import SparseNumericLabels, SparseRankings
-from crossfit.metric.ranking import NDCG
-from crossfit.report.beir.report import (
+import crossfit as cf  # noqa: E402
+from crossfit.data.sparse.ranking import SparseNumericLabels, SparseRankings  # noqa: E402
+from crossfit.metric.ranking import NDCG  # noqa: E402
+from crossfit.report.beir.report import (  # noqa: E402
     create_csr_matrix,
     create_label_encoder,
     join_predictions,
@@ -35,15 +35,9 @@ def test_beir_report(
     )
 
     expected_columns = [
-        f"{metric}@{k}"
-        for metric in ["NDCG", "Recall", "Precision", "AP"]
-        for k in [1, 3, 5, 10]
+        f"{metric}@{k}" for metric in ["NDCG", "Recall", "Precision", "AP"] for k in [1, 3, 5, 10]
     ]
-    expected_indices = [
-        ("split", "test"),
-        ("split", "train"),
-        ("split", "val"),
-    ]
+
     assert sorted(report.result_df.columns.tolist()) == sorted(expected_columns)
     assert ("split", "test") in report.result_df.index.values.tolist()
     for col in expected_columns:

@@ -1,13 +1,12 @@
 import time
 
 import dask
+from dask_cuda import LocalCUDACluster
+from distributed import Client, LocalCluster
 
 from crossfit.calculate.frame import MetricFrame
 from crossfit.dask.calculate import calculate_per_col as calculate_dask
 from crossfit.stats.continuous.stats import ContinuousStats
-
-from dask_cuda import LocalCUDACluster
-from distributed import Client, LocalCluster
 
 # Benchmark assumes Criteo dataset.
 # Low-cardinality columns:
@@ -25,13 +24,12 @@ use_cluster = True
 # Set Dask backend
 dask.config.set({"dataframe.backend": backend})
 if backend == "cudf":
-    # For older dask versions, backend config wont work
+    # For older dask versions, backend config won't work
     import dask_cudf as dd
 else:
     import dask.dataframe as dd
 
 if __name__ == "__main__":
-
     if use_cluster:
         # Spin up cluster
         cluster_type = LocalCUDACluster if backend == "cudf" else LocalCluster

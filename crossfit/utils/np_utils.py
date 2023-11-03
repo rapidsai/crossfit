@@ -1,4 +1,5 @@
 import inspect
+
 import numpy as np
 
 
@@ -34,10 +35,7 @@ def np_signature(f):
         ("extobj", None),
     ]
     params = []
-    params += [
-        inspect.Parameter(name, inspect.Parameter.POSITIONAL_ONLY)
-        for name in input_names
-    ]
+    params += [inspect.Parameter(name, inspect.Parameter.POSITIONAL_ONLY) for name in input_names]
     if f.nout > 1:
         params += [
             inspect.Parameter(name, inspect.Parameter.POSITIONAL_ONLY, default=None)

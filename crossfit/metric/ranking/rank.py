@@ -1,7 +1,7 @@
 import numpy as np
 
-from crossfit.metric.ranking.base import BinaryRankingMetric, SparseBinaryLabels
 from crossfit.data.array.masked import MaskedArray
+from crossfit.metric.ranking.base import BinaryRankingMetric, SparseBinaryLabels
 
 
 class ReciprocalRank(BinaryRankingMetric):

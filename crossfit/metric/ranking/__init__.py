@@ -1,17 +1,16 @@
+from crossfit.data.sparse.ranking import (
+    Rankings,
+    SparseBinaryLabels,
+    SparseLabels,
+    SparseNumericLabels,
+    SparseRankings,
+)
 from crossfit.metric.ranking.f1 import F1
 from crossfit.metric.ranking.hitrate import HitRate
 from crossfit.metric.ranking.ndcg import DCG, NDCG
-from crossfit.metric.ranking.precision import Precision, AP
+from crossfit.metric.ranking.precision import AP, Precision
 from crossfit.metric.ranking.rank import FirstRelevantRank, MeanRanks, ReciprocalRank
 from crossfit.metric.ranking.recall import Recall
-from crossfit.data.sparse.ranking import (
-    SparseLabels,
-    SparseBinaryLabels,
-    SparseNumericLabels,
-    SparseRankings,
-    Rankings,
-)
-
 
 __all__ = [
     "AP",
