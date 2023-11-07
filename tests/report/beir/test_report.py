@@ -82,7 +82,6 @@ def test_no_invalid_scores(
     assert not np.isinf(ndcg).any()
 
 
-@pytest.mark.slow
 @pytest.mark.benchmark(
     warmup_iterations=1,
 )
