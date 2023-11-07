@@ -106,7 +106,7 @@ jobs:
 
           #git checkout ${{ env.BASE_SHA }}
           #$RUN_BENCHMARK --benchmark-save=main
-          git checkout 42958f0
+          git checkout 64a5b3a 
           $RUN_BENCHMARK --benchmark-save=main
 
       - name: Compare results
@@ -122,13 +122,25 @@ jobs:
           cat pr_comment > ${{ env.PR_COMMENT }}
 
       - name: 'Comment PR'
-        uses: actions/github-script@v6.4.1
+        uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            // Get pull requests that are open for current ref.
+            const pullRequests = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              head: `${context.repo.owner}:${context.ref.replace('refs/heads/', '')}`
+            })
+
+            // Set issue number for following calls from context (if on pull request event)
+            // or from above variable.
+            const issueNumber = context.issue.number || pullRequests.data[0].number
+
             github.rest.issues.createComment({
-              issue_number: context.issue.number,
+              issue_number: issueNumber,
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: require('fs').readFileSync('${{ env.PR_COMMENT }}').toString()
-            });
+            })
