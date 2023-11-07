@@ -27,7 +27,6 @@ jobs:
           fetch-depth: 0
       - name: Install dependencies
         run: |
-          python -m pip install "torch${{ matrix.torch-version }}"
           python -m pip install .[pytorch-dev]
       - name: Run tests
         run: |
@@ -76,10 +75,13 @@ jobs:
         run: |
           python -m pip install .[pytorch-dev]
 
+      - name: Get Branch name
+        id: get-branch-name
+        uses: NVIDIA-Merlin/.github/actions/branch-name@main
+
       - name: Setup benchmarks
         run: |
-          echo "BASE_SHA=$(echo ${{ github.event.pull_request.base.sha }} | cut -c1-8)" >> $GITHUB_ENV
-          echo "HEAD_SHA=$(echo ${{ github.event.pull_request.head.sha }} | cut -c1-8)" >> $GITHUB_ENV
+          BRANCH_NAME="${{ steps.get-branch-name.outputs.branch }}"
 
           echo "PR_COMMENT=$(mktemp)" >>  $GITHUB_ENV
 
@@ -87,10 +89,10 @@ jobs:
         run: |
           RUN_BENCHMARK="py.test -m benchmark tests/"
 
-          git checkout ${{ github.event.pull_request.base.sha }}
+          git checkout main
           $RUN_BENCHMARK --benchmark-save=base
 
-          git checkout ${{ github.event.pull_request.head.sha }}
+          git checkout $BRANCH_NAME
           $RUN_BENCHMARK --benchmark-save=pr
 
       - name: Compare results
@@ -98,7 +100,7 @@ jobs:
           
           py.test-benchmark compare > cmp_results
 
-          echo 'Benchmark comparison for [`${{ env.BASE_SHA }}`](${{ github.event.repository.html_url }}/commit/${{ github.event.pull_request.base.sha }}) (base) vs [`${{ env.HEAD_SHA }}`](${{ github.event.repository.html_url }}/commit/${{ github.event.pull_request.head.sha }}) (PR)' >> pr_comment
+          echo "Benchmark comparison for main branch vs. $BRANCH_NAME branch" >> pr_comment
           echo '```' >> pr_comment
           cat cmp_results >> pr_comment
           echo '```' >> pr_comment
