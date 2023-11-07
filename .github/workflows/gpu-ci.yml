@@ -93,6 +93,8 @@ jobs:
         run: |
           echo "PR_COMMENT=$(mktemp)" >>  $GITHUB_ENV
 
+          git config --global --add safe.directory /__w/crossfit/crossfit
+
       - name: Run benchmarks
         shell: bash
         run: |
