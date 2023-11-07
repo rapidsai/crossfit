@@ -134,12 +134,8 @@ jobs:
               head: `${context.repo.owner}:${context.ref.replace('refs/heads/', '')}`
             })
 
-            // Set issue number for following calls from context (if on pull request event)
-            // or from above variable.
-            const issueNumber = context.issue.number || pullRequests.data[0].number
-
             github.rest.issues.createComment({
-              issue_number: issueNumber,
+              issue_number: pullRequests.data[0].number,
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: require('fs').readFileSync('${{ env.PR_COMMENT }}').toString()
