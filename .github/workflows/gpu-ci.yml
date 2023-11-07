@@ -106,7 +106,7 @@ jobs:
 
           #git checkout ${{ env.BASE_SHA }}
           #$RUN_BENCHMARK --benchmark-save=main
-          git checkout ef50048
+          git checkout 27da9eb8
           $RUN_BENCHMARK --benchmark-save=main
 
       - name: Compare results
