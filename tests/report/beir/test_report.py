@@ -19,6 +19,7 @@ from crossfit.report.beir.report import (  # noqa: E402
 @pytest.mark.parametrize("dataset", ["fiqa", "hotpotqa", "nq"])
 def test_beir_report(
     dataset,
+    benchmark,
     model_name="sentence-transformers/all-MiniLM-L6-v2",
     k=10,
     batch_size=8,
@@ -79,3 +80,28 @@ def test_no_invalid_scores(
     assert ndcg.min() >= 0
     assert ndcg.max() <= 1
     assert not np.isinf(ndcg).any()
+
+
+@pytest.mark.benchmark(
+    warmup_iterations=1,
+)
+def test_fiqa_all_MiniLM_L6_v2(
+    benchmark,
+):
+    @benchmark
+    def report(
+        batch_size=1024,
+        dataset="fiqa",
+        model_name="sentence-transformers/all-MiniLM-L6-v2",
+        k=10,
+    ):
+        model = cf.SentenceTransformerModel(model_name)
+        vector_search = cf.TorchExactSearch(k=k)
+
+        cf.beir_report(
+            dataset,
+            model,
+            vector_search=vector_search,
+            overwrite=True,
+            batch_size=batch_size,
+        )

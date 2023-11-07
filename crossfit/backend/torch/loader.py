@@ -132,6 +132,8 @@ class SortedSeqLoader(InMemoryLoader):
                 break
             except torch.cuda.OutOfMemoryError:
                 mid = start + (end - start) // 2
+                if mid == start:
+                    raise
                 warnings.warn(
                     f"Not enough memory for a batch size of {end - start}. "
                     f"Retrying with a new batch size of {mid - start}. "
