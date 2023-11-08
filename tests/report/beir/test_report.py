@@ -84,13 +84,13 @@ def test_no_invalid_scores(
 @pytest.mark.benchmark(
     warmup_iterations=1,
 )
-def test_fiqa_all_MiniLM_L6_v2(
+def test_quora_all_MiniLM_L6_v2(
     benchmark,
 ):
     @benchmark
     def report(
-        batch_size=64,
-        dataset="fiqa",
+        batch_size=128,
+        dataset="quora",
         model_name="sentence-transformers/all-MiniLM-L6-v2",
         k=10,
     ):
