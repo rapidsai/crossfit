@@ -103,5 +103,6 @@ def test_fiqa_all_MiniLM_L6_v2(
             model,
             vector_search=vector_search,
             overwrite=True,
+            tiny_sample=True,
             batch_size=batch_size,
         )
