@@ -102,8 +102,7 @@ jobs:
           RUN_BENCHMARK="py.test -m benchmark tests/"
 
           #git checkout ${{ env.BASE_SHA }}
-          #$RUN_BENCHMARK --benchmark-save=main
-          git checkout 72d548e
+          git checkout 72d548e  # TODO: remove placeholder
           $RUN_BENCHMARK --benchmark-save=main
 
           git checkout ${{ env.HEAD_SHA }}
@@ -125,15 +124,13 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            // Get pull requests that are open for current ref.
             const pullRequests = await github.rest.pulls.list({
               owner: context.repo.owner,
               repo: context.repo.repo,
               state: 'open',
             })
             
-            const filtered = pullRequests.data.filter(x => x.head.sha.startsWith('${{ env.HEAD_SHA }}')
-            console.log(filtered)
+            const filtered = pullRequests.data.filter(x => x.head.sha.startsWith('${{ env.HEAD_SHA }}'))
 
             github.rest.issues.createComment({
               issue_number: filtered[0].number,

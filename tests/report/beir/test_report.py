@@ -19,7 +19,6 @@ from crossfit.report.beir.report import (  # noqa: E402
 @pytest.mark.parametrize("dataset", ["fiqa", "hotpotqa", "nq"])
 def test_beir_report(
     dataset,
-    benchmark,
     model_name="sentence-transformers/all-MiniLM-L6-v2",
     k=10,
     batch_size=8,
