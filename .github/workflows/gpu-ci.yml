@@ -101,13 +101,13 @@ jobs:
         run: |
           RUN_BENCHMARK="py.test -m benchmark tests/"
 
-          git checkout ${{ env.HEAD_SHA }}
-          $RUN_BENCHMARK --benchmark-save=branch
-
           #git checkout ${{ env.BASE_SHA }}
           #$RUN_BENCHMARK --benchmark-save=main
           git checkout 72d548e
           $RUN_BENCHMARK --benchmark-save=main
+
+          git checkout ${{ env.HEAD_SHA }}
+          $RUN_BENCHMARK --benchmark-save=${{ env.HEAD_SHA }}
 
       - name: Compare results
         run: |
@@ -115,7 +115,6 @@ jobs:
           py.test-benchmark compare > cmp_results
 
           echo 'Benchmark comparison for [`${{ env.BASE_SHA }}`](${{ github.event.repository.html_url }}/commit/${{ env.BASE_SHA }}) (main) vs [`${{ env.HEAD_SHA }}`](${{ github.event.repository.html_url }}/commit/${{ env.HEAD_SHA }}) (PR)' >> pr_comment
-          echo 'Benchmark comparison for [main] vs PR (${{ github.event.repository.html_url }}/commit/${{ env.HEAD_SHA }})' >> pr_comment
           echo '```' >> pr_comment
           cat cmp_results >> pr_comment
           echo '```' >> pr_comment
@@ -130,17 +129,15 @@ jobs:
             const pullRequests = await github.rest.pulls.list({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              // state: 'all',
-              // head: `${context.repo.owner}:${context.ref.replace('refs/heads/', '')}`
+              state: 'open',
             })
+            
+            const filtered = pullRequests.data.filter(x => x.head.sha.startsWith('${{ env.HEAD_SHA }}')
+            console.log(filtered)
 
-            console.log(pullRequests.data[0])
-            console.log(pullRequests.data[0].head)
-            console.log(`${context.repo.owner}:${context.ref.replace('refs/heads/', '')}`)
-
-            // github.rest.issues.createComment({
-            //   issue_number: pullRequests.data[0].number,
-            //   owner: context.repo.owner,
-            //   repo: context.repo.repo,
-            //   body: require('fs').readFileSync('${{ env.PR_COMMENT }}').toString()
-            // })
+            github.rest.issues.createComment({
+              issue_number: filtered[0].number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: require('fs').readFileSync('${{ env.PR_COMMENT }}').toString()
+            })
