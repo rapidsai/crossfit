@@ -102,7 +102,7 @@ jobs:
           RUN_BENCHMARK="py.test -m benchmark tests/"
 
           #git checkout ${{ env.BASE_SHA }}
-          git checkout 72d548e  # TODO: remove placeholder
+          git checkout ac82d4f1  # TODO: remove placeholder
           $RUN_BENCHMARK --benchmark-save=main
 
           git checkout ${{ env.HEAD_SHA }}
