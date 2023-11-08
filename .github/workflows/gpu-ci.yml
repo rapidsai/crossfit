@@ -106,7 +106,7 @@ jobs:
 
           #git checkout ${{ env.BASE_SHA }}
           #$RUN_BENCHMARK --benchmark-save=main
-          git checkout 64a5b3a 
+          git checkout 72d548e
           $RUN_BENCHMARK --benchmark-save=main
 
       - name: Compare results
@@ -130,11 +130,14 @@ jobs:
             const pullRequests = await github.rest.pulls.list({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              state: 'all',
-              head: `${context.repo.owner}:${context.ref.replace('refs/heads/', '')}`
+              // state: 'all',
+              // head: `${context.repo.owner}:${context.ref.replace('refs/heads/', '')}`
             })
 
+            console.log(context.repo.owner)
+            console.log(context.repo.repo)
             console.log(pullRequests)
+            console.log(`${context.repo.owner}:${context.ref.replace('refs/heads/', '')}`)
 
             github.rest.issues.createComment({
               issue_number: pullRequests.data[0].number,
