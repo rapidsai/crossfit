@@ -103,4 +103,5 @@ def test_quora_all_MiniLM_L6_v2(
             vector_search=vector_search,
             overwrite=True,
             batch_size=batch_size,
+            partition_num=1_000,
         )
