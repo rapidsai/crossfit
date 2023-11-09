@@ -90,18 +90,17 @@ def test_quora_all_MiniLM_L6_v2(
     @benchmark
     def report(
         batch_size=128,
-        dataset="quora",
+        dataset="fiqa",
         model_name="sentence-transformers/all-MiniLM-L6-v2",
         k=10,
     ):
         model = cf.SentenceTransformerModel(model_name)
         vector_search = cf.TorchExactSearch(k=k)
 
-        cf.beir_report(
+        _ = cf.beir_report(
             dataset,
             model,
             vector_search=vector_search,
             overwrite=True,
             batch_size=batch_size,
-            partition_num=10_000,
         )
