@@ -89,7 +89,7 @@ def test_quora_all_MiniLM_L6_v2(
 ):
     @benchmark
     def report(
-        batch_size=128,
+        batch_size=64,
         dataset="fiqa",
         model_name="sentence-transformers/all-MiniLM-L6-v2",
         k=10,
