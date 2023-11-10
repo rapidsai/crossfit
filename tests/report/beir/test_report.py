@@ -84,7 +84,7 @@ def test_no_invalid_scores(
 @pytest.mark.benchmark(
     warmup_iterations=1,
 )
-def test_quora_all_MiniLM_L6_v2(
+def test_fiqa_all_MiniLM_L6_v2(
     benchmark,
 ):
     @benchmark

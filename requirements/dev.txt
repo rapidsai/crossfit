@@ -5,3 +5,4 @@ bandit==1.7.0
 pytest>=5
 pytest-benchmark>=4.0.0
 pytest-cov>=2
+pytest-benchmark>=4.0.0
