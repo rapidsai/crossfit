@@ -3,9 +3,8 @@ import shutil
 from dataclasses import dataclass
 from typing import Dict, List, Union
 
-from beir import util
-
 from crossfit.dataset.home import CF_HOME
+from crossfit.utils import file_utils
 
 
 @dataclass
@@ -225,10 +224,10 @@ def download_raw(name, out_dir=None, overwrite=False) -> str:
     url = BEIR_DATASETS[name].download_link
 
     print("Downloading {} ...".format(name))
-    util.download_url(url, zip_file)
+    file_utils.download_url(url, zip_file)
 
     print("Unzipping {} ...".format(name))
-    util.unzip(zip_file, raw_dir)
+    file_utils.unzip(zip_file, raw_dir)
 
     return output_path
 
