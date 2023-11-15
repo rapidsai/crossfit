@@ -88,6 +88,7 @@ jobs:
           cat pr_comment > ${{ env.PR_COMMENT }}
 
       - name: 'Comment PR'
+        if: github.ref != 'refs/heads/main'
         uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
