@@ -1,9 +1,9 @@
 import cupy as cp
 import torch
-from beir.retrieval.search.dense import util as utils
 
 from crossfit.data.array.conversion import convert_array
 from crossfit.op.vector_search import ExactSearchOp
+from crossfit.utils import math_utils
 
 
 class TorchExactSearch(ExactSearchOp):
@@ -20,7 +20,7 @@ class TorchExactSearch(ExactSearchOp):
         self.metric = metric
         self.embedding_col = embedding_col
         self.normalize = False
-        self.score_functions = {"cos_sim": utils.cos_sim, "dot": utils.dot_score}
+        self.score_functions = {"cos_sim": math_utils.cos_sim, "dot": math_utils.dot_score}
         self.score_function_desc = {"cos_sim": "Cosine Similarity", "dot": "Dot Product"}
 
     def search_tensors(self, queries, corpus):
