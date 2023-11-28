@@ -17,9 +17,9 @@ except ImportError:
 
 
 try:
-    from crossfit.op.tokenize import Tokenizer
+    from crossfit.op.tokenize import Tokenizer, TokenCounter
 
-    __all__.append("Tokenizer")
+    __all__.extend(["Tokenizer", "TokenCounter"])
 except ImportError:
     pass
 
