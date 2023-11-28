@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 
 import cudf
 from cudf.core.subword_tokenizer import SubwordTokenizer, _cast_to_appropriate_type
@@ -145,7 +146,7 @@ class GPUTokenizer(SubwordTokenizer):
 
             # Save vocabulary to disk
             # `save_vocabulary()` automatically appends `-vocab.txt` suffix.
-            vocab_path = tokenizer.save_vocabulary(cache_dir, "{tokenizer_class}")[0]
+            vocab_path = tokenizer.save_vocabulary(cache_dir, f"{tokenizer_class}")[0]
 
             # Hash the vocabulary and save it
             hash_vocab(vocab_path, hashed_vocab_path)
@@ -166,3 +167,55 @@ def clip_tokens(token_o, max_length, return_type="pt"):
         del token_o["metadata"]
 
     return token_o
+
+
+class TokenCounter(Op):
+    def __init__(
+        self,
+        cols=None,
+        keep_cols=None,
+        max_length: Optional[int] = None,
+    ):
+        super().__init__(cols=cols, keep_cols=keep_cols)
+        self.max_length = max_length
+
+    def call_column(self, data):
+        if isinstance(data, cudf.DataFrame):
+            raise ValueError(
+                "data must be a Series, got DataFrame. Add a pre step to convert to Series"
+            )
+        first_zero = data.list.astype(int).list.index(0)
+        max_length = self.max_length or data.list.len().iloc[0]
+        num_tokens = first_zero.replace(-1, max_length)
+        return num_tokens
+
+    def call(self, data):
+        output = cudf.DataFrame()
+
+        if self.cols is None or len(self.cols) == 1:
+            if self.cols:
+                data = data[self.cols[0]]
+
+            if not isinstance(data, cudf.Series):
+                raise ValueError("data must be a cudf Series")
+
+            num_tokens = self.call_column(data)
+            output["token_count"] = num_tokens
+
+            return output
+
+        for col in self.cols:
+            if col not in data.columns:
+                raise ValueError(f"Column {col} not found in data")
+
+            num_tokens = self.call_column(data[col])
+            output[f"{col}_token_count"] = num_tokens
+
+        return output
+
+    def meta(self):
+        if self.cols is not None and len(self.cols) > 1:
+            dtypes = {f"{col}_token_count": "int32" for col in self.cols}
+        else:
+            dtypes = {"token_count": "int32"}
+        return dtypes
