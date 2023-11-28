@@ -146,7 +146,7 @@ class GPUTokenizer(SubwordTokenizer):
 
             # Save vocabulary to disk
             # `save_vocabulary()` automatically appends `-vocab.txt` suffix.
-            vocab_path = tokenizer.save_vocabulary(cache_dir, "{tokenizer_class}")[0]
+            vocab_path = tokenizer.save_vocabulary(cache_dir, f"{tokenizer_class}")[0]
 
             # Hash the vocabulary and save it
             hash_vocab(vocab_path, hashed_vocab_path)
