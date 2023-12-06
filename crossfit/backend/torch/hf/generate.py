@@ -19,6 +19,7 @@ from crossfit.dataset.home import CF_HOME
 
 
 logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 TGI_IMAGE_NAME = "ghcr.io/huggingface/text-generation-inference"
 TGI_IMAGE_VERSION = "1.1.1"
