@@ -22,9 +22,7 @@ def parse_arguments():
     parser.add_argument(
         "--dataset", default="beir/fiqa", help="Dataset to load (default: beir/fiqa)"
     )
-    parser.add_argument(
-        "--tiny-sample", default=True, action="store_true", help="Use tiny sample dataset"
-    )
+    parser.add_argument("--tiny-sample", default=True, action="store_true", help="Use tiny sample dataset")
     parser.add_argument(
         "--num-gpus", type=int, default=2, help="Number of GPUs to use (default: 1)"
     )

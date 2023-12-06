@@ -44,8 +44,11 @@ class HFGenerator:
         self.max_wait_seconds = max_wait_seconds
         self.max_tokens = max_tokens
 
-    def __enter__(self):
-        self.inference_server = get_tgi_app_def(
+        self.runner = None
+        self.app_handle = None
+
+    def start(self):
+        inference_server = get_tgi_app_def(
             self.path_or_name,
             image_name=self.image_name,
             image_version=self.image_version,
@@ -56,21 +59,21 @@ class HFGenerator:
         self.runner = runner.get_runner()
 
         self.app_handle = self.runner.run(
-            self.inference_server,
+            inference_server,
             scheduler="local_docker",
         )
 
         self.status = self.runner.status(self.app_handle)
 
-        self.container_name = self.app_handle.split("/")[-1]
-        self.local_docker_client = self.runner._scheduler_instances["local_docker"]._docker_client
-        self.networked_containers = self.local_docker_client.networks.get("torchx").attrs[
+        container_name = self.app_handle.split("/")[-1]
+        local_docker_client = self.runner._scheduler_instances["local_docker"]._docker_client
+        networked_containers = local_docker_client.networks.get("torchx").attrs[
             "Containers"
         ]
 
         self.ip_address = None
-        for _, container_config in self.networked_containers.items():
-            if self.container_name in container_config["Name"]:
+        for _, container_config in networked_containers.items():
+            if container_name in container_config["Name"]:
                 self.ip_address = container_config["IPv4Address"].split("/")[0]
                 break
         if not self.ip_address:
@@ -93,6 +96,9 @@ class HFGenerator:
             self.status = self.runner.status(self.app_handle)
 
         logger.info(self.status)
+
+    def __enter__(self):
+        self.start()
 
         return self
 
@@ -123,10 +129,8 @@ class HFGenerator:
         output_col = "generated_text"
         npartitions = getattr(data, "npartitions", self.num_gpus)
         ddf = dask_cudf.from_cudf(
-            cudf.DataFrame(
-                {input_col: data, output_col: generated_text},
-                npartitions=npartitions,
-            )
+            cudf.DataFrame({input_col: data, output_col: generated_text}),
+            npartitions=npartitions,
         )
         return ddf
 
