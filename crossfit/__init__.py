@@ -28,7 +28,7 @@ __all__ = [
 
 
 try:
-    from crossfit.backend.torch import HFModel, SentenceTransformerModel, TorchExactSearch
+    from crossfit.backend.torch import HFModel, HFGenerator, SentenceTransformerModel, TorchExactSearch
     from crossfit.dataset.base import IRDataset, MultiDataset
     from crossfit.dataset.load import load_dataset
     from crossfit.report.beir.embed import embed
@@ -44,6 +44,7 @@ try:
             "HFModel",
             "MultiDataset",
             "IRDataset",
+            "HFGenerator",
         ]
     )
 except ImportError as e:
