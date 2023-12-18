@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import os
+from typing import Optional
 
 import cudf
 from cudf.core.subword_tokenizer import SubwordTokenizer, _cast_to_appropriate_type
@@ -32,11 +33,11 @@ class Tokenizer(Op):
         cols=None,
         keep_cols=None,
         pre=None,
-        max_length: int = 1024,
+        max_length: Optional[int] = None,
     ):
         super().__init__(pre=pre, cols=cols, keep_cols=keep_cols)
         self.model = model
-        self.max_length = max_length
+        self.max_length = max_length or model.max_seq_length()
 
         # Make sure we download the tokenizer just once
         GPUTokenizer.from_pretrained(self.model)
