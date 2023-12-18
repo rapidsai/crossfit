@@ -36,7 +36,7 @@ def test_script_execution(script):
             "--batch-size",
             "8",
             "--partition-num",
-            "1000",
+            "100",
         ]
         runpy.run_path(
             tmp_path,
