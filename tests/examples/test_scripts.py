@@ -34,7 +34,7 @@ def test_script_execution(script):
             "--pool-size",
             "12GB",
             "--batch-size",
-            "32",
+            "8",
         ]
         runpy.run_path(
             tmp_path,
