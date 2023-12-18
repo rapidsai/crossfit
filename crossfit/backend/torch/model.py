@@ -27,6 +27,9 @@ class Model:
     def load_on_worker(self, worker):
         raise NotImplementedError()
 
+    def unload_from_worker(self, worker):
+        raise NotImplementedError()
+
     def call_on_worker(self, worker, *args, **kwargs):
         return worker.torch_model(*args, **kwargs)
 

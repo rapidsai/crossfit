@@ -45,6 +45,9 @@ class Embedder(Op):
     def setup(self):
         self.model.load_on_worker(self)
 
+    def teardown(self):
+        self.model.unload_from_worker(self)
+
     @torch.no_grad()
     def call(self, data, partition_info=None):
         index = data.index
