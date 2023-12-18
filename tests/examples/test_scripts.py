@@ -24,7 +24,18 @@ def test_script_execution(script):
         tmp_path = os.path.join(tmpdir, script)
         shutil.copy2(path, tmp_path)
         # argv[0] will be replaced by runpy
-        sys.argv = ["", "--dataset", "fiqa"]
+        sys.argv = [
+            "",
+            "--overwrite",
+            "--num-workers",
+            "1",
+            "--dataset",
+            "fiqa",
+            "--pool-size",
+            "12GB",
+            "--batch-size",
+            "32",
+        ]
         runpy.run_path(
             tmp_path,
             run_name="__main__",
