@@ -26,15 +26,16 @@ def test_script_execution(script):
         # argv[0] will be replaced by runpy
         sys.argv = [
             "",
-            "--overwrite",
             "--num-workers",
             "1",
             "--dataset",
-            "scifact",
+            "fiqa",
             "--pool-size",
             "12GB",
             "--batch-size",
             "8",
+            "--partition-num",
+            "1000",
         ]
         runpy.run_path(
             tmp_path,
