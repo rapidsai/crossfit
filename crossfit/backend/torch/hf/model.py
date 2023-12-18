@@ -41,6 +41,14 @@ class HFModel(Model):
         worker.torch_model = self.load_model(device)
         worker.cfg = self.load_cfg()
 
+    def unload_from_worker(self, worker):
+        if hasattr(worker, "torch_model"):
+            delattr(worker, "torch_model")
+        if hasattr(worker, "cfg"):
+            delattr(worker, "cfg")
+        gc.collect()
+        torch.cuda.empty_cache()
+
     def load_model(self, device="cuda"):
         return AutoModel.from_pretrained(self.path_or_name).to(device)
 
