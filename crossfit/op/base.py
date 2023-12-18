@@ -16,8 +16,10 @@ import inspect
 import uuid
 
 import dask.dataframe as dd
-from dask.distributed import get_worker
+from dask.distributed import get_worker, wait
 from tqdm.auto import tqdm
+
+from crossfit.backend.dask.cluster import global_dask_client
 
 
 class Op:
@@ -30,24 +32,48 @@ class Op:
     def setup(self):
         pass
 
+    def teardown(self):
+        pass
+
     def meta(self):
         return None
 
-    def setup_worker(self):
+    def get_worker(self):
         try:
             worker = get_worker()
         except ValueError:
             worker = self
 
-        self.worker_name = getattr(worker, "name", 0)
+        return worker
+
+    def _get_init_name(self):
         init_name = f"setup_done_{self.id}"
+        return init_name
+
+    def setup_worker(self):
+        worker = self.get_worker()
+
+        self.worker_name = getattr(worker, "name", 0)
+        init_name = self._get_init_name()
 
         if not hasattr(worker, init_name):
             self.setup()
             setattr(worker, init_name, True)
 
+    def teardown_worker(self):
+        worker = self.get_worker()
+
+        init_name = self._get_init_name()
+
+        if hasattr(worker, init_name):
+            delattr(worker, init_name)
+            self.teardown()
+
     def call_dask(self, data: dd.DataFrame):
         output = data.map_partitions(self, meta=self._build_dask_meta(data))
+
+        if global_dask_client():
+            wait(output)
 
         return output
 
@@ -74,7 +100,9 @@ class Op:
 
     def __call__(self, data, *args, partition_info=None, **kwargs):
         if isinstance(data, dd.DataFrame):
-            return self.call_dask(data, *args, **kwargs)
+            output = self.call_dask(data, *args, **kwargs)
+            self.teardown_worker()
+            return output
 
         self.setup_worker()
 
