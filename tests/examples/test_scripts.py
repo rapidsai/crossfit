@@ -30,7 +30,7 @@ def test_script_execution(script):
             "--num-workers",
             "1",
             "--dataset",
-            "fiqa",
+            "scifact",
             "--pool-size",
             "12GB",
             "--batch-size",
