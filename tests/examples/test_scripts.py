@@ -26,6 +26,7 @@ def test_script_execution(script):
         # argv[0] will be replaced by runpy
         sys.argv = [
             "",
+            "--overwrite",
             "--num-workers",
             "1",
             "--dataset",
