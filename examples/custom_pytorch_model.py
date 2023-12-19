@@ -111,10 +111,10 @@ def main():
 
     ddf = dask_cudf.read_parquet(args.input_parquet_path)
 
-    model = MyModel(CFG.model)
     labels = ["foo", "bar", "baz"]
 
     with cf.Distributed(rmm_pool_size=args.pool_size, n_workers=args.num_workers):
+        model = MyModel(CFG.model)
         pipe = op.Sequential(
             op.Tokenizer(model, cols=[args.input_column]),
             op.Predictor(model, sorted_data_loader=True, batch_size=args.batch_size),
