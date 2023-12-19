@@ -1,15 +1,14 @@
-import cudf
-import dask_cudf
+import argparse
 import os
+
+import dask_cudf
 import torch
 import torch.nn as nn
 from transformers import AutoConfig, AutoModel
-from transformers.models.deberta_v2 import DebertaV2TokenizerFast
 
 import crossfit as cf
 from crossfit import op
 from crossfit.backend.torch.hf.model import HFModel
-
 
 BATCH_SIZE = 16
 NUM_ROWS = 1_000
@@ -19,17 +18,15 @@ class CFG:
     model = "sentence-transformers/all-MiniLM-L6-v2"
     fc_dropout = 0.2
     max_len = 512
+    out_dim = 3
 
 
 class CustomModel(nn.Module):
     def __init__(self, cfg, config_path=None, pretrained=False):
         super().__init__()
         self.cfg = cfg
-        out_dim = 27
         if config_path is None:
-            self.config = AutoConfig.from_pretrained(
-                cfg.model, output_hidden_states=True
-            )
+            self.config = AutoConfig.from_pretrained(cfg.model, output_hidden_states=True)
         else:
             self.config = torch.load(config_path)
         if pretrained:
@@ -37,7 +34,7 @@ class CustomModel(nn.Module):
         else:
             self.model = AutoModel(self.config)
         self.fc_dropout = nn.Dropout(cfg.fc_dropout)
-        self.fc = nn.Linear(self.config.hidden_size, out_dim)
+        self.fc = nn.Linear(self.config.hidden_size, self.cfg.out_dim)
         self._init_weights(self.fc)
 
     def _init_weights(self, module):
@@ -69,14 +66,17 @@ class CustomModel(nn.Module):
 def load_model(CFG, device, model_path):
     model = CustomModel(CFG, config_path=None, pretrained=True)
     model = model.to(device)
-    #sd = torch.load(os.path.join(model_path), map_location="cpu")
-    #sd = {k[7:] if k.startswith("module.") else k: sd[k] for k in sd.keys()}
-    #model.load_state_dict(sd, strict=True)
+
+    if os.path.exists(model_path):
+        sd = torch.load(os.path.join(model_path), map_location="cpu")
+        sd = {k[7:] if k.startswith("module.") else k: sd[k] for k in sd.keys()}
+        model.load_state_dict(sd, strict=True)
+
     model.eval()
     return model
 
 
-class CustomCFModel(HFModel):
+class MyModel(HFModel):
     def load_model(self, device="cuda"):
         return load_model(CFG, device=device, model_path=self.path_or_name)
 
@@ -84,31 +84,46 @@ class CustomCFModel(HFModel):
         return AutoConfig.from_pretrained(self.path_or_name)
 
 
+def parse_arguments():
+    parser = argparse.ArgumentParser(description="BEIR evaluation using Crossfit")
+    parser.add_argument("input_parquet_path", help="Input parquet file")
+    parser.add_argument("output_parquet_path", help="Output file")
+    parser.add_argument(
+        "--input-column", type=str, default="text", help="Column name in input dataframe"
+    )
+    parser.add_argument("--pool-size", type=str, default="12GB", help="RMM pool size")
+    parser.add_argument("--num-workers", type=int, default=1, help="Number of GPUs")
+    parser.add_argument(
+        "--model-name",
+        type=str,
+        default="sentence-transformers/all-MiniLM-L6-v2",
+        help="Model name",
+    )
+    parser.add_argument("--batch-size", type=int, default=64, help="Batch size")
+    parser.add_argument("--partitions", type=int, default=2, help="Number of partitions")
+
+    args = parser.parse_args()
+    return args
+
+
 def main():
+    args = parse_arguments()
 
-    df = cudf.DataFrame({"String": ["str1"] * NUM_ROWS})
-    #ddf = dask_cudf.from_cudf(df, npartitions=2)
-    ddf = dask_cudf.from_cudf(df, npartitions=1)
-    ddf.to_parquet("/tmp/bb-string-df.parquet")
+    ddf = dask_cudf.read_parquet(args.input_parquet_path)
 
-    #model = cf.SentenceTransformerModel("sentence-transformers/all-MiniLM-L6-v2")
-    model = CustomCFModel("sentence-transformers/all-MiniLM-L6-v2")
-    labels = [chr(i + ord("a")) for i in range(27)]
+    model = MyModel(CFG.model)
+    labels = ["foo", "bar", "baz"]
 
-    #with cf.Distributed(rmm_pool_size="25GB", n_workers=2):
-    with cf.Distributed(rmm_pool_size="25GB", n_workers=1):
-        ddf = dask_cudf.read_parquet("/tmp/bb-string-df.parquet")
+    with cf.Distributed(rmm_pool_size=args.pool_size, n_workers=args.num_workers):
         pipe = op.Sequential(
-            op.Tokenizer(model, cols=["String"]),
-            #op.Embedder(model, sorted_data_loader=True, batch_size=BATCH_SIZE),
-            op.Predictor(model, sorted_data_loader=True, batch_size=BATCH_SIZE),
-            op.Labeler(labels, cols=["preds"])
+            op.Tokenizer(model, cols=[args.input_column]),
+            op.Predictor(model, sorted_data_loader=True, batch_size=args.batch_size),
+            op.Labeler(labels, cols=["preds"]),
+            repartition=args.partitions,
         )
         outputs = pipe(ddf)
-        outputs = outputs.compute()
+        outputs.to_parquet(args.output_parquet_path)
 
-    breakpoint()
-    
 
 if __name__ == "__main__":
     main()
