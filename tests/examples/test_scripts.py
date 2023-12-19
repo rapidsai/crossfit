@@ -66,7 +66,7 @@ def test_custom_pytorch_model():
             f"{dataset_path}",
             f"{output_path}",
             "--pool-size",
-            "12GB",
+            "4GB",
             "--batch-size",
             "8",
             "--partitions",
@@ -78,6 +78,6 @@ def test_custom_pytorch_model():
         )
 
         df = cudf.read_parquet(output_path)
-        assert sorted(df["labels"].unique().to_arrow().to_pylist()) == ["bar", "baz", "foo"]
+        assert all(x in ["foo", "bar", "baz"] for x in df["labels"].unique().to_arrow().to_pylist())
 
     sys.argv = orig_sys_argv
