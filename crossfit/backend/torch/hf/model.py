@@ -102,7 +102,7 @@ class HFModel(Model):
                     y.append(memory_used)
 
                 except RuntimeError as e:
-                    if "out of memory" in str(e):
+                    if "out of memory" in str(e) or "out_of_memory" in str(e):
                         pass
                     else:
                         raise e
