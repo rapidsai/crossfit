@@ -13,11 +13,11 @@
 # limitations under the License.
 
 import gc
+from typing import Optional
 
 import cudf
 import cupy as cp
 import torch
-from typing import Optional
 
 from crossfit.backend.cudf.series import (
     create_list_series_from_2d_ar,

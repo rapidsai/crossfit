@@ -12,14 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import gc
-
-import cudf
-import cupy as cp
-import torch
-
-from crossfit.backend.cudf.series import create_list_series_from_2d_ar
-from crossfit.backend.torch.loader import DEFAULT_BATCH_SIZE, InMemoryLoader, SortedSeqLoader
+from crossfit.backend.torch.loader import DEFAULT_BATCH_SIZE
 from crossfit.backend.torch.model import Model
 from crossfit.backend.torch.op.base import Predictor
 
