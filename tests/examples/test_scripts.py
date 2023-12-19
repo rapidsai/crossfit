@@ -70,7 +70,7 @@ def test_custom_pytorch_model():
             "--batch-size",
             "8",
             "--partitions",
-            "10",
+            "20",
         ]
         runpy.run_path(
             tmp_path,
