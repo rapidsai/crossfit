@@ -63,8 +63,8 @@ class CustomModel(nn.Module):
 
 
 # The user must provide a load_model function
-def load_model(CFG, device, model_path):
-    model = CustomModel(CFG, config_path=None, pretrained=True)
+def load_model(cfg, device, model_path):
+    model = CustomModel(cfg, config_path=None, pretrained=True)
     model = model.to(device)
 
     if os.path.exists(model_path):
@@ -85,7 +85,7 @@ class MyModel(HFModel):
 
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(description="BEIR evaluation using Crossfit")
+    parser = argparse.ArgumentParser(description="PyTorch Model Predictions using Crossfit")
     parser.add_argument("input_parquet_path", help="Input parquet file")
     parser.add_argument("output_parquet_path", help="Output file")
     parser.add_argument(
