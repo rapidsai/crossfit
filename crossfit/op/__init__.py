@@ -31,9 +31,25 @@ except ImportError:
 
 
 try:
+    from crossfit.backend.torch.op.base import Predictor
+
+    __all__.append("Predictor")
+except ImportError:
+    pass
+
+
+try:
     from crossfit.op.tokenize import Tokenizer
 
     __all__.append("Tokenizer")
+except ImportError:
+    pass
+
+
+try:
+    from crossfit.op.label import Labeler
+
+    __all__.append("Labeler")
 except ImportError:
     pass
 

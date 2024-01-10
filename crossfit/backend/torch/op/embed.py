@@ -12,19 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import gc
-
-import cudf
-import cupy as cp
-import torch
-
-from crossfit.backend.cudf.series import create_list_series_from_2d_ar
-from crossfit.backend.torch.loader import DEFAULT_BATCH_SIZE, InMemoryLoader, SortedSeqLoader
+from crossfit.backend.torch.loader import DEFAULT_BATCH_SIZE
 from crossfit.backend.torch.model import Model
-from crossfit.op.base import Op
+from crossfit.backend.torch.op.base import Predictor
 
 
-class Embedder(Op):
+class Embedder(Predictor):
     def __init__(
         self,
         model: Model,
@@ -34,51 +27,17 @@ class Embedder(Op):
         batch_size: int = DEFAULT_BATCH_SIZE,
         max_mem: str = "16GB",
         sorted_data_loader: bool = True,
+        model_output_col: str = "sentence_embedding",
+        pred_output_col: str = "embedding",
     ):
-        super().__init__(pre=pre, cols=cols, keep_cols=keep_cols)
-        self.model = model
-        self.batch_size = batch_size
-        self.max_mem = max_mem
-        self.max_mem_gb = int(self.max_mem.split("GB")[0]) / 2.5
-        self.sorted_data_loader = sorted_data_loader
-
-    def setup(self):
-        self.model.load_on_worker(self)
-
-    def teardown(self):
-        self.model.unload_from_worker(self)
-
-    @torch.no_grad()
-    def call(self, data, partition_info=None):
-        index = data.index
-        if self.sorted_data_loader:
-            loader = SortedSeqLoader(
-                data[["input_ids", "attention_mask"]],
-                self.model,
-                progress_bar=self.create_progress_bar(len(data), partition_info),
-                initial_batch_size=self.batch_size,
-            )
-        else:
-            loader = InMemoryLoader(
-                data[["input_ids", "attention_mask"]],
-                batch_size=self.batch_size,
-                progress_bar=self.create_progress_bar(len(data), partition_info),
-                max_seq_len=self.model.max_seq_length(),
-            )
-
-        all_embeddings_ls = []
-        for output in loader.map(self.model.get_model(self)):
-            all_embeddings_ls.append(output["sentence_embedding"])
-
-        out = cudf.DataFrame(index=index)
-        embedding = cp.asarray(torch.vstack(all_embeddings_ls))
-        _index = loader.sort_column(index.values) if self.sorted_data_loader else index
-        out["embedding"] = create_list_series_from_2d_ar(embedding, _index)
-
-        gc.collect()
-        torch.cuda.empty_cache()
-
-        return out
-
-    def meta(self):
-        return {"embedding": "float32"}
+        super().__init__(
+            model,
+            pre=pre,
+            cols=cols,
+            keep_cols=keep_cols,
+            batch_size=batch_size,
+            max_mem=max_mem,
+            sorted_data_loader=sorted_data_loader,
+            model_output_col=model_output_col,
+            pred_output_col=pred_output_col,
+        )
