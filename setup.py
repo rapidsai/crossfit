@@ -2,7 +2,7 @@ import codecs
 import itertools
 import os
 
-from setuptools import setup
+from setuptools import find_packages, setup
 
 VERSION = "0.0.1"
 
@@ -43,16 +43,17 @@ setup(
     description="Metric calculation library",
     long_description=get_long_description(),
     long_description_content_type="text/markdown",
-    author="Marc Romeyn",
-    url="https://github.com/marcromeyn/crossfit",
+    author="NVIDIA Corporation",
+    url="https://github.com/NVIDIA-Merlin/crossfit",
     project_urls={
-        "Issues": "https://github.com/marcromeyn/crossfit/issues",
-        "CI": "https://github.com/marcromeyn/crossfit/actions",
-        "Changelog": "https://github.com/marcromeyn/crossfit/releases",
+        "Issues": "https://github.com/NVIDIA-Merlin/crossfit/issues",
+        "CI": "https://github.com/NVIDIA-Merlin/crossfit/actions",
+        "Changelog": "https://github.com/NVIDIA-Merlin/crossfit/releases",
     },
     license="Apache License, Version 2.0",
     version=VERSION,
-    packages=["crossfit"],
+    packages=find_packages(),
+    package_dir={"crossfit": "crossfit"},
     install_requires=requirements["base"],
     include_package_data=True,
     extras_require={
