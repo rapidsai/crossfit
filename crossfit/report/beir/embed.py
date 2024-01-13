@@ -52,7 +52,6 @@ def embed(
         else:
             return EmbeddingDatataset.from_dir(emb_dir, data=dataset)
 
-    dfs = []
     for dtype in ["query", "item"]:
         if os.path.exists(os.path.join(emb_dir, dtype)):
             continue
@@ -76,7 +75,6 @@ def embed(
         embeddings = pipe(df)
 
         embeddings.to_parquet(os.path.join(emb_dir, dtype))
-        dfs.append(df)
 
     output: EmbeddingDatataset = EmbeddingDatataset.from_dir(emb_dir, data=dataset)
     pred_path = os.path.join(emb_dir, "predictions")

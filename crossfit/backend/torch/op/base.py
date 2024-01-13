@@ -50,9 +50,6 @@ class Predictor(Op):
         self.model_output_col = model_output_col
         self.pred_output_col = pred_output_col
 
-    def setup(self):
-        self.model.load_on_worker(self)
-
     @torch.no_grad()
     def call(self, data, partition_info=None):
         index = data.index
@@ -72,7 +69,7 @@ class Predictor(Op):
             )
 
         all_outputs_ls = []
-        for output in loader.map(self.model.get_model(self)):
+        for output in loader.map(self.model.get_model(self.get_worker())):
             if isinstance(output, dict):
                 if self.model_output_col not in output:
                     raise ValueError(f"Column '{self.model_outupt_col}' not found in model output.")

@@ -34,6 +34,8 @@ class Model:
         return worker.torch_model(*args, **kwargs)
 
     def get_model(self, worker):
+        if not hasattr(worker, "torch_model"):
+            self.load_on_worker(worker)
         return worker.torch_model
 
     def estimate_memory(self, max_num_tokens: int, batch_size: int) -> int:
