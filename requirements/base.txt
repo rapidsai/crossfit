@@ -12,6 +12,3 @@ typing_utils
 tqdm
 rich
 pynvml>=11.0.0,<11.5
-cudf-cu12==23.12
-dask-cuda==23.12
-dask-cudf-cu12==23.12

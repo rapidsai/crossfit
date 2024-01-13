@@ -2,7 +2,8 @@ FROM nvcr.io/nvidia/pytorch:23.10-py3
 
 COPY . /tmp/crossfit/
 RUN cd /tmp/crossfit && \
-    python3 -m pip install .[pytorch-dev] --no-cache-dir --extra-index-url https://pypi.nvidia.com && \
+    python3 -m pip install .[pytorch-dev] && \
+    python3 -m pip install -r requirements/gpu.txt --no-cache-dir --extra-index-url https://pypi.nvidia.com && \
     rm -r /tmp/crossfit
 
 ENV CF_HOME /root/.cf
