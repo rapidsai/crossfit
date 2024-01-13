@@ -45,7 +45,7 @@ class Tokenizer(Op):
         worker = self.get_worker()
 
         if hasattr(worker, "tokenizer"):
-            tokernizer = worker.tokenizer
+            tokenizer = worker.tokenizer
         else:
             tokenizer = GPUTokenizer.from_pretrained(self.model)
             worker.tokenizer = tokenizer

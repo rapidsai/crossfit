@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import inspect
-import uuid
 
 import dask.dataframe as dd
 from dask.distributed import get_worker, wait
@@ -81,7 +80,7 @@ class Op:
             self.teardown()
             return output
 
-        #self.setup()
+        # self.setup()
 
         if self.pre is not None:
             params = inspect.signature(self.pre).parameters
