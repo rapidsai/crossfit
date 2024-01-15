@@ -80,7 +80,7 @@ class Op:
             self.teardown()
             return output
 
-        # self.setup()
+        self.setup()
 
         if self.pre is not None:
             params = inspect.signature(self.pre).parameters

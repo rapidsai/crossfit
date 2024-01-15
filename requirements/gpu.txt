@@ -1,3 +1,0 @@
-cudf-cu12>=23.12
-dask-cuda>=23.12
-dask-cudf-cu12>=23.12
