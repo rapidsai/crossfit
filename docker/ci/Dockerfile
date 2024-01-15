@@ -1,8 +1,9 @@
-FROM nvcr.io/nvidia/pytorch:23.09-py3
+FROM nvcr.io/nvidia/nemo:23.10
 
 COPY . /tmp/crossfit/
 RUN cd /tmp/crossfit && \
-    pip install .[pytorch-dev] && \
+    python3 -m pip install .[pytorch-dev] && \
+    python3 -m pip install beir && \
     rm -r /tmp/crossfit
 
 ENV CF_HOME /root/.cf

@@ -39,14 +39,18 @@ class Tokenizer(Op):
         self.model = model
         self.max_length = max_length or model.max_seq_length()
 
-        # Make sure we download the tokenizer just once
-        GPUTokenizer.from_pretrained(self.model)
-
-    def setup(self):
-        self.tokenizer = GPUTokenizer.from_pretrained(self.model)
+        self.setup()
 
     def tokenize_strings(self, sentences, max_length=None):
-        return self.tokenizer(
+        worker = self.get_worker()
+
+        if hasattr(worker, "tokenizer"):
+            tokenizer = worker.tokenizer
+        else:
+            tokenizer = GPUTokenizer.from_pretrained(self.model)
+            worker.tokenizer = tokenizer
+
+        return worker.tokenizer(
             sentences,
             max_length=max_length or self.max_length,
             max_num_rows=len(sentences),
@@ -55,6 +59,11 @@ class Tokenizer(Op):
             truncation=True,
             add_special_tokens=True,
         )
+
+    def teardown(self):
+        worker = self.get_worker()
+        if hasattr(worker, "tokenizer"):
+            delattr(worker, "tokenizer")
 
     def call_column(self, data):
         if isinstance(data, cudf.DataFrame):

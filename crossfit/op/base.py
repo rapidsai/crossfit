@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import inspect
-import uuid
 
 import dask.dataframe as dd
 from dask.distributed import get_worker, wait
@@ -27,7 +26,7 @@ class Op:
         self.pre = pre
         self.cols = cols
         self.keep_cols = keep_cols or []
-        self.id = str(uuid.uuid4())
+        self.worker_name = getattr(self.get_worker(), "name", 0)
 
     def setup(self):
         pass
@@ -45,29 +44,6 @@ class Op:
             worker = self
 
         return worker
-
-    def _get_init_name(self):
-        init_name = f"setup_done_{self.id}"
-        return init_name
-
-    def setup_worker(self):
-        worker = self.get_worker()
-
-        self.worker_name = getattr(worker, "name", 0)
-        init_name = self._get_init_name()
-
-        if not hasattr(worker, init_name):
-            self.setup()
-            setattr(worker, init_name, True)
-
-    def teardown_worker(self):
-        worker = self.get_worker()
-
-        init_name = self._get_init_name()
-
-        if hasattr(worker, init_name):
-            delattr(worker, init_name)
-            self.teardown()
 
     def call_dask(self, data: dd.DataFrame):
         output = data.map_partitions(self, meta=self._build_dask_meta(data))
@@ -101,10 +77,10 @@ class Op:
     def __call__(self, data, *args, partition_info=None, **kwargs):
         if isinstance(data, dd.DataFrame):
             output = self.call_dask(data, *args, **kwargs)
-            self.teardown_worker()
+            self.teardown()
             return output
 
-        self.setup_worker()
+        self.setup()
 
         if self.pre is not None:
             params = inspect.signature(self.pre).parameters
