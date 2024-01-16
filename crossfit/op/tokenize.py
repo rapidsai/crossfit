@@ -45,7 +45,7 @@ class Tokenizer(Op):
     ):
         super().__init__(pre=pre, cols=cols, keep_cols=keep_cols)
         self.model = model
-        self.tokenizer_type = tokenizer_type
+        self.tokenizer_type = self._convert_to_tokenizer_type(tokenizer_type)
         self.max_length = max_length or model.max_seq_length()
 
         if self.tokenizer_type == TokenizerType.SUBWORD:
@@ -53,7 +53,7 @@ class Tokenizer(Op):
             GPUTokenizer.from_pretrained(self.model)
 
     def tokenize_strings(self, sentences, max_length=None):
-        if self.tokenizer_type in ["sentencepiece", "spm", TokenizerType.SENTENCE_PIECE]:
+        if self.tokenizer_type == TokenizerType.SENTENCE_PIECE:
             tokenizer = self.model.load_tokenizer()
 
             if isinstance(sentences, cudf.Series):
@@ -70,8 +70,7 @@ class Tokenizer(Op):
                     return_token_type_ids=False,
                 )
             return tokenized_data
-
-        elif self.tokenizer_type in ["subword", "bert", TokenizerType.SUBWORD]:
+        elif self.tokenizer_type == TokenizerType.SUBWORD:
             worker = self.get_worker()
 
             if hasattr(worker, "tokenizer"):
@@ -159,6 +158,16 @@ class Tokenizer(Op):
             return suffix
 
         return f"{col_name}_{suffix}"
+
+    def _convert_to_tokenizer_type(
+        self,
+        tokenizer_type: Union[TokenizerType, str],
+    ) -> TokenizerType:
+        if tokenizer_type in ["sentencepiece", "spm", TokenizerType.SENTENCE_PIECE]:
+            tokenizer_type = TokenizerType.SENTENCE_PIECE
+        elif tokenizer_type in ["subword", "bert", TokenizerType.SUBWORD]:
+            tokenizer_type = TokenizerType.SUBWORD
+        return tokenizer_type
 
 
 class GPUTokenizer(SubwordTokenizer):
