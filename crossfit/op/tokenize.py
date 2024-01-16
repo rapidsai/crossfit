@@ -11,11 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 import os
-from typing import Optional
+from enum import Enum
+from typing import Optional, Union
 
 import cudf
+import cupy as cp
+import torch
 from cudf.core.subword_tokenizer import SubwordTokenizer, _cast_to_appropriate_type
 from cudf.utils.hash_vocab_utils import hash_vocab
 from transformers import AutoConfig, AutoTokenizer
@@ -26,10 +28,16 @@ from crossfit.dataset.home import CF_HOME
 from crossfit.op.base import Op
 
 
+class TokenizerType(Enum):
+    SUBWORD = 1
+    SENTENCE_PIECE = 2
+
+
 class Tokenizer(Op):
     def __init__(
         self,
         model: Model,
+        tokenizer_type: Union[TokenizerType, str] = TokenizerType.SUBWORD,
         cols=None,
         keep_cols=None,
         pre=None,
@@ -37,28 +45,52 @@ class Tokenizer(Op):
     ):
         super().__init__(pre=pre, cols=cols, keep_cols=keep_cols)
         self.model = model
+        self.tokenizer_type = tokenizer_type
         self.max_length = max_length or model.max_seq_length()
 
-        self.setup()
+        if self.tokenizer_type == TokenizerType.SUBWORD:
+            # Make sure we download the tokenizer just once
+            GPUTokenizer.from_pretrained(self.model)
 
     def tokenize_strings(self, sentences, max_length=None):
-        worker = self.get_worker()
+        if self.tokenizer_type in ["sentencepiece", "spm", TokenizerType.SENTENCE_PIECE]:
+            tokenizer = self.model.load_tokenizer()
 
-        if hasattr(worker, "tokenizer"):
-            tokenizer = worker.tokenizer
+            if isinstance(sentences, cudf.Series):
+                sentences = sentences.to_arrow().to_pylist()
+
+            with torch.no_grad():
+                tokenized_data = tokenizer.batch_encode_plus(
+                    sentences,
+                    max_length=max_length or self.max_length,
+                    return_tensors="pt",
+                    add_special_tokens=True,
+                    padding="max_length",
+                    truncation=True,
+                    return_token_type_ids=False,
+                )
+            return tokenized_data
+
+        elif self.tokenizer_type in ["subword", "bert", TokenizerType.SUBWORD]:
+            worker = self.get_worker()
+
+            if hasattr(worker, "tokenizer"):
+                tokenizer = worker.tokenizer
+            else:
+                tokenizer = GPUTokenizer.from_pretrained(self.model)
+                worker.tokenizer = tokenizer
+
+            return worker.tokenizer(
+                sentences,
+                max_length=max_length or self.max_length,
+                max_num_rows=len(sentences),
+                padding="max_length",
+                return_tensors="cp",
+                truncation=True,
+                add_special_tokens=True,
+            )
         else:
-            tokenizer = GPUTokenizer.from_pretrained(self.model)
-            worker.tokenizer = tokenizer
-
-        return worker.tokenizer(
-            sentences,
-            max_length=max_length or self.max_length,
-            max_num_rows=len(sentences),
-            padding="max_length",
-            return_tensors="cp",
-            truncation=True,
-            add_special_tokens=True,
-        )
+            raise ValueError(f"Unexpected tokenizer type: {self.tokenizer_type}")
 
     def teardown(self):
         worker = self.get_worker()
@@ -178,6 +210,9 @@ class GPUTokenizer(SubwordTokenizer):
 
 
 def clip_tokens(token_o, max_length, return_type="pt"):
+    if not isinstance(token_o["input_ids"], cp.ndarray):
+        token_o = {k: cp.asarray(v) for k, v in token_o.items()}
+
     clip_len = max_length - int((token_o["input_ids"][:, ::-1] != 0).argmax(1).min())
     token_o["input_ids"] = _cast_to_appropriate_type(
         token_o["input_ids"][:, :clip_len], return_type
