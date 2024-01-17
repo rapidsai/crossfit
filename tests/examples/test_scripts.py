@@ -8,6 +8,10 @@ import shutil  # noqa: E402
 import sys  # noqa: E402
 import tempfile  # noqa: E402
 
+# from uuid import uuid4  # noqa: E402
+
+# from crossfit.dataset.load import load_dataset  # noqa: E402
+
 examples_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "examples")
 
 

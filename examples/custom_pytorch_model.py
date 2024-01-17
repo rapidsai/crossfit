@@ -1,5 +1,6 @@
 import argparse
 import os
+from dataclasses import dataclass
 
 import dask_cudf
 import torch
@@ -14,27 +15,28 @@ BATCH_SIZE = 16
 NUM_ROWS = 1_000
 
 
-class CFG:
-    model = "sentence-transformers/all-MiniLM-L6-v2"
+@dataclass
+class Config:
+    model = "microsoft/deberta-v3-base"
     fc_dropout = 0.2
     max_len = 512
     out_dim = 3
 
 
 class CustomModel(nn.Module):
-    def __init__(self, cfg, config_path=None, pretrained=False):
+    def __init__(self, config, config_path=None, pretrained=False):
         super().__init__()
-        self.cfg = cfg
+        self.config = config
         if config_path is None:
-            self.config = AutoConfig.from_pretrained(cfg.model, output_hidden_states=True)
+            self.config = AutoConfig.from_pretrained(config.model, output_hidden_states=True)
         else:
             self.config = torch.load(config_path)
         if pretrained:
-            self.model = AutoModel.from_pretrained(cfg.model, config=self.config)
+            self.model = AutoModel.from_pretrained(config.model, config=self.config)
         else:
             self.model = AutoModel(self.config)
-        self.fc_dropout = nn.Dropout(cfg.fc_dropout)
-        self.fc = nn.Linear(self.config.hidden_size, self.cfg.out_dim)
+        self.fc_dropout = nn.Dropout(config.fc_dropout)
+        self.fc = nn.Linear(self.config.hidden_size, config.out_dim)
         self._init_weights(self.fc)
 
     def _init_weights(self, module):
@@ -63,8 +65,8 @@ class CustomModel(nn.Module):
 
 
 # The user must provide a load_model function
-def load_model(cfg, device, model_path):
-    model = CustomModel(cfg, config_path=None, pretrained=True)
+def load_model(config, device, model_path):
+    model = CustomModel(config, config_path=None, pretrained=True)
     model = model.to(device)
 
     if os.path.exists(model_path):
@@ -77,10 +79,14 @@ def load_model(cfg, device, model_path):
 
 
 class MyModel(HFModel):
-    def load_model(self, device="cuda"):
-        return load_model(CFG, device=device, model_path=self.path_or_name)
+    def __init__(self, config):
+        self.config = config
+        super().__init__(self.config.model)
 
-    def load_cfg(self):
+    def load_model(self, model_path=None, device="cuda"):
+        return load_model(self.config, device=device, model_path=model_path or self.path_or_name)
+
+    def load_config(self):
         return AutoConfig.from_pretrained(self.path_or_name)
 
 
@@ -114,12 +120,13 @@ def main():
     labels = ["foo", "bar", "baz"]
 
     with cf.Distributed(rmm_pool_size=args.pool_size, n_workers=args.num_workers):
-        model = MyModel(CFG.model)
+        model = MyModel(Config)
         pipe = op.Sequential(
-            op.Tokenizer(model, cols=[args.input_column]),
+            op.Tokenizer(model, cols=[args.input_column], tokenizer_type="sentencepiece"),
             op.Predictor(model, sorted_data_loader=True, batch_size=args.batch_size),
             op.Labeler(labels, cols=["preds"]),
             repartition=args.partitions,
+            keep_cols=[args.input_column],
         )
         outputs = pipe(ddf)
         outputs.to_parquet(args.output_parquet_path)
