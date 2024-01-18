@@ -22,7 +22,7 @@ from cudf.core.subword_tokenizer import SubwordTokenizer, _cast_to_appropriate_t
 from cudf.utils.hash_vocab_utils import hash_vocab
 from transformers import AutoConfig, AutoTokenizer
 
-from crossfit.backend.cudf.series import create_list_series_from_2d_ar
+from crossfit.backend.cudf.series import create_list_series_from_1d_or_2d_ar
 from crossfit.backend.torch.model import Model
 from crossfit.dataset.home import CF_HOME
 from crossfit.op.base import Op
@@ -63,10 +63,10 @@ class Tokenizer(Op):
                 tokenized_data = tokenizer.batch_encode_plus(
                     sentences,
                     max_length=max_length or self.max_length,
-                    return_tensors="pt",
-                    add_special_tokens=True,
                     padding="max_length",
+                    return_tensors="pt",
                     truncation=True,
+                    add_special_tokens=True,
                     return_token_type_ids=False,
                 )
             return tokenized_data
@@ -106,10 +106,10 @@ class Tokenizer(Op):
         tokenized_data = self.tokenize_strings(text).copy()
         tokenized_data = clip_tokens(tokenized_data, max_length=self.max_length, return_type="cp")
 
-        input_ids = create_list_series_from_2d_ar(
+        input_ids = create_list_series_from_1d_or_2d_ar(
             tokenized_data["input_ids"].astype("int32"), data.index
         )
-        attention_mask = create_list_series_from_2d_ar(
+        attention_mask = create_list_series_from_1d_or_2d_ar(
             tokenized_data["attention_mask"].astype("int32"), data.index
         )
 

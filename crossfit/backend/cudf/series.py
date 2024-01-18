@@ -17,11 +17,17 @@ import cupy as cp
 from cudf.core.column import as_column
 
 
-def create_list_series_from_2d_ar(ar, index):
+def create_list_series_from_1d_or_2d_ar(ar, index):
     """
     Create a cudf list series  from 2d arrays
     """
-    n_rows, n_cols = ar.shape
+    if len(ar.shape) == 1:
+        n_rows, *_ = ar.shape
+        n_cols = 1
+    elif len(ar.shape) == 2:
+        n_rows, n_cols = ar.shape
+    else:
+        return RuntimeError(f"Unexpected input shape: {ar.shape}")
     data = as_column(ar.flatten())
     offset_col = as_column(cp.arange(start=0, stop=len(data) + 1, step=n_cols), dtype="int32")
     mask_col = cp.full(shape=n_rows, fill_value=True)

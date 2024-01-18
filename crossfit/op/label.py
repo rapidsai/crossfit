@@ -34,7 +34,7 @@ class Labeler(Op):
             )
 
         scores = data.list.leaves.values.reshape(-1, num_labels)
-        classes = scores.argmax(1)
+        classes = scores.argmax(-1)
         labels_map = {i: self.labels[i] for i in range(len(self.labels))}
 
         return cudf.Series(classes).map(labels_map)

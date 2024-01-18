@@ -20,7 +20,7 @@ import cupy as cp
 import torch
 
 from crossfit.backend.cudf.series import (
-    create_list_series_from_2d_ar,
+    create_list_series_from_1d_or_2d_ar,
     create_nested_list_series_from_3d_ar,
 )
 from crossfit.backend.torch.loader import DEFAULT_BATCH_SIZE, InMemoryLoader, SortedSeqLoader
@@ -33,6 +33,7 @@ class Predictor(Op):
         self,
         model: Model,
         pre=None,
+        post=None,
         cols=False,
         keep_cols=None,
         batch_size: int = DEFAULT_BATCH_SIZE,
@@ -43,6 +44,7 @@ class Predictor(Op):
     ):
         super().__init__(pre=pre, cols=cols, keep_cols=keep_cols)
         self.model = model
+        self.post = post
         self.batch_size = batch_size
         self.max_mem = max_mem
         self.max_mem_gb = int(self.max_mem.split("GB")[0]) / 2.5
@@ -73,15 +75,18 @@ class Predictor(Op):
             if isinstance(output, dict):
                 if self.model_output_col not in output:
                     raise ValueError(f"Column '{self.model_outupt_col}' not found in model output.")
-                all_outputs_ls.append(output[self.model_output_col])
-            else:
-                all_outputs_ls.append(output)
+                output = output[self.model_output_col]
+
+            if self.post is not None:
+                output = self.post(output)
+
+            all_outputs_ls.append(output)
 
         out = cudf.DataFrame(index=index)
-        outputs = cp.asarray(torch.vstack(all_outputs_ls))
+        outputs = cp.asarray(torch.cat(all_outputs_ls, dim=0))
         _index = loader.sort_column(index.values) if self.sorted_data_loader else index
-        if len(outputs.shape) == 2:
-            out[self.pred_output_col] = create_list_series_from_2d_ar(outputs, _index)
+        if len(outputs.shape) <= 2:
+            out[self.pred_output_col] = create_list_series_from_1d_or_2d_ar(outputs, _index)
         elif len(outputs.shape) == 3:
             out[self.pred_output_col] = create_nested_list_series_from_3d_ar(outputs, _index)
         else:
