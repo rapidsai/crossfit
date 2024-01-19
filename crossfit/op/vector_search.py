@@ -22,7 +22,7 @@ from dask import delayed
 from dask_cudf import from_delayed
 from pylibraft.neighbors.brute_force import knn
 
-from crossfit.backend.cudf.series import create_list_series_from_2d_ar
+from crossfit.backend.cudf.series import create_list_series_from_1d_or_2d_ar
 from crossfit.backend.dask.cluster import global_dask_client
 from crossfit.dataset.base import EmbeddingDatataset
 from crossfit.op.base import Op
@@ -82,8 +82,10 @@ class ExactSearchOp(VectorSearchOp):
         df = cudf.DataFrame(index=queries.index)
         df["query-id"] = queries["_id"]
         df["query-index"] = queries["index"]
-        df["corpus-index"] = create_list_series_from_2d_ar(items["index"].values[indices], df.index)
-        df["score"] = create_list_series_from_2d_ar(results, df.index)
+        df["corpus-index"] = create_list_series_from_1d_or_2d_ar(
+            items["index"].values[indices], df.index
+        )
+        df["score"] = create_list_series_from_1d_or_2d_ar(results, df.index)
 
         return df
 
@@ -105,8 +107,8 @@ class ExactSearchOp(VectorSearchOp):
         reduced = cudf.DataFrame(index=grouped.index)
         reduced["query-index"] = grouped["query-index"]
         reduced["query-id"] = grouped["query-id"]
-        reduced["score"] = create_list_series_from_2d_ar(topk_scores, reduced.index)
-        reduced["corpus-index"] = create_list_series_from_2d_ar(topk_indices, reduced.index)
+        reduced["score"] = create_list_series_from_1d_or_2d_ar(topk_scores, reduced.index)
+        reduced["corpus-index"] = create_list_series_from_1d_or_2d_ar(topk_indices, reduced.index)
 
         reduced = reduced.set_index("query-index", drop=False)
 
@@ -235,8 +237,8 @@ class CuMLVectorSearch(VectorSearchOp):
 
             df = cudf.DataFrame()
             df.index = part["index"].values
-            df["corpus-index"] = create_list_series_from_2d_ar(indices, df.index)
-            df["score"] = create_list_series_from_2d_ar(distances, df.index)
+            df["corpus-index"] = create_list_series_from_1d_or_2d_ar(indices, df.index)
+            df["score"] = create_list_series_from_1d_or_2d_ar(distances, df.index)
 
             return df
 
