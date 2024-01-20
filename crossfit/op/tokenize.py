@@ -42,11 +42,13 @@ class Tokenizer(Op):
         keep_cols=None,
         pre=None,
         max_length: Optional[int] = None,
+        max_chars: Optional[int] = None,
     ):
         super().__init__(pre=pre, cols=cols, keep_cols=keep_cols)
         self.model = model
         self.tokenizer_type = self._convert_to_tokenizer_type(tokenizer_type)
         self.max_length = max_length or model.max_seq_length()
+        self.max_chars = max_chars
 
         if self.tokenizer_type == TokenizerType.SUBWORD:
             # Make sure we download the tokenizer just once
@@ -103,6 +105,10 @@ class Tokenizer(Op):
             )
 
         text = data.replace("", "unknown")
+
+        if self.max_chars:
+            text = text.str.slice(0, self.max_chars)
+
         tokenized_data = self.tokenize_strings(text).copy()
         tokenized_data = clip_tokens(tokenized_data, max_length=self.max_length, return_type="cp")
 
