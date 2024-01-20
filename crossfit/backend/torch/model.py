@@ -11,8 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
 class Model:
     def __init__(self, path_or_name: str, max_mem_gb: int = 16):
         self.path_or_name = path_or_name
