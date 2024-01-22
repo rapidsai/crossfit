@@ -14,11 +14,13 @@ class Labeler(Op):
         pre=None,
         keep_prob: bool = False,
         suffix: str = "labels",
+        axis=-1,
     ):
         super().__init__(pre=pre, cols=cols, keep_cols=keep_cols)
         self.labels = labels
         self.keep_prob = keep_prob
         self.suffix = suffix
+        self.axis = axis
 
     def call_column(self, data: cudf.Series) -> cudf.Series:
         if isinstance(data, cudf.DataFrame):
@@ -34,7 +36,7 @@ class Labeler(Op):
             )
 
         scores = data.list.leaves.values.reshape(-1, num_labels)
-        classes = scores.argmax(-1)
+        classes = scores.argmax(self.axis)
         labels_map = {i: self.labels[i] for i in range(len(self.labels))}
 
         return cudf.Series(classes).map(labels_map)
@@ -60,7 +62,7 @@ class Labeler(Op):
     def meta(self):
         labeled = {"labels": "string"}
 
-        if len(self.cols) > 1:
+        if self.cols and len(self.cols) > 1:
             labeled = {
                 self._construct_name(col, suffix): dtype
                 for col in self.cols
