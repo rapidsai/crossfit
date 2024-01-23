@@ -252,7 +252,7 @@ class Distributed:
         self._client = client or "auto"  # Cannot be `None`
         self.cluster_type = cluster_type or ("cuda" if HAS_GPU else "cpu")
 
-        if torch_rmm and "rmm_pool_size" not in cluster_options:
+        if self.cluster_type == "cuda" and torch_rmm and "rmm_pool_size" not in cluster_options:
             cluster_options["rmm_pool_size"] = True
 
         self.cluster_options = cluster_options
