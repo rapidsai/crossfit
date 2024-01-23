@@ -27,7 +27,9 @@ class Labeler(Op):
                 "data must be a Series, got DataFrame. Add a pre step to convert to Series"
             )
 
-        classes = cp.asarray(data.iloc[0]).argmax(self.axis)
+        shape = (data.size,) + cp.asarray(data.iloc[0]).shape
+        scores = data.list.leaves.values.reshape(shape)
+        classes = scores.argmax(self.axis)
 
         if len(classes.shape) > 1:
             raise RuntimeError(f"Max category of the axis {self.axis} of data is not a 1-d array.")

@@ -7,14 +7,12 @@ import crossfit as cf  # noqa: E402
 
 def test_labeler_basic():
     df = cudf.Series(
-        {
-            "col1": [
-                [0.1, 0.2, 0.5],
-                [0.2, 0.1, 0.3],
-                [0.3, 0.2, 0.1],
-                [0.2, 0.3, 0.1],
-            ]
-        }
+        [
+            [0.1, 0.2, 0.5],
+            [0.2, 0.1, 0.3],
+            [0.3, 0.2, 0.1],
+            [0.2, 0.3, 0.1],
+        ]
     )
     labeler = cf.op.Labeler(list("abc"))
     results = labeler(df)
@@ -24,14 +22,12 @@ def test_labeler_basic():
 
 def test_labeler_first_axis():
     df = cudf.Series(
-        {
-            "col1": [
-                [0.1, 0.2, 0.5],
-                [0.2, 0.1, 0.3],
-                [0.3, 0.2, 0.1],
-                [0.2, 0.3, 0.1],
-            ]
-        }
+        [
+            [0.1, 0.2, 0.5],
+            [0.2, 0.1, 0.3],
+            [0.3, 0.2, 0.1],
+            [0.2, 0.3, 0.1],
+        ]
     )
     labeler = cf.op.Labeler(list("abcd"), axis=0)
     results = labeler(df)
