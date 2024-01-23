@@ -1,6 +1,7 @@
 from typing import List, Union
 
 import cudf
+import cupy as cp
 
 from crossfit.op.base import Op
 
@@ -12,13 +13,13 @@ class Labeler(Op):
         cols=None,
         keep_cols=None,
         pre=None,
-        keep_prob: bool = False,
         suffix: str = "labels",
+        axis=-1,
     ):
         super().__init__(pre=pre, cols=cols, keep_cols=keep_cols)
         self.labels = labels
-        self.keep_prob = keep_prob
         self.suffix = suffix
+        self.axis = axis
 
     def call_column(self, data: cudf.Series) -> cudf.Series:
         if isinstance(data, cudf.DataFrame):
@@ -26,15 +27,13 @@ class Labeler(Op):
                 "data must be a Series, got DataFrame. Add a pre step to convert to Series"
             )
 
-        num_labels = len(data.iloc[0])
-        if len(self.labels) != num_labels:
-            raise ValueError(
-                f"The number of provided labels is {len(self.labels)} "
-                f"but there are {num_labels} in data."
-            )
+        shape = (data.size,) + cp.asarray(data.iloc[0]).shape
+        scores = data.list.leaves.values.reshape(shape)
+        classes = scores.argmax(self.axis)
 
-        scores = data.list.leaves.values.reshape(-1, num_labels)
-        classes = scores.argmax(-1)
+        if len(classes.shape) > 1:
+            raise RuntimeError(f"Max category of the axis {self.axis} of data is not a 1-d array.")
+
         labels_map = {i: self.labels[i] for i in range(len(self.labels))}
 
         return cudf.Series(classes).map(labels_map)
@@ -60,7 +59,7 @@ class Labeler(Op):
     def meta(self):
         labeled = {"labels": "string"}
 
-        if len(self.cols) > 1:
+        if self.cols and len(self.cols) > 1:
             labeled = {
                 self._construct_name(col, suffix): dtype
                 for col in self.cols
