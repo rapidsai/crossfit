@@ -2,7 +2,7 @@ import pytest
 
 cudf = pytest.importorskip("cudf")
 
-import crossfit as cf
+import crossfit as cf  # noqa: E402
 
 
 def test_labeler_basic():
@@ -20,6 +20,7 @@ def test_labeler_basic():
     results = labeler(df)
 
     assert results.to_pandas().values.tolist() == ["c", "c", "a", "b"]
+
 
 def test_labeler_first_axis():
     df = cudf.Series(

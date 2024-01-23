@@ -1,7 +1,7 @@
 from typing import List, Union
 
-import cupy as cp
 import cudf
+import cupy as cp
 
 from crossfit.op.base import Op
 
