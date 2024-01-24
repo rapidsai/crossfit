@@ -13,7 +13,7 @@ jobs:
   gpu-ci:
     runs-on: linux-amd64-gpu-p100-latest-1
     container:
-      image: nvcr.io/nvidian/crossfit-ci:23.10
+      image: nvcr.io/nvidian/crossfit-ci:23.10-cudf23.12
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }}
       options: --shm-size=1G
@@ -32,7 +32,7 @@ jobs:
   benchmark:
     runs-on: linux-amd64-gpu-p100-latest-1
     container:
-      image: nvcr.io/nvidian/crossfit-ci:23.10
+      image: nvcr.io/nvidian/crossfit-ci:23.10-cudf23.12
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }}
       options: --shm-size=1G
