@@ -60,7 +60,7 @@ if __name__ == "__main__":
     )
     print(f"\nddf: {ddf}\n")
 
-    # Calculate continuous stats
+    # Aggregate moments (mean, var, std)
     agg = cf.Aggregator(Moments(axis=0), per_column=True)
     t0 = time.time()
     result = aggregate(ddf, agg, to_frame=True)
