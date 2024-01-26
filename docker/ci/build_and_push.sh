@@ -6,7 +6,7 @@
 set -e
 
 IMAGE_NAME=nvcr.io/nvidian/crossfit-ci
-IMAGE_TAG=23.10
+IMAGE_TAG=23.10-cudf23.12
 
 docker build -t ${IMAGE_NAME}:${IMAGE_TAG} -f docker/ci/Dockerfile .
 
