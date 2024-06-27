@@ -57,7 +57,7 @@ jobs:
         if: ${{ github.event_name == 'pull_request' }}
         shell: bash
         run: |
-          echo "HEAD_SHA=$(echo ${{ github.event.pull_request.head.sha }} | cut cut -c1-8)" >> ${GITHUB_ENV}
+          echo "HEAD_SHA=$(echo ${{ github.event.pull_request.head.sha }} | cut -c1-8)" >> ${GITHUB_ENV}
 
       - name: Setup Environment (Push)
         if: ${{ github.event_name == 'push' }}
