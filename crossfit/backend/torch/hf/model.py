@@ -30,7 +30,7 @@ from crossfit.dataset.home import CF_HOME
 class HFModel(Model):
     def __init__(self, path_or_name: str, max_mem_gb: int = 16, training=False):
         super().__init__(path_or_name, max_mem_gb)
-
+    
         if not training:
             with torch.no_grad():
                 self.fit_memory_estimate_curve()
@@ -129,7 +129,14 @@ class HFModel(Model):
         return predicted_memory[0] / 1024  # Convert from MB to GB
 
     def max_seq_length(self) -> int:
-        return self.load_cfg().max_position_embeddings
+        max_seq_length = self.load_tokenizer().model_max_length
+        # Gaurd against the HF bug
+        # which sets max_seq_length to max(int) for some models
+        if max_seq_length > 1e5:
+            max_seq_length = AutoConfig.from_pretrained(
+                self.model_name_or_path
+            ).max_position_embeddings
+        return max_seq_length
 
 
 class SentenceTransformerModel(HFModel):

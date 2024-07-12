@@ -66,6 +66,7 @@ class Predictor(Op):
             loader = InMemoryLoader(
                 data[["input_ids", "attention_mask"]],
                 batch_size=self.batch_size,
+                padding_side=self.model.load_tokenizer().padding_side,
                 progress_bar=self.create_progress_bar(len(data), partition_info),
                 max_seq_len=self.model.max_seq_length(),
             )

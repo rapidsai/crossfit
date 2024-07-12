@@ -1,4 +1,4 @@
-# Copyright 2023 NVIDIA CORPORATION
+# Copyright 2023-2024 NVIDIA CORPORATION
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 
 import warnings
 from itertools import islice
-from typing import Dict, overload
+from typing import Dict, overload, Optional
 
 import torch
 
@@ -35,7 +35,7 @@ class InMemoryLoader:
     def __init__(self, data: CrossFrame, batch_size: int, progress_bar=None):
         ...
 
-    def __init__(self, data, batch_size: int, progress_bar=None, max_seq_len=None):
+    def __init__(self, data, batch_size: int, progress_bar=None, max_seq_len=None, padding_side:str = "right"):
         self.data = CrossFrame(data).cast(torch.Tensor)
         self.tensor_dict = self.data.to_dict()
         self._batch_size = batch_size
@@ -44,6 +44,7 @@ class InMemoryLoader:
         self._to_map = []
         self.progress_bar = progress_bar
         self.max_seq_len = max_seq_len
+        self.padding_side = padding_side
 
     def map(self, fn):
         self._to_map.append(fn)
@@ -65,8 +66,10 @@ class InMemoryLoader:
 
         batch = {key: val[self.current_idx : end] for key, val in self.tensor_dict.items()}
         if self.max_seq_len is not None:
-            batch = {key: val[:, : self.max_seq_len] for key, val in batch.items()}
-
+            if self.padding_side == "right":
+                batch = {key: val[:, : self.max_seq_len] for key, val in batch.items()}
+            else:
+                batch = {key: val[:, -self.max_seq_len :] for key, val in batch.items()}
         self.current_idx += self.batch_size
 
         for fn in self._to_map:
@@ -96,15 +99,20 @@ class SortedSeqLoader(InMemoryLoader):
         self.to_ignore = to_ignore or []
         self.to_ignore.append("seq_length")
         self.model = model
+        self.pad_token_id = self.model.load_tokenizer().pad_token_id
+        self.padding_side = self.model.load_tokenizer().padding_side
 
         frame = CrossFrame(data).cast(torch.Tensor)
-        seq_length = (frame[sort_key] != 0).sum(axis=1)
+        seq_length = (frame[sort_key] != self.pad_token_id).sum(axis=1)
         self.sorted_indices = seq_length.argsort(descending=True)
         frame = frame.apply(lambda x: x[self.sorted_indices])
         frame = frame.assign(seq_length=seq_length[self.sorted_indices])
 
         super().__init__(frame, initial_batch_size, progress_bar=progress_bar)
         self.splits = self._find_optimal_splits()
+        # TODO: Debug PRINTS
+        print(f"Padding side: {self.padding_side}")
+        print(f"Pad token id: {self.pad_token_id}")
 
     def sort_column(self, col):
         indices = convert_array(self.sorted_indices, type(col))
@@ -138,7 +146,10 @@ class SortedSeqLoader(InMemoryLoader):
                     if key not in self.to_ignore
                 }
                 clip_len = min(max(_tokens[start], _tokens[end - 1]), self.model.max_seq_length())
-                batch = {key: val[:, :clip_len] for key, val in batch.items()}
+                if self.padding_side == "right":
+                    batch = {key: val[:, :clip_len] for key, val in batch.items()}
+                else:
+                    batch = {key: val[:, -clip_len:] for key, val in batch.items()}
 
                 for fn in self._to_map:
                     batch = fn(batch)
