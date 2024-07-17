@@ -14,9 +14,10 @@ jobs:
     runs-on: linux-amd64-gpu-p100-latest-1
     container:
       image: nvcr.io/nvidia/rapidsai/base:24.06-cuda12.2-py3.11
-      env:
-        NVIDIA_VISIBLE_DEVICES: all
-      options: --shm-size=1G --ulimit memlock=-1 --ulimit stack=67108864
+      options: >-
+        --shm-size=1G
+        --ulimit memlock=-1
+        --ulimit stack=67108864
 
     steps:
       - uses: actions/checkout@v3
