@@ -15,7 +15,7 @@ else
     echo "CUDA version found: $CUDA_VERSION"
 fi
 
-echo "Intalling pytorch,transformers and pytest to the environment for crossfit tests..."
+echo "Installing pytorch,transformers and pytest to the environment for crossfit tests..."
 mamba install \
   cuda-version=$CUDA_VERSION \
   conda-forge::pytorch \
