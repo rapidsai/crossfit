@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
 import dask.dataframe as dd
 import numpy as np
 import pandas as pd
+import pytest
 
 import crossfit as cf
 from crossfit.backend.dask.aggregate import aggregate
