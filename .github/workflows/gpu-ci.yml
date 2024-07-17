@@ -10,23 +10,30 @@ on:
       - "v[0-9]+.[0-9]+.[0-9]+"
 
 jobs:
-  gpu-ci:
-    runs-on: linux-amd64-gpu-p100-latest-1
-    container:
-      image: nvcr.io/nvidia/rapidsai/base:24.06-cuda12.2-py3.11
-      options: >-
-        --shm-size=1G
-        --ulimit memlock=-1
-        --ulimit stack=67108864
+  pr-builder:
+    needs:
+      - checks
+      - python-gpu-tests
+    secrets: inherit
+    uses: rapidsai/shared-workflows/.github/workflows/pr-builder.yaml@branch-24.06
 
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-      - name: Run tests
-        run: |
-          bash -c "echo 'Running tests'"
+  checks:
+    secrets: inherit
+    uses: rapidsai/shared-workflows/.github/workflows/checks.yaml@branch-24.06
+    with:
+      enable_check_generated_files: false
 
+  python-gpu-tests:
+    needs:
+      - checks
+    secrets: inherit
+    uses: rapidsai/shared-workflows/.github/workflows/custom-job.yaml@branch-24.06
+    with:
+      build_type: pull-request
+      node_type: "gpu-v100-latest-1"
+      arch: "amd64"
+      container_image: "nvcr.io/nvidia/rapidsai/base:24.06-cuda12.2-py3.11"
+      run_script: "ci/test_gpu.sh"
 
   # benchmark:
   #   runs-on: linux-amd64-gpu-p100-latest-1
