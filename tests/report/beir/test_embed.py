@@ -15,6 +15,7 @@
 import pytest
 
 cp = pytest.importorskip("cupy")
+sentece_transformers = pytest.importorskip("sentence_transformers")
 
 import crossfit as cf  # noqa: E402
 

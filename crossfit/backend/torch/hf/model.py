@@ -96,7 +96,7 @@ class HFModel(Model):
                 }
 
                 try:
-                    _ = model(batch)
+                    _ = model(**batch)
                     memory_used = torch.cuda.max_memory_allocated() / (1024**2)  # Convert to MB
                     X.append([batch_size, seq_len, seq_len**2])
                     y.append(memory_used)

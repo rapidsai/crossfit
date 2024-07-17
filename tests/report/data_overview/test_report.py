@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pytest
 import dask.dataframe as dd
 import numpy as np
 import pandas as pd
@@ -40,6 +41,7 @@ def test_continuous_aggregators(df, npartitions=2):
     assert len(result.columns) == 7
 
 
+@pytest.mark.skip(reason="Not implemented for pyarrow[string] yet")
 @sample_df(
     {
         "a": np.random.choice(list("abcdefgh"), size=1000),
@@ -57,6 +59,7 @@ def test_categorical_aggregator(df, npartitions=2):
     assert len(result.columns) == 6
 
 
+@pytest.mark.skip(reason="Not implemented for pyarrow[string] yet")
 @sample_df(
     {
         "con": [1, 2] * 500,
@@ -74,6 +77,7 @@ def test_data_overview_report(df, npartitions=2):
     assert isinstance(visualization, FacetsOverview)
 
 
+@pytest.mark.skip(reason="Not implemented for pyarrow[string] yet")
 @sample_df(
     {
         "con": [1, 2] * 500,

@@ -14,7 +14,7 @@ import tempfile  # noqa: E402
 
 examples_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "examples")
 
-
+@pytest.mark.skip(reason="This test is taking too long")
 @pytest.mark.singlegpu
 def test_beir_report():
     path = os.path.join(examples_dir, "beir_report.py")

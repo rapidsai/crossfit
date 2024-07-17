@@ -28,7 +28,7 @@ class Sequential(Op):
     def call_dask(self, data):
         for op in self.ops:
             if self.repartition is not None:
-                data = data.repartition(self.repartition)
+                data = data.repartition(npartitions=self.repartition)
 
             data = op(data)
 

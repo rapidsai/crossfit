@@ -15,6 +15,8 @@
 import pytest
 
 pytest.importorskip("cupy")
+pytest.importorskip("pytrec_eval")
+
 
 import numpy as np  # noqa: E402
 from pytrec_eval import RelevanceEvaluator  # noqa: E402
