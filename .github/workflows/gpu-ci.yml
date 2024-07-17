@@ -17,9 +17,6 @@ jobs:
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }}
       options: --shm-size=1G
-      credentials:
-        username: $oauthtoken
-        password: ${{ secrets.NGC_TOKEN }}
 
     steps:
       - uses: actions/checkout@v3
@@ -32,13 +29,10 @@ jobs:
   benchmark:
     runs-on: linux-amd64-gpu-p100-latest-1
     container:
-      image: nvcr.io/nvidian/crossfit-ci:23.10
+      image: rapidsai/base:24.06-cuda12.2-py3.11
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }}
-      options: --shm-size=1G
-      credentials:
-        username: $oauthtoken
-        password: ${{ secrets.NGC_TOKEN }}
+      options: --shm-size=1G -ulimit memlock=-1 --ulimit stack=67108864 
 
     steps:
       - uses: actions/checkout@v3
