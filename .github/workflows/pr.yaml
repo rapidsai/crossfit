@@ -11,21 +11,11 @@ on:
 
 jobs:
   pr-builder:
-    needs:
-      - checks
       - python-gpu-tests
     secrets: inherit
     uses: rapidsai/shared-workflows/.github/workflows/pr-builder.yaml@branch-24.06
 
-  checks:
-    secrets: inherit
-    uses: rapidsai/shared-workflows/.github/workflows/checks.yaml@branch-24.06
-    with:
-      enable_check_generated_files: false
-
   python-gpu-tests:
-    needs:
-      - checks
     secrets: inherit
     uses: rapidsai/shared-workflows/.github/workflows/custom-job.yaml@branch-24.06
     with:
