@@ -1,7 +1,6 @@
-name: pr
+name: GPU CI
 
 on:
-  workflow_dispatch:
   push:
     branches:
       - main
@@ -11,6 +10,7 @@ on:
 
 jobs:
   pr-builder:
+    needs:
       - python-gpu-tests
     secrets: inherit
     uses: rapidsai/shared-workflows/.github/workflows/pr-builder.yaml@branch-24.06
