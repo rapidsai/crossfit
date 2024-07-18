@@ -1,0 +1,102 @@
+name: GPU CI
+
+on:
+  push:
+    branches:
+      - main
+      - "pull-request/[0-9]+"
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+jobs:
+  pr-builder:
+    needs:
+      - python-gpu-tests
+    secrets: inherit
+    uses: rapidsai/shared-workflows/.github/workflows/pr-builder.yaml@branch-24.06
+
+  python-gpu-tests:
+    secrets: inherit
+    uses: rapidsai/shared-workflows/.github/workflows/custom-job.yaml@branch-24.06
+    with:
+      build_type: pull-request
+      node_type: "gpu-v100-latest-1"
+      arch: "amd64"
+      container_image: "rapidsai/base:24.06-cuda12.2-py3.11"
+      run_script: "ci/test_gpu.sh"
+
+  # benchmark:
+  #   runs-on: linux-amd64-gpu-p100-latest-1
+  #   container:
+  #     image: rapidsai/base:24.06-cuda12.2-py3.11
+  #     env:
+  #       NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }}
+  #     options: --shm-size=1G -ulimit memlock=-1 --ulimit stack=67108864 
+
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #       with:
+  #         fetch-depth: 50 # this is to make sure we obtain the target base commit
+
+  #     - name: Setup Environment
+  #       shell: bash
+  #       run: |
+  #         git config --global --add safe.directory /__w/crossfit/crossfit
+
+  #         echo "BASE_SHA=$(git ls-remote -q | grep refs/heads/main$ | awk '{print $1}' | xargs git rev-parse --short)" >> ${GITHUB_ENV}
+  #         echo "PR_COMMENT=$(mktemp)" >>  ${GITHUB_ENV}
+
+  #     - name: Setup Environment (PR)
+  #       if: ${{ github.event_name == 'pull_request' }}
+  #       shell: bash
+  #       run: |
+  #         echo "HEAD_SHA=$(echo ${{ github.event.pull_request.head.sha }} | cut cut -c1-8)" >> ${GITHUB_ENV}
+
+  #     - name: Setup Environment (Push)
+  #       if: ${{ github.event_name == 'push' }}
+  #       shell: bash
+  #       run: |
+  #         echo "HEAD_SHA=$(echo ${GITHUB_SHA} | cut -c1-8)" >> ${GITHUB_ENV}
+
+  #     - name: Run benchmarks
+  #       shell: bash
+  #       run: |
+  #         RUN_BENCHMARK="py.test -m benchmark tests/"
+
+  #         git checkout ${{ env.BASE_SHA }}
+  #         $RUN_BENCHMARK --benchmark-save=main
+
+  #         git checkout ${{ env.HEAD_SHA }}
+  #         $RUN_BENCHMARK --benchmark-save=${{ env.HEAD_SHA }}
+
+  #     - name: Compare results
+  #       run: |
+          
+  #         py.test-benchmark compare > cmp_results
+
+  #         echo 'Benchmark comparison for [`${{ env.BASE_SHA }}`](${{ github.event.repository.html_url }}/commit/${{ env.BASE_SHA }}) (main) vs [`${{ env.HEAD_SHA }}`](${{ github.event.repository.html_url }}/commit/${{ env.HEAD_SHA }}) (PR)' >> pr_comment
+  #         echo '```' >> pr_comment
+  #         cat cmp_results >> pr_comment
+  #         echo '```' >> pr_comment
+  #         cat pr_comment > ${{ env.PR_COMMENT }}
+
+  #     - name: 'Comment PR'
+  #       if: github.ref != 'refs/heads/main'
+  #       uses: actions/github-script@v6
+  #       with:
+  #         github-token: ${{ secrets.GITHUB_TOKEN }}
+  #         script: |
+  #           const pullRequests = await github.rest.pulls.list({
+  #             owner: context.repo.owner,
+  #             repo: context.repo.repo,
+  #             state: 'open',
+  #           })
+            
+  #           const filtered = pullRequests.data.filter(x => x.head.sha.startsWith('${{ env.HEAD_SHA }}'))
+
+  #           github.rest.issues.createComment({
+  #             issue_number: filtered[0].number,
+  #             owner: context.repo.owner,
+  #             repo: context.repo.repo,
+  #             body: require('fs').readFileSync('${{ env.PR_COMMENT }}').toString()
+  #           })

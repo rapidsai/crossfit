@@ -29,7 +29,7 @@ def register_cudf_backend():
         def concatenate(self, series_list, *, axis=None):
             return cudf.concat(series_list, axis=axis or 0)
 
-    np_backend_dispatch.register((cudf.Series, cudf.GenericIndex))(CudfBackend())
+    np_backend_dispatch.register((cudf.Series, cudf.Index))(CudfBackend())
 
 
 @conversion.dispatch_to_dlpack.register_lazy("cudf")

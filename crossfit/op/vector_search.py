@@ -118,7 +118,7 @@ class ExactSearchOp(VectorSearchOp):
         partitions = max(int(len(items) / partition_num), 1)
         if not partitions % 2 == 0:
             partitions += 1
-        _items = items.repartition(partitions)
+        _items = items.repartition(npartitions=partitions)
 
         delayed_cross_products = []
         for i in range(queries.npartitions):
