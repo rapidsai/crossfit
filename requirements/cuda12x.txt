@@ -1,0 +1,13 @@
+cudf-cu12>=24.4
+dask-cudf-cu12>=24.4
+cuml-cu12>=24.4
+pylibraft-cu12>=24.4
+raft-dask-cu12>=24.4
+cuvs-cu12>=24.4
+dask-cuda>=24.6
+torch>=2.0
+transformers>=4.0
+curated-transformers>=1.0
+bitsandbytes>=0.30
+sentence-transformers>=2.0
+sentencepiece

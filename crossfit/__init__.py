@@ -25,6 +25,41 @@ from crossfit.data.dataframe.dispatch import CrossFrame
 from crossfit.metric import *
 from crossfit.op import *
 
+
+class LazyLoader:
+    def __init__(self, name):
+        self._name = name
+        self._module = None
+        self._error = None
+
+    def _load(self):
+        if self._module is None and self._error is None:
+            try:
+                parts = self._name.split(".")
+                module_name = ".".join(parts[:-1])
+                attribute_name = parts[-1]
+                module = __import__(module_name, fromlist=[attribute_name])
+                self._module = getattr(module, attribute_name)
+            except ImportError as e:
+                self._error = e
+            except AttributeError as e:
+                self._error = AttributeError(
+                    f"Module '{module_name}' has no attribute '{attribute_name}'"
+                )
+
+    def __getattr__(self, item):
+        self._load()
+        if self._error is not None:
+            raise ImportError(f"Failed to import {self._name}: {self._error}")
+        return getattr(self._module, item)
+
+    def __call__(self, *args, **kwargs):
+        self._load()
+        if self._error is not None:
+            raise ImportError(f"Failed to import {self._name}: {self._error}")
+        return self._module(*args, **kwargs)
+
+
 __all__ = [
     "Aggregator",
     "backend",
@@ -40,25 +75,25 @@ __all__ = [
     "Serial",
 ]
 
+# Using the lazy import function
+HFModel = LazyLoader("crossfit.backend.torch.HFModel")
+SentenceTransformerModel = LazyLoader("crossfit.backend.torch.SentenceTransformerModel")
+TorchExactSearch = LazyLoader("crossfit.backend.torch.TorchExactSearch")
+IRDataset = LazyLoader("crossfit.dataset.base.IRDataset")
+MultiDataset = LazyLoader("crossfit.dataset.base.MultiDataset")
+load_dataset = LazyLoader("crossfit.dataset.load.load_dataset")
+embed = LazyLoader("crossfit.report.beir.embed.embed")
+beir_report = LazyLoader("crossfit.report.beir.report.beir_report")
 
-try:
-    from crossfit.backend.torch import HFModel, SentenceTransformerModel, TorchExactSearch
-    from crossfit.dataset.base import IRDataset, MultiDataset
-    from crossfit.dataset.load import load_dataset
-    from crossfit.report.beir.embed import embed
-    from crossfit.report.beir.report import beir_report
-
-    __all__.extend(
-        [
-            "embed",
-            "beir_report",
-            "load_dataset",
-            "TorchExactSearch",
-            "SentenceTransformerModel",
-            "HFModel",
-            "MultiDataset",
-            "IRDataset",
-        ]
-    )
-except ImportError as e:
-    pass
+__all__.extend(
+    [
+        "embed",
+        "beir_report",
+        "load_dataset",
+        "TorchExactSearch",
+        "SentenceTransformerModel",
+        "HFModel",
+        "MultiDataset",
+        "IRDataset",
+    ]
+)
