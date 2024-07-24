@@ -22,6 +22,7 @@ from crossfit.backend.torch.model import Model
 from crossfit.data.array.conversion import convert_array
 from crossfit.data.array.dispatch import crossarray
 from crossfit.data.dataframe.dispatch import CrossFrame
+from crossfit.utils.model_adapter import adapt_model_input
 
 DEFAULT_BATCH_SIZE = 512
 
@@ -70,7 +71,7 @@ class InMemoryLoader:
         self.current_idx += self.batch_size
 
         for fn in self._to_map:
-            batch = fn(batch)
+            batch = adapt_model_input(fn, batch)
 
         if self.progress_bar is not None:
             self.progress_bar.update(batch_size)
@@ -141,7 +142,7 @@ class SortedSeqLoader(InMemoryLoader):
                 batch = {key: val[:, :clip_len] for key, val in batch.items()}
 
                 for fn in self._to_map:
-                    batch = fn(batch)
+                    batch = adapt_model_input(fn, batch)
 
                 break
             except torch.cuda.OutOfMemoryError:

@@ -74,7 +74,7 @@ class Predictor(Op):
         for output in loader.map(self.model.get_model(self.get_worker())):
             if isinstance(output, dict):
                 if self.model_output_col not in output:
-                    raise ValueError(f"Column '{self.model_outupt_col}' not found in model output.")
+                    raise ValueError(f"Column '{self.model_output_col}' not found in model output.")
                 output = output[self.model_output_col]
 
             if self.post is not None:
