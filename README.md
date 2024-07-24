@@ -12,6 +12,14 @@ Install this library using `pip`:
 
     pip install crossfit
 
+### Installation from source (for cuda 12.x)
+
+```
+git clone https://github.com/rapidsai/crossfit.git
+cd crossfit
+pip install --extra-index-url https://pypi.nvidia.com ".[cuda12x]"
+```
+
 ## Usage
 
 Usage instructions go here.
