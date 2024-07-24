@@ -25,6 +25,7 @@ from transformers import AutoConfig, AutoModel, AutoTokenizer
 
 from crossfit.backend.torch.model import Model
 from crossfit.dataset.home import CF_HOME
+from crossfit.utils.model_adapter import adapt_model_input
 
 
 class HFModel(Model):
@@ -96,7 +97,7 @@ class HFModel(Model):
                 }
 
                 try:
-                    _ = model(**batch)
+                    _ = adapt_model_input(model, batch)
                     memory_used = torch.cuda.max_memory_allocated() / (1024**2)  # Convert to MB
                     X.append([batch_size, seq_len, seq_len**2])
                     y.append(memory_used)
