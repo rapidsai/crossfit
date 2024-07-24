@@ -31,7 +31,7 @@ def get_long_description():
 
 def read_requirements(filename):
     base = os.path.abspath(os.path.dirname(__file__))
-    with codecs.open(os.path.join(base, filename), "rb", "utf-8") as f:
+    with codecs.open(os.path.join(base, filename), "r", "utf-8") as f:
         lineiter = (line.strip() for line in f)
         return [line for line in lineiter if line and not line.startswith("#")]
 
@@ -40,12 +40,15 @@ _dev = read_requirements("requirements/dev.txt")
 
 requirements = {
     "base": read_requirements("requirements/base.txt"),
+    "cuda12x": read_requirements("requirements/cuda12x.txt"),
     "dev": _dev,
     "tensorflow": read_requirements("requirements/tensorflow.txt"),
     "pytorch": read_requirements("requirements/pytorch.txt"),
     "jax": read_requirements("requirements/jax.txt"),
 }
+
 dev_requirements = {
+    "cuda12x-dev": requirements["cuda12x"] + _dev,
     "tensorflow-dev": requirements["tensorflow"] + _dev,
     "pytorch-dev": requirements["pytorch"] + _dev,
     "jax-dev": requirements["jax"] + _dev,
@@ -75,6 +78,6 @@ setup(
         **dev_requirements,
         "all": list(itertools.chain(*list(requirements.values()))),
     },
-    python_requires=">=3.7",
+    python_requires=">=3.7, <3.12",
     test_suite="tests",
 )
