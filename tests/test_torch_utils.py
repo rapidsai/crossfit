@@ -1,11 +1,11 @@
 import pytest
 
-from crossfit.utils.torch_utils import concat_and_pad_tensors, pad_tensors
-
 torch = pytest.importorskip("torch")
 
 
 def test_pad_tensors_2d():
+    from crossfit.utils.torch_utils import pad_tensors
+
     # Test with 2D tensors
     tensor1 = torch.tensor([[1, 2], [3, 4]])
     tensor2 = torch.tensor([[5, 6, 7], [8, 9, 10], [11, 12, 13]])
@@ -21,6 +21,8 @@ def test_pad_tensors_2d():
 
 
 def test_pad_tensors_3d():
+    from crossfit.utils.torch_utils import pad_tensors
+
     # Test with 3D tensors
     tensor1 = torch.rand(2, 3, 4)
     tensor2 = torch.rand(3, 2, 5)
@@ -34,6 +36,8 @@ def test_pad_tensors_3d():
 
 
 def test_pad_tensors_custom_value():
+    from crossfit.utils.torch_utils import pad_tensors
+
     # Test with custom pad value
     tensor1 = torch.tensor([[1, 2], [3, 4]])
     tensor2 = torch.tensor([[5, 6, 7]])
@@ -46,6 +50,8 @@ def test_pad_tensors_custom_value():
 
 
 def test_concat_padded_tensors():
+    from crossfit.utils.torch_utils import concat_and_pad_tensors
+
     tensor1 = torch.tensor([[1, 2], [3, 4]])
     tensor2 = torch.tensor([[5, 6, 7], [8, 9, 10]])
     all_outputs_ls = [tensor1, tensor2]
@@ -58,6 +64,8 @@ def test_concat_padded_tensors():
 
 
 def test_concat_padded_tensors_custom_value():
+    from crossfit.utils.torch_utils import concat_and_pad_tensors
+
     tensor1 = torch.tensor([[1, 2], [3, 4]])
     tensor2 = torch.tensor([[5, 6, 7], [8, 9, 10]])
     all_outputs_ls = [tensor1, tensor2]
@@ -70,6 +78,8 @@ def test_concat_padded_tensors_custom_value():
 
 
 def test_concat_padded_tensors_different_devices():
+    from crossfit.utils.torch_utils import concat_and_pad_tensors
+
     if torch.cuda.is_available():
         tensor1 = torch.tensor([[1, 2], [3, 4]], device="cuda")
         tensor2 = torch.tensor([[5, 6, 7], [8, 9, 10]], device="cpu")
