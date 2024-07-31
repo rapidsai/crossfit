@@ -26,6 +26,7 @@ from crossfit.backend.cudf.series import (
 from crossfit.backend.torch.loader import DEFAULT_BATCH_SIZE, InMemoryLoader, SortedSeqLoader
 from crossfit.backend.torch.model import Model
 from crossfit.op.base import Op
+from crossfit.utils.torch_utils import concat_and_pad_tensors
 
 
 class Predictor(Op):
@@ -84,7 +85,9 @@ class Predictor(Op):
             all_outputs_ls.append(output)
 
         out = cudf.DataFrame(index=index)
-        outputs = cp.asarray(torch.cat(all_outputs_ls, dim=0))
+        outputs = cp.asarray(
+            concat_and_pad_tensors(all_outputs_ls, pad_token_id=loader.pad_token_id)
+        )
         _index = loader.sort_column(index.values) if self.sorted_data_loader else index
         if len(outputs.shape) <= 2:
             out[self.pred_output_col] = create_list_series_from_1d_or_2d_ar(outputs, _index)
