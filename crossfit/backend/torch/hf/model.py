@@ -130,7 +130,12 @@ class HFModel(Model):
         return predicted_memory[0] / 1024  # Convert from MB to GB
 
     def max_seq_length(self) -> int:
-        return self.load_cfg().max_position_embeddings
+        max_seq_length = self.load_tokenizer().model_max_length
+        # Guard against the HF bug
+        # which sets max_seq_length to max(int) for some models
+        if max_seq_length > 1e5:
+            max_seq_length = AutoConfig.from_pretrained(self.path_or_name).max_position_embeddings
+        return max_seq_length
 
 
 class SentenceTransformerModel(HFModel):
