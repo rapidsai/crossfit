@@ -38,7 +38,7 @@ def test_pad_tensors_custom_value():
     tensor2 = torch.tensor([[5, 6, 7]])
     tensor_list = [tensor1, tensor2]
 
-    padded_tensors = pad_tensors(tensor_list, pad_value=-1)
+    padded_tensors = pad_tensors(tensor_list, pad_token_id=-1)
 
     assert torch.all(padded_tensors[0] == torch.tensor([[1, 2, -1], [3, 4, -1]]))
     assert torch.all(padded_tensors[1] == torch.tensor([[5, 6, 7], [-1, -1, -1]]))
@@ -61,7 +61,7 @@ def test_concat_padded_tensors_custom_value():
     tensor2 = torch.tensor([[5, 6, 7], [8, 9, 10]])
     all_outputs_ls = [tensor1, tensor2]
 
-    result = concat_and_pad_tensors(all_outputs_ls, pad_value=-1)
+    result = concat_and_pad_tensors(all_outputs_ls, pad_token_id=-1)
 
     expected_result = torch.tensor([[1, 2, -1], [3, 4, -1], [5, 6, 7], [8, 9, 10]])
 
