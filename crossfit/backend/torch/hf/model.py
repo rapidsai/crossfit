@@ -29,8 +29,23 @@ from crossfit.utils.model_adapter import adapt_model_input
 
 
 class HFModel(Model):
-    def __init__(self, path_or_name: str, max_mem_gb: int = 16, training=False):
+    def __init__(
+        self,
+        path_or_name: str,
+        max_mem_gb: int = 16,
+        training: bool = False,
+        start_batch_size: int = 1,
+        end_batch_size: int = 2048,
+        batch_size_increment: int = 256,
+        start_seq_len: int = 1,
+        seq_len_increment: int = 64,
+    ):
         super().__init__(path_or_name, max_mem_gb)
+        self.start_batch_size = start_batch_size
+        self.end_batch_size = end_batch_size
+        self.batch_size_increment = batch_size_increment
+        self.start_seq_len = start_seq_len
+        self.seq_len_increment = seq_len_increment
 
         if not training:
             with torch.no_grad():
@@ -81,11 +96,13 @@ class HFModel(Model):
         y = []
 
         max_seq = self.max_seq_length()
-        for batch_size in tqdm(range(2048, 0, -256)):
+        for batch_size in tqdm(
+            range(self.end_batch_size, self.start_batch_size, -self.batch_size_increment)
+        ):
             if batch_size <= 0:
                 continue
 
-            for seq_len in range(max_seq, 0, -64):
+            for seq_len in range(max_seq, self.start_seq_len, -self.seq_len_increment):
                 if seq_len <= 0:
                     continue
 
