@@ -1,7 +1,8 @@
 import pytest
-import torch
 
 from crossfit.utils.torch_utils import concat_and_pad_tensors, pad_tensors
+
+torch = pytest.importorskip("torch")
 
 
 def test_pad_tensors_2d():
