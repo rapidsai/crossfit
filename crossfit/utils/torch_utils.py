@@ -12,7 +12,7 @@ def pad_tensors(
 
     This function takes a list of tensors with potentially different shapes and pads them
     to match the largest dimensions across all tensors in the list. The padding is applied
-    to the end of the last dimension.
+    to the end of each dimension.
 
     Args:
         tensor_list (List[torch.Tensor]): A list of tensors to be padded.
@@ -21,19 +21,22 @@ def pad_tensors(
     Returns:
         List[torch.Tensor]: A list of padded tensors, all with the same shape.
     """
-    # Find the maximum size of the last dimension
-    max_last_dim = max(tensor.shape[-1] for tensor in tensor_list)
+    # Find the maximum size for each dimension except the batch dimension
+    max_sizes = list(tensor_list[0].shape)
+    for tensor in tensor_list:
+        for dim in range(1, len(tensor.shape)):
+            if tensor.shape[dim] > max_sizes[dim]:
+                max_sizes[dim] = tensor.shape[dim]
 
-    # Pad each tensor to the maximum size of the last dimension
+    # Pad each tensor to the maximum size for each dimension
     padded_tensors = []
     for tensor in tensor_list:
-        pad_size = max_last_dim - tensor.shape[-1]
-        pad_sizes = [0, pad_size]  # Only pad the last dimension
+        pad_sizes = []
+        for i in range(len(tensor.shape) - 1, 0, -1):
+            pad_size = max_sizes[i] - tensor.shape[i]
+            pad_sizes.extend([0, pad_size])
 
-        # For multi-dimensional tensors, prepend zeros for the other dimensions
-        if len(tensor.shape) > 2:
-            pad_sizes = [0, 0] * (len(tensor.shape) - 1) + pad_sizes
-
+        # Apply padding
         padded_tensor = F.pad(tensor, pad_sizes, mode="constant", value=pad_token_id)
         padded_tensors.append(padded_tensor)
 

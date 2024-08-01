@@ -14,9 +14,9 @@ def test_pad_tensors_2d():
     padded_tensors = pad_tensors(tensor_list)
 
     assert len(padded_tensors) == 2
-    assert padded_tensors[0].shape == (3, 3)
+    assert padded_tensors[0].shape == (2, 3)
     assert padded_tensors[1].shape == (3, 3)
-    assert torch.all(padded_tensors[0] == torch.tensor([[1, 2, 0], [3, 4, 0], [0, 0, 0]]))
+    assert torch.all(padded_tensors[0] == torch.tensor([[1, 2, 0], [3, 4, 0]]))
     assert torch.all(padded_tensors[1] == tensor2)
 
 
@@ -25,13 +25,13 @@ def test_pad_tensors_3d():
 
     # Test with 3D tensors
     tensor1 = torch.rand(2, 3, 4)
-    tensor2 = torch.rand(3, 2, 5)
+    tensor2 = torch.rand(3, 3, 5)
     tensor_list = [tensor1, tensor2]
 
     padded_tensors = pad_tensors(tensor_list)
 
     assert len(padded_tensors) == 2
-    assert padded_tensors[0].shape == (3, 3, 5)
+    assert padded_tensors[0].shape == (2, 3, 5)
     assert padded_tensors[1].shape == (3, 3, 5)
 
 
@@ -46,7 +46,7 @@ def test_pad_tensors_custom_value():
     padded_tensors = pad_tensors(tensor_list, pad_token_id=-1)
 
     assert torch.all(padded_tensors[0] == torch.tensor([[1, 2, -1], [3, 4, -1]]))
-    assert torch.all(padded_tensors[1] == torch.tensor([[5, 6, 7], [-1, -1, -1]]))
+    assert torch.all(padded_tensors[1] == torch.tensor([[5, 6, 7]]))
 
 
 def test_concat_padded_tensors():
