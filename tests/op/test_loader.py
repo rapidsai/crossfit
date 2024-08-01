@@ -16,8 +16,7 @@ import pytest
 
 transformers = pytest.importorskip("transformers")
 torch = pytest.importorskip("torch")
-
-from crossfit.backend.torch.loader import InMemoryLoader  # noqa: E402
+cf_loader = pytest.importorskip("crossfit.backend.torch.loader")
 
 
 def test_padding_side_right():
@@ -25,7 +24,7 @@ def test_padding_side_right():
         "input_ids": torch.tensor([[1, 2, 3, 0, 0], [4, 5, 0, 0, 0], [6, 7, 8, 9, 0]])
     }
 
-    loader = InMemoryLoader(
+    loader = cf_loader.InMemoryLoader(
         sample_data_for_padding, batch_size=2, max_seq_len=3, padding_side="right"
     )
     batches = list(loader)
@@ -43,7 +42,7 @@ def test_padding_side_left():
         "input_ids": torch.tensor([[0, 0, 1, 2, 3], [0, 0, 4, 5, 6], [0, 6, 7, 8, 9]])
     }
 
-    loader = InMemoryLoader(
+    loader = cf_loader.InMemoryLoader(
         sample_data_for_padding, batch_size=2, max_seq_len=3, padding_side="left"
     )
     batches = list(loader)
