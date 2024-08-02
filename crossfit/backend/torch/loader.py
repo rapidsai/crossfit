@@ -22,6 +22,7 @@ from crossfit.backend.torch.model import Model
 from crossfit.data.array.conversion import convert_array
 from crossfit.data.array.dispatch import crossarray
 from crossfit.data.dataframe.dispatch import CrossFrame
+from crossfit.op.tokenize import clip_tokens
 from crossfit.utils.model_adapter import adapt_model_input
 
 DEFAULT_BATCH_SIZE = 512
@@ -74,6 +75,7 @@ class InMemoryLoader:
 
         batch = {key: val[self.current_idx : end] for key, val in self.tensor_dict.items()}
         if self.max_seq_len is not None:
+            # TODO: Check this
             if self.padding_side == "right":
                 batch = {key: val[:, : self.max_seq_len] for key, val in batch.items()}
             else:
@@ -108,11 +110,19 @@ class SortedSeqLoader(InMemoryLoader):
         self.to_ignore = to_ignore or []
         self.to_ignore.append("seq_length")
         self.model = model
-        self.pad_token_id = self.model.load_tokenizer().pad_token_id
-        self.padding_side = self.model.load_tokenizer().padding_side
+        tokenizer = self.model.load_tokenizer()
+        pad_token_id = tokenizer.pad_token_id
+        padding_side = tokenizer.padding_side
+
+        if padding_side not in ["right", "left"]:
+            raise ValueError("padding_side must be either 'right' or 'left'")
+
+        self.pad_token_id = pad_token_id
+        self.padding_side = padding_side
+        self.max_seq_len = self.model.max_seq_length()
 
         frame = CrossFrame(data).cast(torch.Tensor)
-        seq_length = (frame[sort_key] != 0).sum(axis=1)
+        seq_length = (frame[sort_key] != self.pad_token_id).sum(axis=1)
         self.sorted_indices = seq_length.argsort(descending=True)
         frame = frame.apply(lambda x: x[self.sorted_indices])
         frame = frame.assign(seq_length=seq_length[self.sorted_indices])
@@ -141,8 +151,6 @@ class SortedSeqLoader(InMemoryLoader):
         else:
             start = self.splits[self.current_idx - 1]
 
-        _tokens = self.tensor_dict["seq_length"]
-
         end = min(self.splits[self.current_idx], self.num_rows)
         while end > start:
             try:
@@ -151,11 +159,17 @@ class SortedSeqLoader(InMemoryLoader):
                     for key, val in self.tensor_dict.items()
                     if key not in self.to_ignore
                 }
-                clip_len = min(max(_tokens[start], _tokens[end - 1]), self.model.max_seq_length())
-                if self.padding_side == "right":
-                    batch = {key: val[:, :clip_len] for key, val in batch.items()}
-                else:
-                    batch = {key: val[:, -clip_len:] for key, val in batch.items()}
+                # TODO: Fix max_length
+                if self.max_seq_len is None:
+                    self.max_seq_len = self.model.max_seq_length()
+
+                batch = clip_tokens(
+                    token_o=batch,
+                    max_length=self.max_seq_len,
+                    padding_side=self.padding_side,
+                    pad_token_id=self.pad_token_id,
+                    return_type="pt",
+                )
 
                 for fn in self._to_map:
                     batch = adapt_model_input(fn, batch)

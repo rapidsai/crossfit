@@ -13,7 +13,7 @@
 # limitations under the License.
 import os
 from enum import Enum
-from typing import Optional, Union
+from typing import Dict, Optional, Union
 
 import cudf
 import cupy as cp
@@ -247,13 +247,28 @@ class GPUTokenizer(SubwordTokenizer):
         return cls(hashed_vocab_path, config=config)
 
 
-def clip_tokens(token_o, max_length, padding_side, pad_token_id, return_type="pt"):
+def clip_tokens(
+    token_o: Dict[str, Union[cp.ndarray, torch.Tensor]],
+    max_length: int,
+    padding_side: str,
+    pad_token_id: int,
+    return_type: str = "pt",
+) -> Dict[str, Union[cp.ndarray, torch.Tensor]]:
+    # Verify non-empty max_length, padding_side, and pad_token_id
+    if not max_length:
+        raise ValueError("max_length cannot be empty or zero.")
+    if not padding_side:
+        raise ValueError("padding_side cannot be empty.")
+    if pad_token_id is None:
+        raise ValueError("pad_token_id cannot be None.")
+
+    # Check if input_ids is a cupy array, if not convert to cupy array
     if not isinstance(token_o["input_ids"], cp.ndarray):
         token_o = {k: cp.asarray(v) for k, v in token_o.items()}
 
-    clip_len = max_length - int((token_o["input_ids"][:, ::-1] != pad_token_id).argmax(1).min())
-
+    # Clip the input_ids and attention_mask based on the padding side
     if padding_side == "right":
+        clip_len = max_length - int((token_o["input_ids"][:, ::-1] != pad_token_id).argmax(1).min())
         token_o["input_ids"] = _cast_to_appropriate_type(
             token_o["input_ids"][:, :clip_len], return_type
         )
@@ -261,6 +276,7 @@ def clip_tokens(token_o, max_length, padding_side, pad_token_id, return_type="pt
             token_o["attention_mask"][:, :clip_len], return_type
         )
     else:
+        clip_len = max_length - int((token_o["input_ids"] != pad_token_id).argmax(1).min())
         token_o["input_ids"] = _cast_to_appropriate_type(
             token_o["input_ids"][:, -clip_len:], return_type
         )

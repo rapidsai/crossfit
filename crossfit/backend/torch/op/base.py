@@ -86,7 +86,9 @@ class Predictor(Op):
 
         out = cudf.DataFrame(index=index)
         outputs = cp.asarray(
-            concat_and_pad_tensors(all_outputs_ls, pad_token_id=loader.pad_token_id)
+            concat_and_pad_tensors(
+                all_outputs_ls, pad_token_id=loader.pad_token_id, padding_side=loader.padding_side
+            )
         )
         _index = loader.sort_column(index.values) if self.sorted_data_loader else index
         if len(outputs.shape) <= 2:

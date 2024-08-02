@@ -19,7 +19,9 @@ import torch.nn.functional as F
 
 
 def pad_tensors(
-    tensor_list: List[torch.Tensor], pad_token_id: Union[int, float] = 0
+    tensor_list: List[torch.Tensor],
+    pad_token_id: Union[int, float] = 0,
+    padding_side: str = "right",
 ) -> List[torch.Tensor]:
     """
     Pad a list of tensors to the same shape.
@@ -35,6 +37,8 @@ def pad_tensors(
     Returns:
         List[torch.Tensor]: A list of padded tensors, all with the same shape.
     """
+    if padding_side not in ["right", "left"]:
+        raise ValueError("padding_side must be either 'right' or 'left'")
     # Find the maximum size for each dimension except the batch dimension
     max_sizes = list(tensor_list[0].shape)
     for tensor in tensor_list:
@@ -48,7 +52,10 @@ def pad_tensors(
         pad_sizes = []
         for i in range(len(tensor.shape) - 1, 0, -1):
             pad_size = max_sizes[i] - tensor.shape[i]
-            pad_sizes.extend([0, pad_size])
+            if padding_side == "right":
+                pad_sizes.extend([0, pad_size])
+            else:
+                pad_sizes.extend([pad_size, 0])
 
         # Apply padding
         padded_tensor = F.pad(tensor, pad_sizes, mode="constant", value=pad_token_id)
@@ -58,7 +65,9 @@ def pad_tensors(
 
 
 def concat_and_pad_tensors(
-    all_outputs_ls: List[torch.Tensor], pad_token_id: Union[int, float] = 0
+    all_outputs_ls: List[torch.Tensor],
+    pad_token_id: Union[int, float] = 0,
+    padding_side: str = "right",
 ) -> torch.Tensor:
     """
     Concatenate a list of tensors after padding them to the same shape.
@@ -79,7 +88,7 @@ def concat_and_pad_tensors(
     all_outputs_ls = [tensor.to(device) for tensor in all_outputs_ls]
 
     # Pad the tensors
-    padded_outputs = pad_tensors(all_outputs_ls, pad_token_id)
+    padded_outputs = pad_tensors(all_outputs_ls, pad_token_id, padding_side)
 
     # Concatenate the padded tensors
     return torch.cat(padded_outputs, dim=0)
