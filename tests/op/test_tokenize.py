@@ -12,30 +12,43 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import numpy as np
 import pytest
 
+cp = pytest.importorskip("cupy")
 cudf = pytest.importorskip("cudf")
 dask_cudf = pytest.importorskip("dask_cudf")
 transformers = pytest.importorskip("transformers")
+torch = pytest.importorskip("torch")
 
 import crossfit as cf  # noqa: E402
 from crossfit import op  # noqa: E402
+
+cf_loader = pytest.importorskip("crossfit.backend.torch.loader")
 
 
 def test_tokenizer_sentence_piece(model_name="microsoft/deberta-v3-base"):
     model = cf.HFModel(model_name)
     tokenizer = op.Tokenizer(model, cols=["text"], tokenizer_type="spm")
+    input_strings = ["hello world", "this is a sentence"]
     ddf = dask_cudf.from_cudf(
-        cudf.DataFrame({"text": ["hello world", "this is a sentence"]}),
-        npartitions=2,
+        cudf.DataFrame({"text": input_strings}),
+        npartitions=1,
     )
     results = tokenizer(ddf)
     results = results.compute()
 
     hf_tokenizer = transformers.AutoTokenizer.from_pretrained(model_name)
+    tokenized_strings = hf_tokenizer.batch_encode_plus(
+        input_strings, return_tensors="pt", padding="longest"
+    )
     assert isinstance(results, cudf.DataFrame)
-    assert results["input_ids"][0] == hf_tokenizer(["hello world"])["input_ids"][0]
-    assert results["input_ids"][1] == hf_tokenizer(["this is a sentence"])["input_ids"][0]
+    np.testing.assert_equal(
+        np.asarray(results["input_ids"][0]), tokenized_strings["input_ids"][0].numpy()
+    )
+    np.testing.assert_equal(
+        np.asarray(results["input_ids"][1]), tokenized_strings["input_ids"][1].numpy()
+    )
 
 
 def test_tokenizer_max_chars(model_name="sentence-transformers/all-MiniLM-L6-v2"):
@@ -63,14 +76,71 @@ def test_tokenizer_max_chars(model_name="sentence-transformers/all-MiniLM-L6-v2"
 def test_tokenizer_padded(model_name="microsoft/deberta-v3-base"):
     model = cf.HFModel(model_name)
     tokenizer = op.Tokenizer(model, cols=["text"], tokenizer_type="spm")
+    input_strings = ["hello world", "this is a sentence"]
     ddf = dask_cudf.from_cudf(
-        cudf.DataFrame({"text": ["hello world", "this is a sentence"]}),
-        npartitions=2,
+        cudf.DataFrame({"text": input_strings}),
+        npartitions=1,
     )
     results = tokenizer(ddf)
     results = results.compute()
 
     hf_tokenizer = transformers.AutoTokenizer.from_pretrained(model_name)
+    tokenized_strings = hf_tokenizer.batch_encode_plus(
+        input_strings, return_tensors="pt", padding="longest"
+    )
     assert isinstance(results, cudf.DataFrame)
-    assert results["input_ids"][0] == hf_tokenizer(["hello world"])["input_ids"][0]
-    assert results["input_ids"][1] == hf_tokenizer(["this is a sentence"])["input_ids"][0]
+    np.testing.assert_equal(
+        np.asarray(results["input_ids"][0]), tokenized_strings["input_ids"][0].numpy()
+    )
+    np.testing.assert_equal(
+        np.asarray(results["input_ids"][1]), tokenized_strings["input_ids"][1].numpy()
+    )
+
+
+def test_clip_tokens_right_padding():
+    input_ids = cp.array([[1, 2, 3, 0, 0], [1, 2, 3, 4, 0]])
+    attention_mask = cp.array([[1, 1, 1, 0, 0], [1, 1, 1, 1, 0]])
+    token_o = {"input_ids": input_ids, "attention_mask": attention_mask}
+
+    result = cf_loader.clip_tokens(token_o, max_length=4, padding_side="right", pad_token_id=0)
+
+    assert isinstance(result["input_ids"], torch.Tensor)
+    assert isinstance(result["attention_mask"], torch.Tensor)
+    assert result["input_ids"].shape == (2, 4)
+    assert result["attention_mask"].shape == (2, 4)
+    assert torch.equal(result["input_ids"].to("cpu"), torch.tensor([[1, 2, 3, 0], [1, 2, 3, 4]]))
+    assert torch.equal(
+        result["attention_mask"].to("cpu"), torch.tensor([[1, 1, 1, 0], [1, 1, 1, 1]])
+    )
+
+
+def test_clip_tokens_left_padding():
+    input_ids = cp.array([[0, 0, 1, 2, 3], [0, 1, 2, 3, 4]])
+    attention_mask = cp.array([[0, 0, 1, 1, 1], [0, 1, 1, 1, 1]])
+    token_o = {"input_ids": input_ids, "attention_mask": attention_mask}
+
+    result = cf_loader.clip_tokens(token_o, max_length=4, padding_side="left", pad_token_id=0)
+
+    assert isinstance(result["input_ids"], torch.Tensor)
+    assert isinstance(result["attention_mask"], torch.Tensor)
+    assert result["input_ids"].shape == (2, 4)
+    assert result["attention_mask"].shape == (2, 4)
+    assert torch.equal(result["input_ids"].to("cpu"), torch.tensor([[0, 1, 2, 3], [1, 2, 3, 4]]))
+    assert torch.equal(
+        result["attention_mask"].to("cpu"), torch.tensor([[0, 1, 1, 1], [1, 1, 1, 1]])
+    )
+
+
+def test_clip_tokens_no_clipping_needed():
+    input_ids = cp.array([[1, 2, 3], [4, 5, 6]])
+    attention_mask = cp.array([[1, 1, 1], [1, 1, 1]])
+    token_o = {"input_ids": input_ids, "attention_mask": attention_mask}
+
+    result = cf_loader.clip_tokens(token_o, max_length=4, padding_side="right", pad_token_id=0)
+
+    assert isinstance(result["input_ids"], torch.Tensor)
+    assert isinstance(result["attention_mask"], torch.Tensor)
+    assert result["input_ids"].shape == (2, 3)
+    assert result["attention_mask"].shape == (2, 3)
+    assert torch.equal(result["input_ids"].to("cpu"), torch.tensor([[1, 2, 3], [4, 5, 6]]))
+    assert torch.equal(result["attention_mask"].to("cpu"), torch.tensor([[1, 1, 1], [1, 1, 1]]))

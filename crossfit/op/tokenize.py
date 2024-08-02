@@ -267,8 +267,13 @@ def clip_tokens(
         token_o = {k: cp.asarray(v) for k, v in token_o.items()}
 
     # Clip the input_ids and attention_mask based on the padding side
+    # max_length = min(max_length, token_o["input_ids"].shape[1])
+    total_indices = token_o["input_ids"].shape[1]
     if padding_side == "right":
-        clip_len = max_length - int((token_o["input_ids"][:, ::-1] != pad_token_id).argmax(1).min())
+        clip_len = total_indices - int(
+            (token_o["input_ids"][:, ::-1] != pad_token_id).argmax(1).min()
+        )
+        clip_len = min(clip_len, max_length)
         token_o["input_ids"] = _cast_to_appropriate_type(
             token_o["input_ids"][:, :clip_len], return_type
         )
@@ -276,7 +281,8 @@ def clip_tokens(
             token_o["attention_mask"][:, :clip_len], return_type
         )
     else:
-        clip_len = max_length - int((token_o["input_ids"] != pad_token_id).argmax(1).min())
+        clip_len = total_indices - int((token_o["input_ids"] != pad_token_id).argmax(1).min())
+        clip_len = min(clip_len, max_length)
         token_o["input_ids"] = _cast_to_appropriate_type(
             token_o["input_ids"][:, -clip_len:], return_type
         )
