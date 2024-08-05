@@ -45,9 +45,7 @@ class HFModel(Model):
         self.start_seq_len = start_seq_len
         self.seq_len_increment = seq_len_increment
 
-        cache_dir = os.path.join(
-            CF_HOME, "memory", AutoConfig.from_pretrained(path_or_name)._name_or_path
-        )
+        cache_dir = os.path.join(CF_HOME, "memory", self.load_cfg()._name_or_path)
         os.makedirs(cache_dir, exist_ok=True)
         mem_model_path = os.path.join(cache_dir, "mem_model.pkl")
         if os.path.exists(mem_model_path):
