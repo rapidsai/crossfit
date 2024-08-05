@@ -19,7 +19,7 @@ import numpy as np
 import torch
 from sklearn.linear_model import LinearRegression
 from tqdm import tqdm
-from transformers import AutoConfig, AutoTokenizer, PreTrainedModel
+from transformers import PreTrainedModel
 
 from crossfit.utils.model_adapter import adapt_model_input
 
@@ -41,16 +41,12 @@ def fit_memory_estimate_curve(
     X: list[list[int]] = []
     y: list[float] = []
 
-    max_seq = min(AutoTokenizer.from_pretrained(path_or_name).model_max_length, end_seq_len)
-    if max_seq > 1e5:
-        max_seq = min(AutoConfig.from_pretrained(path_or_name).max_position_embeddings, end_seq_len)
-
     batch_size_pbar = tqdm(
         range(start_batch_size, end_batch_size + 1, batch_size_increment), desc="Batch size"
     )
     for batch_size in batch_size_pbar:
         seq_len_pbar = tqdm(
-            range(start_seq_len, max_seq + 1, seq_len_increment),
+            range(start_seq_len, end_seq_len + 1, seq_len_increment),
             desc="Sequence length",
             leave=False,
         )
