@@ -75,7 +75,6 @@ class InMemoryLoader:
 
         batch = {key: val[self.current_idx : end] for key, val in self.tensor_dict.items()}
         if self.max_seq_len is not None:
-            # TODO: Check this
             if self.padding_side == "right":
                 batch = {key: val[:, : self.max_seq_len] for key, val in batch.items()}
             else:
@@ -162,10 +161,6 @@ class SortedSeqLoader(InMemoryLoader):
                     for key, val in self.tensor_dict.items()
                     if key not in self.to_ignore
                 }
-                # TODO: Fix max_length
-                if self.max_seq_len is None:
-                    self.max_seq_len = self.model.max_seq_length()
-
                 batch = clip_tokens(
                     token_o=batch,
                     max_length=self.max_seq_len,
