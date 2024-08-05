@@ -84,6 +84,7 @@ MultiDataset = LazyLoader("crossfit.dataset.base.MultiDataset")
 load_dataset = LazyLoader("crossfit.dataset.load.load_dataset")
 embed = LazyLoader("crossfit.report.beir.embed.embed")
 beir_report = LazyLoader("crossfit.report.beir.report.beir_report")
+utils = LazyLoader("crossfit.utils")
 
 __all__.extend(
     [

@@ -1,4 +1,4 @@
-# Copyright 2023 NVIDIA CORPORATION
+# Copyright 2024 NVIDIA CORPORATION
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,6 +22,8 @@ from crossfit.backend.torch.model import Model
 from crossfit.data.array.conversion import convert_array
 from crossfit.data.array.dispatch import crossarray
 from crossfit.data.dataframe.dispatch import CrossFrame
+from crossfit.op.tokenize import clip_tokens
+from crossfit.utils.model_adapter import adapt_model_input
 
 DEFAULT_BATCH_SIZE = 512
 
@@ -35,7 +37,14 @@ class InMemoryLoader:
     def __init__(self, data: CrossFrame, batch_size: int, progress_bar=None):
         ...
 
-    def __init__(self, data, batch_size: int, progress_bar=None, max_seq_len=None):
+    def __init__(
+        self,
+        data,
+        batch_size: int,
+        progress_bar=None,
+        max_seq_len=None,
+        padding_side: str = "right",
+    ):
         self.data = CrossFrame(data).cast(torch.Tensor)
         self.tensor_dict = self.data.to_dict()
         self._batch_size = batch_size
@@ -44,6 +53,7 @@ class InMemoryLoader:
         self._to_map = []
         self.progress_bar = progress_bar
         self.max_seq_len = max_seq_len
+        self.padding_side = padding_side
 
     def map(self, fn):
         self._to_map.append(fn)
@@ -65,12 +75,15 @@ class InMemoryLoader:
 
         batch = {key: val[self.current_idx : end] for key, val in self.tensor_dict.items()}
         if self.max_seq_len is not None:
-            batch = {key: val[:, : self.max_seq_len] for key, val in batch.items()}
+            if self.padding_side == "right":
+                batch = {key: val[:, : self.max_seq_len] for key, val in batch.items()}
+            else:
+                batch = {key: val[:, -self.max_seq_len :] for key, val in batch.items()}
 
         self.current_idx += self.batch_size
 
         for fn in self._to_map:
-            batch = fn(batch)
+            batch = adapt_model_input(fn, batch)
 
         if self.progress_bar is not None:
             self.progress_bar.update(batch_size)
@@ -96,14 +109,27 @@ class SortedSeqLoader(InMemoryLoader):
         self.to_ignore = to_ignore or []
         self.to_ignore.append("seq_length")
         self.model = model
+        tokenizer = self.model.load_tokenizer()
+        pad_token_id = tokenizer.pad_token_id
+        padding_side = tokenizer.padding_side
 
+        if padding_side not in ["right", "left"]:
+            raise ValueError("padding_side must be either 'right' or 'left'")
+
+        self.pad_token_id = pad_token_id
         frame = CrossFrame(data).cast(torch.Tensor)
-        seq_length = (frame[sort_key] != 0).sum(axis=1)
+        seq_length = (frame[sort_key] != self.pad_token_id).sum(axis=1)
         self.sorted_indices = seq_length.argsort(descending=True)
         frame = frame.apply(lambda x: x[self.sorted_indices])
         frame = frame.assign(seq_length=seq_length[self.sorted_indices])
 
-        super().__init__(frame, initial_batch_size, progress_bar=progress_bar)
+        super().__init__(
+            frame,
+            initial_batch_size,
+            progress_bar=progress_bar,
+            max_seq_len=self.model.max_seq_length(),
+            padding_side=padding_side,
+        )
         self.splits = self._find_optimal_splits()
 
     def sort_column(self, col):
@@ -127,8 +153,6 @@ class SortedSeqLoader(InMemoryLoader):
         else:
             start = self.splits[self.current_idx - 1]
 
-        _tokens = self.tensor_dict["seq_length"]
-
         end = min(self.splits[self.current_idx], self.num_rows)
         while end > start:
             try:
@@ -137,11 +161,16 @@ class SortedSeqLoader(InMemoryLoader):
                     for key, val in self.tensor_dict.items()
                     if key not in self.to_ignore
                 }
-                clip_len = min(max(_tokens[start], _tokens[end - 1]), self.model.max_seq_length())
-                batch = {key: val[:, :clip_len] for key, val in batch.items()}
+                batch = clip_tokens(
+                    token_o=batch,
+                    max_length=self.max_seq_len,
+                    padding_side=self.padding_side,
+                    pad_token_id=self.pad_token_id,
+                    return_type="pt",
+                )
 
                 for fn in self._to_map:
-                    batch = fn(batch)
+                    batch = adapt_model_input(fn, batch)
 
                 break
             except torch.cuda.OutOfMemoryError:

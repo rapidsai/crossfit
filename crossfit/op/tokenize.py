@@ -1,4 +1,4 @@
-# Copyright 2023 NVIDIA CORPORATION
+# Copyright 2023-2024 NVIDIA CORPORATION
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
 # limitations under the License.
 import os
 from enum import Enum
-from typing import Optional, Union
+from typing import Dict, Optional, Union
 
 import cudf
 import cupy as cp
@@ -31,6 +31,7 @@ from crossfit.op.base import Op
 class TokenizerType(Enum):
     SUBWORD = 1
     SENTENCE_PIECE = 2
+    DEFAULT = 3
 
 
 class Tokenizer(Op):
@@ -55,8 +56,10 @@ class Tokenizer(Op):
             GPUTokenizer.from_pretrained(self.model)
 
     def tokenize_strings(self, sentences, max_length=None):
-        if self.tokenizer_type == TokenizerType.SENTENCE_PIECE:
+        if self.tokenizer_type in [TokenizerType.SENTENCE_PIECE, TokenizerType.DEFAULT]:
             tokenizer = self.model.load_tokenizer()
+            self.padding_side = tokenizer.padding_side
+            self.pad_token_id = tokenizer.pad_token_id
 
             if isinstance(sentences, cudf.Series):
                 sentences = sentences.to_arrow().to_pylist()
@@ -81,6 +84,8 @@ class Tokenizer(Op):
                 tokenizer = GPUTokenizer.from_pretrained(self.model)
                 worker.tokenizer = tokenizer
 
+            self.padding_side = tokenizer.padding_side
+            self.pad_token_id = tokenizer.pad_token_id
             return worker.tokenizer(
                 sentences,
                 max_length=max_length or self.max_length,
@@ -110,7 +115,13 @@ class Tokenizer(Op):
             text = text.str.slice(0, self.max_chars)
 
         tokenized_data = self.tokenize_strings(text).copy()
-        tokenized_data = clip_tokens(tokenized_data, max_length=self.max_length, return_type="cp")
+        tokenized_data = clip_tokens(
+            tokenized_data,
+            max_length=self.max_length,
+            padding_side=self.padding_side,
+            pad_token_id=self.pad_token_id,
+            return_type="cp",
+        )
 
         input_ids = create_list_series_from_1d_or_2d_ar(
             tokenized_data["input_ids"].astype("int32"), data.index
@@ -173,6 +184,8 @@ class Tokenizer(Op):
             tokenizer_type = TokenizerType.SENTENCE_PIECE
         elif tokenizer_type in ["subword", "bert", TokenizerType.SUBWORD]:
             tokenizer_type = TokenizerType.SUBWORD
+        elif tokenizer_type in ["default", TokenizerType.DEFAULT]:
+            tokenizer_type = TokenizerType.DEFAULT
         return tokenizer_type
 
 
@@ -180,6 +193,16 @@ class GPUTokenizer(SubwordTokenizer):
     def __init__(self, hash_file: str, do_lower_case: bool = True, config=None):
         super().__init__(str(hash_file), do_lower_case=do_lower_case)
         self.config = config or {"_name_or_path": hash_file}
+        self.padding_side = self.config.get("padding_side", "right")
+        self.pad_token_id = self.config.get("pad_token_id", 0)
+        if self.padding_side != "right":
+            raise ValueError(
+                f"Only right padding is supported for GPUTokenizer, got {self.padding_side}"
+            )
+        if self.pad_token_id != 0:
+            raise ValueError(
+                f"Only pad_token_id=0 is supported for GPUTokenizer, got {self.pad_token_id}"
+            )
 
     @classmethod
     def get_tokenizer_config(cls, name):
@@ -224,17 +247,48 @@ class GPUTokenizer(SubwordTokenizer):
         return cls(hashed_vocab_path, config=config)
 
 
-def clip_tokens(token_o, max_length, return_type="pt"):
+def clip_tokens(
+    token_o: Dict[str, Union[cp.ndarray, torch.Tensor]],
+    max_length: int,
+    padding_side: str,
+    pad_token_id: int,
+    return_type: str = "pt",
+) -> Dict[str, Union[cp.ndarray, torch.Tensor]]:
+    # Verify non-empty max_length, padding_side, and pad_token_id
+    if not max_length:
+        raise ValueError("max_length cannot be empty or zero.")
+    if not padding_side:
+        raise ValueError("padding_side cannot be empty.")
+    if pad_token_id is None:
+        raise ValueError("pad_token_id cannot be None.")
+
+    # Check if input_ids is a cupy array, if not convert to cupy array
     if not isinstance(token_o["input_ids"], cp.ndarray):
         token_o = {k: cp.asarray(v) for k, v in token_o.items()}
 
-    clip_len = max_length - int((token_o["input_ids"][:, ::-1] != 0).argmax(1).min())
-    token_o["input_ids"] = _cast_to_appropriate_type(
-        token_o["input_ids"][:, :clip_len], return_type
-    )
-    token_o["attention_mask"] = _cast_to_appropriate_type(
-        token_o["attention_mask"][:, :clip_len], return_type
-    )
+    # Clip the input_ids and attention_mask based on the padding side
+    # max_length = min(max_length, token_o["input_ids"].shape[1])
+    total_indices = token_o["input_ids"].shape[1]
+    if padding_side == "right":
+        clip_len = total_indices - int(
+            (token_o["input_ids"][:, ::-1] != pad_token_id).argmax(1).min()
+        )
+        clip_len = min(clip_len, max_length)
+        token_o["input_ids"] = _cast_to_appropriate_type(
+            token_o["input_ids"][:, :clip_len], return_type
+        )
+        token_o["attention_mask"] = _cast_to_appropriate_type(
+            token_o["attention_mask"][:, :clip_len], return_type
+        )
+    else:
+        clip_len = total_indices - int((token_o["input_ids"] != pad_token_id).argmax(1).min())
+        clip_len = min(clip_len, max_length)
+        token_o["input_ids"] = _cast_to_appropriate_type(
+            token_o["input_ids"][:, -clip_len:], return_type
+        )
+        token_o["attention_mask"] = _cast_to_appropriate_type(
+            token_o["attention_mask"][:, -clip_len:], return_type
+        )
 
     if "metadata" in token_o:
         del token_o["metadata"]
