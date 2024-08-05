@@ -112,7 +112,7 @@ class HFModel(Model):
         # Guard against the HF bug
         # which sets max_seq_length to max(int) for some models
         if max_seq_length > 1e5:
-            max_seq_length = AutoConfig.from_pretrained(self.path_or_name).max_position_embeddings
+            max_seq_length = self.load_cfg().max_position_embeddings
         return max_seq_length
 
 
