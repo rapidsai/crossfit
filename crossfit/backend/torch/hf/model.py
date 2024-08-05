@@ -13,14 +13,17 @@
 # limitations under the License.
 
 import gc
+import os
 from functools import lru_cache
 
+import joblib
 import numpy as np
 import torch
 from transformers import AutoConfig, AutoModel, AutoTokenizer
 
 from crossfit.backend.torch.hf.memory_curve_utils import fit_memory_estimate_curve
 from crossfit.backend.torch.model import Model
+from crossfit.dataset.home import CF_HOME
 
 
 class HFModel(Model):
@@ -42,28 +45,41 @@ class HFModel(Model):
         self.start_seq_len = start_seq_len
         self.seq_len_increment = seq_len_increment
 
-        model = self.load_model("cuda") if not training else None
-        if not training:
-            with torch.no_grad():
-                self.mem = fit_memory_estimate_curve(
-                    model,
-                    self.path_or_name,
-                    start_batch_size,
-                    end_batch_size,
-                    batch_size_increment,
-                    start_seq_len,
-                    seq_len_increment,
-                )
+        cache_dir = os.path.join(
+            CF_HOME, "memory", AutoConfig.from_pretrained(path_or_name)._name_or_path
+        )
+        os.makedirs(cache_dir, exist_ok=True)
+        mem_model_path = os.path.join(cache_dir, "mem_model.pkl")
+        if os.path.exists(mem_model_path):
+            self.mem = joblib.load(mem_model_path)
         else:
-            self.mem = fit_memory_estimate_curve(
-                model,
-                self.path_or_name,
-                start_batch_size,
-                end_batch_size,
-                batch_size_increment,
-                start_seq_len,
-                seq_len_increment,
-            )
+            model = self.load_model("cuda") if not training else None
+            end_seq_len = self.max_seq_length()
+            if not training:
+                with torch.no_grad():
+                    self.mem = fit_memory_estimate_curve(
+                        model=model,
+                        path_or_name=self.path_or_name,
+                        start_batch_size=start_batch_size,
+                        end_batch_size=end_batch_size,
+                        start_seq_len=start_seq_len,
+                        end_seq_len=end_seq_len,
+                        batch_size_increment=batch_size_increment,
+                        seq_len_increment=seq_len_increment,
+                        mem_model_path=mem_model_path,
+                    )
+            else:
+                self.mem = fit_memory_estimate_curve(
+                    model=model,
+                    path_or_name=self.path_or_name,
+                    start_batch_size=start_batch_size,
+                    end_batch_size=end_batch_size,
+                    start_seq_len=start_seq_len,
+                    end_seq_len=end_seq_len,
+                    batch_size_increment=batch_size_increment,
+                    seq_len_increment=seq_len_increment,
+                    mem_model_path=mem_model_path,
+                )
 
     def load_on_worker(self, worker, device="cuda"):
         worker.torch_model = self.load_model(device)

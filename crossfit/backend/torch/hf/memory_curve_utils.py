@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import gc
-import os
 
 import joblib
 import numpy as np
@@ -22,7 +21,6 @@ from sklearn.linear_model import LinearRegression
 from tqdm import tqdm
 from transformers import AutoConfig, AutoTokenizer, PreTrainedModel
 
-from crossfit.dataset.home import CF_HOME
 from crossfit.utils.model_adapter import adapt_model_input
 
 
@@ -35,15 +33,8 @@ def fit_memory_estimate_curve(
     start_seq_len: int = 1,
     end_seq_len: int = 2048,
     seq_len_increment: int = 64,
+    mem_model_path: str = None,
 ) -> LinearRegression:
-    cache_dir = os.path.join(
-        CF_HOME, "memory", AutoConfig.from_pretrained(path_or_name)._name_or_path
-    )
-    mem_model_path = os.path.join(cache_dir, "mem_model.pkl")
-
-    if os.path.exists(mem_model_path):
-        return joblib.load(mem_model_path)
-
     print(f"Fitting memory estimate curve for model: {path_or_name}")
 
     device = next(model.parameters()).device
@@ -97,7 +88,6 @@ def fit_memory_estimate_curve(
             break
 
     mem_model = LinearRegression().fit(np.array(X), np.array(y))
-    os.makedirs(cache_dir, exist_ok=True)
     joblib.dump(mem_model, mem_model_path)
 
     return mem_model

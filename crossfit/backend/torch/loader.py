@@ -118,16 +118,19 @@ class SortedSeqLoader(InMemoryLoader):
             raise ValueError("padding_side must be either 'right' or 'left'")
 
         self.pad_token_id = pad_token_id
-        self.padding_side = padding_side
-        self.max_seq_len = self.model.max_seq_length()
-
         frame = CrossFrame(data).cast(torch.Tensor)
         seq_length = (frame[sort_key] != self.pad_token_id).sum(axis=1)
         self.sorted_indices = seq_length.argsort(descending=True)
         frame = frame.apply(lambda x: x[self.sorted_indices])
         frame = frame.assign(seq_length=seq_length[self.sorted_indices])
 
-        super().__init__(frame, initial_batch_size, progress_bar=progress_bar)
+        super().__init__(
+            frame,
+            initial_batch_size,
+            progress_bar=progress_bar,
+            max_seq_len=self.model.max_seq_length(),
+            padding_side=padding_side,
+        )
         self.splits = self._find_optimal_splits()
 
     def sort_column(self, col):
