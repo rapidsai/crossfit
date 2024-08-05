@@ -13,19 +13,14 @@
 # limitations under the License.
 
 import gc
-import os
 from functools import lru_cache
 
-import joblib
 import numpy as np
 import torch
-from sklearn.linear_model import LinearRegression
-from tqdm import tqdm
 from transformers import AutoConfig, AutoModel, AutoTokenizer
 
+from crossfit.backend.torch.hf.memory_curve_utils import fit_memory_estimate_curve
 from crossfit.backend.torch.model import Model
-from crossfit.dataset.home import CF_HOME
-from crossfit.utils.model_adapter import adapt_model_input
 
 
 class HFModel(Model):
@@ -47,11 +42,28 @@ class HFModel(Model):
         self.start_seq_len = start_seq_len
         self.seq_len_increment = seq_len_increment
 
+        model = self.load_model("cuda") if not training else None
         if not training:
             with torch.no_grad():
-                self.fit_memory_estimate_curve()
+                self.mem = fit_memory_estimate_curve(
+                    model,
+                    self.path_or_name,
+                    start_batch_size,
+                    end_batch_size,
+                    batch_size_increment,
+                    start_seq_len,
+                    seq_len_increment,
+                )
         else:
-            self.fit_memory_estimate_curve()
+            self.mem = fit_memory_estimate_curve(
+                model,
+                self.path_or_name,
+                start_batch_size,
+                end_batch_size,
+                batch_size_increment,
+                start_seq_len,
+                seq_len_increment,
+            )
 
     def load_on_worker(self, worker, device="cuda"):
         worker.torch_model = self.load_model(device)
@@ -74,71 +86,6 @@ class HFModel(Model):
     @lru_cache(maxsize=1)
     def load_cfg(self):
         return AutoConfig.from_pretrained(self.path_or_name)
-
-    def fit_memory_estimate_curve(self, model=None):
-        remove_model = False
-        if model is None:
-            remove_model = True
-            model = self.load_model(device="cuda")
-
-        cache_dir = os.path.join(CF_HOME, "memory", self.load_cfg()._name_or_path)
-        mem_model_path = os.path.join(cache_dir, "mem_model.pkl")
-
-        if os.path.exists(mem_model_path):
-            self.mem = joblib.load(mem_model_path)
-
-            return self
-
-        print(f"Fitting memory estimate curve for model: {self.path_or_name}")
-
-        device = next(model.parameters()).device
-        X = []
-        y = []
-
-        max_seq = self.max_seq_length()
-        for batch_size in tqdm(
-            range(self.end_batch_size, self.start_batch_size, -self.batch_size_increment)
-        ):
-            if batch_size <= 0:
-                continue
-
-            for seq_len in range(max_seq, self.start_seq_len, -self.seq_len_increment):
-                if seq_len <= 0:
-                    continue
-
-                torch.cuda.reset_peak_memory_stats()
-
-                batch = {
-                    "input_ids": torch.randint(1, 501, (batch_size, seq_len)).to(device=device),
-                    "attention_mask": torch.ones((batch_size, seq_len)).to(device=device),
-                }
-
-                try:
-                    _ = adapt_model_input(model, batch)
-                    memory_used = torch.cuda.max_memory_allocated() / (1024**2)  # Convert to MB
-                    X.append([batch_size, seq_len, seq_len**2])
-                    y.append(memory_used)
-
-                except RuntimeError as e:
-                    if "out of memory" in str(e) or "out_of_memory" in str(e):
-                        pass
-                    else:
-                        raise e
-                finally:
-                    del batch
-                    if "outputs" in vars():
-                        del outputs
-                    gc.collect()
-                    torch.cuda.empty_cache()
-
-        self.mem = LinearRegression().fit(np.array(X), np.array(y))
-        os.makedirs(cache_dir, exist_ok=True)
-        joblib.dump(self.mem, mem_model_path)
-
-        if remove_model:
-            del model
-        gc.collect()
-        torch.cuda.empty_cache()
 
     def estimate_memory(self, max_num_tokens: int, batch_size: int) -> int:
         predicted_memory = self.mem.predict(
