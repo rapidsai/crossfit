@@ -1,0 +1,4 @@
+# Include all files in the requirements directory
+recursive-include requirements *.txt
+
+include README.md
