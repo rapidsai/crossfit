@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import gc
 import os
 from functools import lru_cache
 
@@ -24,6 +23,7 @@ from transformers import AutoConfig, AutoModel, AutoTokenizer
 from crossfit.backend.torch.hf.memory_curve_utils import fit_memory_estimate_curve
 from crossfit.backend.torch.model import Model
 from crossfit.dataset.home import CF_HOME
+from crossfit.utils.torch_utils import cleanup_torch_cache
 
 
 class HFModel(Model):
@@ -88,8 +88,7 @@ class HFModel(Model):
             delattr(worker, "torch_model")
         if hasattr(worker, "cfg"):
             delattr(worker, "cfg")
-        gc.collect()
-        torch.cuda.empty_cache()
+        cleanup_torch_cache()
 
     def load_model(self, device="cuda"):
         return AutoModel.from_pretrained(self.path_or_name).to(device)

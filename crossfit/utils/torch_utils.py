@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import gc
 from typing import List, Union
 
 import torch
@@ -92,3 +93,9 @@ def concat_and_pad_tensors(
 
     # Concatenate the padded tensors
     return torch.cat(padded_outputs, dim=0)
+
+
+def cleanup_torch_cache() -> None:
+    gc.collect()
+    torch.cuda.empty_cache()
+    return None

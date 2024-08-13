@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import gc
 
 import joblib
 import numpy as np
@@ -22,6 +21,7 @@ from tqdm import tqdm
 from transformers import PreTrainedModel
 
 from crossfit.utils.model_adapter import adapt_model_input
+from crossfit.utils.torch_utils import cleanup_torch_cache
 
 
 def fit_memory_estimate_curve(
@@ -65,6 +65,8 @@ def fit_memory_estimate_curve(
                 y.append(memory_used)
 
             except RuntimeError as e:
+                # Catching run time error because:
+                # https://github.com/pytorch/pytorch/issues/133280
                 if "out of memory" in str(e) or "out_of_memory" in str(e):
                     # Early stopping for this batch size
                     seq_len_pbar.close()
@@ -75,8 +77,7 @@ def fit_memory_estimate_curve(
                 del batch
                 if "outputs" in vars():
                     del outputs
-                gc.collect()
-                torch.cuda.empty_cache()
+                cleanup_torch_cache()
 
         # Check if we've hit the memory limit for all sequence lengths
         if seq_len == start_seq_len:

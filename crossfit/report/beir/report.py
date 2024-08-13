@@ -12,13 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import gc
 from typing import List, Optional
 
 import cudf
 import cupy as cp
 import dask_cudf
-import torch
 from cuml.preprocessing import LabelEncoder
 
 from crossfit.backend.dask.aggregate import aggregate
@@ -32,6 +30,7 @@ from crossfit.metric.ranking import AP, NDCG, Precision, Recall, SparseNumericLa
 from crossfit.op.vector_search import VectorSearchOp
 from crossfit.report.base import Report
 from crossfit.report.beir.embed import embed
+from crossfit.utils.torch_utils import cleanup_torch_cache
 
 
 class BeirMetricAggregator(Aggregator):
@@ -211,9 +210,7 @@ def beir_report(
 
     del data
     del embeddings
-    gc.collect()
-    torch.cuda.empty_cache()
-
+    cleanup_torch_cache()
     aggregator = BeirMetricAggregator(ks)
     aggregator = Aggregator(aggregator, groupby=groupby, name="")
 
