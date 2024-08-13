@@ -17,6 +17,7 @@ from typing import Dict, Optional, Union
 
 import cudf
 import cupy as cp
+import pandas as pd
 import torch
 from cudf.core.subword_tokenizer import SubwordTokenizer, _cast_to_appropriate_type
 from cudf.utils.hash_vocab_utils import hash_vocab
@@ -63,6 +64,8 @@ class Tokenizer(Op):
 
             if isinstance(sentences, cudf.Series):
                 sentences = sentences.to_arrow().to_pylist()
+            elif isinstance(sentences, pd.Series):
+                sentences = sentences.to_list()
 
             with torch.no_grad():
                 tokenized_data = tokenizer.batch_encode_plus(

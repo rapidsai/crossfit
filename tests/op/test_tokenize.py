@@ -18,6 +18,8 @@ import pytest
 cp = pytest.importorskip("cupy")
 cudf = pytest.importorskip("cudf")
 dask_cudf = pytest.importorskip("dask_cudf")
+dd = pytest.importorskip("dask.dataframe")
+pd = pytest.importorskip("pandas")
 transformers = pytest.importorskip("transformers")
 torch = pytest.importorskip("torch")
 
@@ -144,3 +146,12 @@ def test_clip_tokens_no_clipping_needed():
     assert result["attention_mask"].shape == (2, 3)
     assert torch.equal(result["input_ids"].to("cpu"), torch.tensor([[1, 2, 3], [4, 5, 6]]))
     assert torch.equal(result["attention_mask"].to("cpu"), torch.tensor([[1, 1, 1], [1, 1, 1]]))
+
+
+def test_tokenize_strings_cpu(model_name="microsoft/deberta-v3-base"):
+    model = cf.HFModel(model_name)
+    tokenizer = op.Tokenizer(model, cols=["text"], tokenizer_type="spm")
+    input_strings = ["hello world", "this is a sentence"]
+    ddf = dd.from_pandas(pd.DataFrame({"text": input_strings}), npartitions=1)
+    results = tokenizer(ddf)
+    results = results.compute()
