@@ -24,6 +24,7 @@ from crossfit.data.array.dispatch import crossarray
 from crossfit.data.dataframe.dispatch import CrossFrame
 from crossfit.op.tokenize import clip_tokens
 from crossfit.utils.model_adapter import adapt_model_input
+from crossfit.utils.torch_utils import cleanup_torch_cache
 
 DEFAULT_BATCH_SIZE = 512
 
@@ -173,17 +174,24 @@ class SortedSeqLoader(InMemoryLoader):
                     batch = adapt_model_input(fn, batch)
 
                 break
-            except torch.cuda.OutOfMemoryError:
-                mid = start + (end - start) // 2
-                if mid == start:
-                    raise
-                warnings.warn(
-                    f"Not enough memory for a batch size of {end - start}. "
-                    f"Retrying with a new batch size of {mid - start}. "
-                    f"Consider setting initial batch size to {mid - start}."
-                )
-                self.splits.insert(self.current_idx, mid)
-                end = min(self.splits[self.current_idx], self.num_rows)
+            except RuntimeError as e:
+                # Catching run time error because:
+                # https://github.com/pytorch/pytorch/issues/133280
+                if "out of memory" in str(e) or "out_of_memory" in str(e):
+                    mid = start + (end - start) // 2
+                    if mid == start:
+                        raise
+                    warnings.warn(
+                        f"Not enough memory for a batch size of {end - start}. "
+                        f"Retrying with a new batch size of {mid - start}. "
+                        f"Consider setting initial batch size to {mid - start}."
+                    )
+                    del batch
+                    cleanup_torch_cache()
+                    self.splits.insert(self.current_idx, mid)
+                    end = min(self.splits[self.current_idx], self.num_rows)
+                else:
+                    raise e
 
         self.current_idx += 1
 

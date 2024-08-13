@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import gc
 from typing import Optional
 
 import cudf
@@ -26,7 +25,7 @@ from crossfit.backend.cudf.series import (
 from crossfit.backend.torch.loader import DEFAULT_BATCH_SIZE, InMemoryLoader, SortedSeqLoader
 from crossfit.backend.torch.model import Model
 from crossfit.op.base import Op
-from crossfit.utils.torch_utils import concat_and_pad_tensors
+from crossfit.utils.torch_utils import cleanup_torch_cache, concat_and_pad_tensors
 
 
 class Predictor(Op):
@@ -55,7 +54,7 @@ class Predictor(Op):
 
     @torch.no_grad()
     def call(self, data, partition_info=None):
-        index = data.index
+        index = data.index.copy()
         if self.sorted_data_loader:
             loader = SortedSeqLoader(
                 data[["input_ids", "attention_mask"]],
@@ -71,7 +70,7 @@ class Predictor(Op):
                 progress_bar=self.create_progress_bar(len(data), partition_info),
                 max_seq_len=self.model.max_seq_length(),
             )
-
+        del data
         all_outputs_ls = []
         for output in loader.map(self.model.get_model(self.get_worker())):
             if isinstance(output, dict):
@@ -91,16 +90,17 @@ class Predictor(Op):
             )
         )
         _index = loader.sort_column(index.values) if self.sorted_data_loader else index
+        del all_outputs_ls
+        del loader
+        cleanup_torch_cache()
         if len(outputs.shape) <= 2:
             out[self.pred_output_col] = create_list_series_from_1d_or_2d_ar(outputs, _index)
         elif len(outputs.shape) == 3:
             out[self.pred_output_col] = create_nested_list_series_from_3d_ar(outputs, _index)
         else:
             raise RuntimeError(f"Unexpected output shape: {output.shape}")
-
-        gc.collect()
-        torch.cuda.empty_cache()
-
+        del outputs, _index
+        cleanup_torch_cache()
         return out
 
     def meta(self):
