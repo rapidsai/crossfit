@@ -62,10 +62,10 @@ class Tokenizer(Op):
             self.padding_side = tokenizer.padding_side
             self.pad_token_id = tokenizer.pad_token_id
 
-            if isinstance(sentences, pd.Series):
-                sentences = cudf.from_pandas(sentences)
             if isinstance(sentences, cudf.Series):
                 sentences = sentences.to_arrow().to_pylist()
+            elif isinstance(sentences, pd.Series):
+                sentences = sentences.to_list()
 
             with torch.no_grad():
                 tokenized_data = tokenizer.batch_encode_plus(
