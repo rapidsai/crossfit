@@ -54,6 +54,13 @@ class Predictor(Op):
 
     @torch.no_grad()
     def call(self, data, partition_info=None):
+        # Get the current CUDA device
+        current_device = torch.cuda.current_device()
+
+        # Print CUDA memory at the beginning of the method
+        print(f"CUDA memory at start (device {current_device}):")
+        print(torch.cuda.memory_summary(device=current_device))
+
         index = data.index.copy()
         if self.sorted_data_loader:
             loader = SortedSeqLoader(
@@ -101,6 +108,10 @@ class Predictor(Op):
             raise RuntimeError(f"Unexpected output shape: {output.shape}")
         del outputs, _index
         cleanup_torch_cache()
+
+        # Print CUDA memory at the end of the method
+        print(f"CUDA memory at end (device {current_device}):")
+        print(torch.cuda.memory_summary(device=current_device))
         return out
 
     def meta(self):
