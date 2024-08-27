@@ -56,7 +56,6 @@ class Predictor(Op):
     def call(self, data, partition_info=None):
         # Get the current CUDA device
         current_device = torch.cuda.current_device()
-
         # Print CUDA memory at the beginning of the method
         print(f"CUDA memory at start (device {current_device}):")
         print(torch.cuda.memory_summary(device=current_device))
