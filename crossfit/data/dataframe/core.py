@@ -348,7 +348,7 @@ def _(data):
 
 # Fall-back `ArrayBundle` definition
 class ArrayBundle(FrameBackend):
-    @lru_cache
+    @lru_cache(maxsize=1)
     def __len__(self):
         _len = None
         for k, v in self.data.items():
@@ -421,7 +421,7 @@ class ArrayBundle(FrameBackend):
         data = self.data.copy()
         for k, v in kwargs.items():
             if self.columns and len(v) != len(self):
-                raise ValueError(f"Column {k} was length {len(v)}, but expected length {len(self)}")
+                raise ValueError(f"Column {k} was length {len(v)} but expected length {len(self)}")
         data.update(**kwargs)
         return self.__class__(data)
 
