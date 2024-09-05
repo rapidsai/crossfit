@@ -419,9 +419,12 @@ class ArrayBundle(FrameBackend):
 
     def assign(self, **kwargs):
         data = self.data.copy()
-        for k, v in kwargs.items():
-            if self.columns and len(v) != len(self):
-                raise ValueError(f"Column {k} was length {len(v)}, but expected length {len(self)}")
+        # Uncommenting below caueses memory leak
+        # Find out why
+        # for k, v in kwargs.items():
+        #     if self.columns and len(v) != len(self):
+        #         raise ValueError(f"Column {k} was length {len(v)}, "
+        #                          f"but expected length {len(self)}")
         data.update(**kwargs)
         return self.__class__(data)
 
