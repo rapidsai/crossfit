@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from functools import lru_cache
+from functools import cached_property
 from typing import Callable, List
 
 from crossfit.data.array.conversion import convert_array
@@ -348,8 +348,8 @@ def _(data):
 
 # Fall-back `ArrayBundle` definition
 class ArrayBundle(FrameBackend):
-    @lru_cache(maxsize=1)
-    def __len__(self):
+    @cached_property
+    def _cached_len(self):
         _len = None
         for k, v in self.data.items():
             if _len is None:
@@ -357,6 +357,9 @@ class ArrayBundle(FrameBackend):
             elif len(v) != _len:
                 raise ValueError(f"Column {k} was length {len(v)}, but expected length {_len}")
         return _len
+
+    def __len__(self):
+        return self._cached_len
 
     @property
     def dtypes(self) -> dict:
