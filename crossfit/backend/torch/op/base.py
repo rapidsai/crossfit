@@ -81,27 +81,41 @@ class Predictor(Op):
             if self.post is not None:
                 output = self.post(output)
 
-            all_outputs_ls.append(output)
-
+            if self.model.string_tok_inf:
+                for o in output:
+                    all_outputs_ls.append(o)
+            else:
+                all_outputs_ls.append(output)
+        # print(f"all_outputs : {all_outputs_ls}")
         out = cudf.DataFrame(index=index)
-        outputs = cp.asarray(
-            concat_and_pad_tensors(
-                all_outputs_ls, pad_token_id=loader.pad_token_id, padding_side=loader.padding_side
-            )
-        )
         _index = loader.sort_column(index.values) if self.sorted_data_loader else index
-        del all_outputs_ls
-        del loader
-        cleanup_torch_cache()
-        if len(outputs.shape) <= 2:
-            out[self.pred_output_col] = create_list_series_from_1d_or_2d_ar(outputs, _index)
-        elif len(outputs.shape) == 3:
-            out[self.pred_output_col] = create_nested_list_series_from_3d_ar(outputs, _index)
+
+        if self.model.string_tok_inf:
+            out[self.pred_output_col] = cudf.Series(data=all_outputs_ls, index=_index)
+            del all_outputs_ls
+            del loader
         else:
-            raise RuntimeError(f"Unexpected output shape: {output.shape}")
-        del outputs, _index
+            outputs = cp.asarray(
+                concat_and_pad_tensors(
+                    all_outputs_ls, pad_token_id=loader.pad_token_id, padding_side=loader.padding_side
+                )
+            )
+            del all_outputs_ls
+            del loader
+            cleanup_torch_cache()
+            if len(outputs.shape) <= 2:
+                out[self.pred_output_col] = create_list_series_from_1d_or_2d_ar(outputs, _index)
+            elif len(outputs.shape) == 3:
+                out[self.pred_output_col] = create_nested_list_series_from_3d_ar(outputs, _index)
+            else:
+                raise RuntimeError(f"Unexpected output shape: {output.shape}")
+            del outputs
+        del _index
         cleanup_torch_cache()
         return out
 
     def meta(self):
-        return {self.pred_output_col: "float32"}
+        if self.model.string_tok_inf:
+            return {self.pred_output_col: "object"}
+        else:
+            return {self.pred_output_col: "float32"}
