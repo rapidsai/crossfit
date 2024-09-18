@@ -31,6 +31,7 @@ class HFModel(Model):
         self,
         path_or_name: str,
         max_mem_gb: int = 16,
+        model_output_type: str = "numeric",
         training: bool = False,
         start_batch_size: int = 1,
         end_batch_size: int = 2048,
@@ -38,7 +39,7 @@ class HFModel(Model):
         start_seq_len: int = 1,
         seq_len_increment: int = 64,
     ):
-        super().__init__(path_or_name, max_mem_gb)
+        super().__init__(path_or_name, max_mem_gb, model_output_type)
         self.start_batch_size = start_batch_size
         self.end_batch_size = end_batch_size
         self.batch_size_increment = batch_size_increment

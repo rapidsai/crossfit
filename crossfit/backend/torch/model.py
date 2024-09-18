@@ -12,9 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 class Model:
-    def __init__(self, path_or_name: str, max_mem_gb: int = 16):
+    def __init__(self, path_or_name: str, max_mem_gb: int = 16, model_output_type: str = "numeric"):
         self.path_or_name = path_or_name
         self.max_mem_gb = max_mem_gb
+        if model_output_type == "numeric" or model_output_type == "string":
+            self.model_output_type = model_output_type
+        else:
+            raise ValueError("Invalid model output type provided. Allowed values are : 'string' or 'numeric'.")
 
     def load_model(self, device="cuda"):
         raise NotImplementedError()

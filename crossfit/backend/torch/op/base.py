@@ -81,16 +81,15 @@ class Predictor(Op):
             if self.post is not None:
                 output = self.post(output)
 
-            if self.model.string_tok_inf:
+            if self.model.model_output_type == "string":
                 for o in output:
                     all_outputs_ls.append(o)
             else:
                 all_outputs_ls.append(output)
-        # print(f"all_outputs : {all_outputs_ls}")
         out = cudf.DataFrame(index=index)
         _index = loader.sort_column(index.values) if self.sorted_data_loader else index
 
-        if self.model.string_tok_inf:
+        if self.model.model_output_type == "string":
             out[self.pred_output_col] = cudf.Series(data=all_outputs_ls, index=_index)
             del all_outputs_ls
             del loader
@@ -115,7 +114,7 @@ class Predictor(Op):
         return out
 
     def meta(self):
-        if self.model.string_tok_inf:
+        if self.model.model_output_type == "string":
             return {self.pred_output_col: "object"}
         else:
             return {self.pred_output_col: "float32"}

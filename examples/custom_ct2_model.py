@@ -14,7 +14,6 @@ from transformers import AutoConfig, AutoTokenizer
 class TranslationConfig:
     pretrained_model_name_or_path: str
     ct2_model_path: str
-    string_tok_inf: bool = True
 
 class CT2CustomModel():
     def __init__(self, config: TranslationConfig, device="cuda"):
@@ -24,10 +23,9 @@ class CT2CustomModel():
             trust_remote_code = True,
         )
         self.model = ctranslate2.Translator(model_path=config.ct2_model_path, device=device)
-        self.string_tok_inf = config.string_tok_inf
 
     def clean_extra_tokens(self, token_2d):
-        results=[]
+        results = []
         for token_1d in token_2d:
             result = []
             for t in token_1d:
@@ -39,7 +37,7 @@ class CT2CustomModel():
         return results
 
     def __call__(self, batch):
-        token_ids_2d=batch['input_ids']
+        token_ids_2d = batch['input_ids']
         token_ids_1d = token_ids_2d.view(-1).tolist()
         tokens_1d = self.tokenizer.convert_ids_to_tokens(token_ids_1d)
         tokens_2d = [tokens_1d[i:i + token_ids_2d.size(1)] for i in range(0, len(tokens_1d), token_ids_2d.size(1))]
@@ -62,8 +60,7 @@ class ModelForSeq2SeqModel(HFModel):
             pretrained_model_name_or_path=self.trans_config.pretrained_model_name_or_path,
             trust_remote_code=True,
         )
-        self.string_tok_inf = config.string_tok_inf
-        super().__init__(self.trans_config.pretrained_model_name_or_path)
+        super().__init__(self.trans_config.pretrained_model_name_or_path, model_output_type = "string")
 
     def load_model(self, device="cuda"):
         model = CT2CustomModel(
@@ -129,7 +126,7 @@ def main():
     ddf = dask_cudf.read_parquet(args.input_parquet_path)
 
     with cf.Distributed(rmm_pool_size=args.pool_size, n_workers=args.num_workers):
-        model = CT2CustomModel(Config)
+        model = ModelForSeq2SeqModel(Config)
         pipe = op.Sequential(
             op.Tokenizer(model, cols=[args.input_column], tokenizer_type="sentencepiece", max_length=255),
             op.Predictor(model, sorted_data_loader=True, batch_size=args.batch_size),
