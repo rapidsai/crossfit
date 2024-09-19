@@ -13,19 +13,11 @@
 # limitations under the License.
 
 from typing import Optional
-
-import cudf
-import cupy as cp
 import torch
 
-from crossfit.backend.cudf.series import (
-    create_list_series_from_1d_or_2d_ar,
-    create_nested_list_series_from_3d_ar,
-)
 from crossfit.backend.torch.loader import DEFAULT_BATCH_SIZE, InMemoryLoader, SortedSeqLoader
 from crossfit.backend.torch.model import Model
 from crossfit.op.base import Op
-from crossfit.utils.torch_utils import cleanup_torch_cache, concat_and_pad_tensors
 
 
 class Predictor(Op):
@@ -81,36 +73,8 @@ class Predictor(Op):
             if self.post is not None:
                 output = self.post(output)
 
-            if self.model.model_output_type == "string":
-                for o in output:
-                    all_outputs_ls.append(o)
-            else:
-                all_outputs_ls.append(output)
-        out = cudf.DataFrame(index=index)
-        _index = loader.sort_column(index.values) if self.sorted_data_loader else index
-
-        if self.model.model_output_type == "string":
-            out[self.pred_output_col] = cudf.Series(data=all_outputs_ls, index=_index)
-            del all_outputs_ls
-            del loader
-        else:
-            outputs = cp.asarray(
-                concat_and_pad_tensors(
-                    all_outputs_ls, pad_token_id=loader.pad_token_id, padding_side=loader.padding_side
-                )
-            )
-            del all_outputs_ls
-            del loader
-            cleanup_torch_cache()
-            if len(outputs.shape) <= 2:
-                out[self.pred_output_col] = create_list_series_from_1d_or_2d_ar(outputs, _index)
-            elif len(outputs.shape) == 3:
-                out[self.pred_output_col] = create_nested_list_series_from_3d_ar(outputs, _index)
-            else:
-                raise RuntimeError(f"Unexpected output shape: {output.shape}")
-            del outputs
-        del _index
-        cleanup_torch_cache()
+            all_outputs_ls.append(output)
+        out = self.model.get_model_output(all_outputs_ls, index, loader, self.pred_output_col)
         return out
 
     def meta(self):

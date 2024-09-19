@@ -1,4 +1,3 @@
-import os
 import argparse
 from dataclasses import dataclass
 from functools import lru_cache
@@ -10,17 +9,19 @@ import crossfit as cf
 import ctranslate2
 from transformers import AutoConfig, AutoTokenizer
 
+
 @dataclass
 class TranslationConfig:
     pretrained_model_name_or_path: str
     ct2_model_path: str
 
-class CT2CustomModel():
+
+class CT2CustomModel:
     def __init__(self, config: TranslationConfig, device="cuda"):
         self.config = config
         self.tokenizer = AutoTokenizer.from_pretrained(
             pretrained_model_name_or_path=config.pretrained_model_name_or_path,
-            trust_remote_code = True,
+            trust_remote_code=True,
         )
         self.model = ctranslate2.Translator(model_path=config.ct2_model_path, device=device)
 
@@ -29,7 +30,12 @@ class CT2CustomModel():
         for token_1d in token_2d:
             result = []
             for t in token_1d:
-                if t==self.tokenizer.pad_token or t==self.tokenizer.bos_token or t==self.tokenizer.eos_token or t==self.tokenizer.unk_token:
+                if (
+                    t == self.tokenizer.pad_token
+                    or t == self.tokenizer.bos_token
+                    or t == self.tokenizer.eos_token
+                    or t == self.tokenizer.unk_token
+                ):
                     pass
                 else:
                     result.append(t)
@@ -37,10 +43,13 @@ class CT2CustomModel():
         return results
 
     def __call__(self, batch):
-        token_ids_2d = batch['input_ids']
+        token_ids_2d = batch["input_ids"]
         token_ids_1d = token_ids_2d.view(-1).tolist()
         tokens_1d = self.tokenizer.convert_ids_to_tokens(token_ids_1d)
-        tokens_2d = [tokens_1d[i:i + token_ids_2d.size(1)] for i in range(0, len(tokens_1d), token_ids_2d.size(1))]
+        tokens_2d = [
+            tokens_1d[i : i + token_ids_2d.size(1)]
+            for i in range(0, len(tokens_1d), token_ids_2d.size(1))
+        ]
         tokenss = self.clean_extra_tokens(tokens_2d)
 
         tr_res = self.model.translate_batch(
@@ -53,6 +62,7 @@ class CT2CustomModel():
         translations = ["".join(x.hypotheses[0]) for x in tr_res]
         return translations
 
+
 class ModelForSeq2SeqModel(HFModel):
     def __init__(self, config):
         self.trans_config = config
@@ -60,12 +70,12 @@ class ModelForSeq2SeqModel(HFModel):
             pretrained_model_name_or_path=self.trans_config.pretrained_model_name_or_path,
             trust_remote_code=True,
         )
-        super().__init__(self.trans_config.pretrained_model_name_or_path, model_output_type = "string")
+        super().__init__(
+            self.trans_config.pretrained_model_name_or_path, model_output_type="string"
+        )
 
     def load_model(self, device="cuda"):
-        model = CT2CustomModel(
-            self.trans_config
-        )
+        model = CT2CustomModel(self.trans_config)
         return model
 
     def load_config(self):
@@ -92,6 +102,7 @@ class ModelForSeq2SeqModel(HFModel):
         )
         return config
 
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description="PyTorch Model Predictions using Crossfit")
     parser.add_argument("input_parquet_path", help="Input parquet file")
@@ -117,6 +128,7 @@ def parse_arguments():
     args = parser.parse_args()
     return args
 
+
 def main():
     args = parse_arguments()
     Config = TranslationConfig(
@@ -128,7 +140,9 @@ def main():
     with cf.Distributed(rmm_pool_size=args.pool_size, n_workers=args.num_workers):
         model = ModelForSeq2SeqModel(Config)
         pipe = op.Sequential(
-            op.Tokenizer(model, cols=[args.input_column], tokenizer_type="sentencepiece", max_length=255),
+            op.Tokenizer(
+                model, cols=[args.input_column], tokenizer_type="sentencepiece", max_length=255
+            ),
             op.Predictor(model, sorted_data_loader=True, batch_size=args.batch_size),
             repartition=args.partitions,
             keep_cols=[args.input_column],
