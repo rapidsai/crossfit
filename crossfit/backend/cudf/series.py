@@ -32,7 +32,7 @@ def _construct_list_column(
         offset: int = 0,
         null_count: int | None = None,
         children: tuple[NumericalColumn, ColumnBase] = (),  # type: ignore[assignment]
-):
+) -> cudf.core.column.ListColumn:
     
     kwargs = dict(
             size=size,
