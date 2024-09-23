@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+
 import cudf
 import cupy as cp
 from crossfit.backend.cudf.series import (
@@ -24,7 +26,7 @@ class Model:
     def __init__(self, path_or_name: str, max_mem_gb: int = 16, model_output_type: str = "numeric"):
         self.path_or_name = path_or_name
         self.max_mem_gb = max_mem_gb
-        if model_output_type == "numeric" or model_output_type == "string":
+        if model_output_type in ["numeric", "string"]:
             self.model_output_type = model_output_type
         else:
             raise ValueError(
@@ -66,10 +68,7 @@ class Model:
         )
 
         if self.model_output_type == "string":
-            all_outputs = []
-            for output in all_outputs_ls:
-                for o in output:
-                    all_outputs.append(o)
+            all_outputs = [o for output in all_outputs_ls for o in output]
             out[pred_output_col] = cudf.Series(data=all_outputs, index=_index)
             del all_outputs_ls
             del loader
