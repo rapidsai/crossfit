@@ -18,7 +18,6 @@ from cudf.core.column import as_column
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    # from cudf._typing import ColumnBinaryOperand, ColumnLike, Dtype, ScalarLike
     from cudf.core.buffer import Buffer
     from cudf.core.dtypes import ListDtype
     from cudf.core.column.numerical import NumericalColumn
