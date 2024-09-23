@@ -15,7 +15,39 @@
 import cudf
 import cupy as cp
 from cudf.core.column import as_column
+from typing import TYPE_CHECKING
 
+if TYPE_CHECKING:
+    # from cudf._typing import ColumnBinaryOperand, ColumnLike, Dtype, ScalarLike
+    from cudf.core.buffer import Buffer
+    from cudf.core.dtypes import ListDtype
+    from cudf.core.column.numerical import NumericalColumn
+    from cudf.core.column import ColumnBase
+
+from importlib_metadata import version
+
+def _construct_list_column(
+        size: int,
+        dtype: ListDtype,
+        mask: Buffer | None = None,
+        offset: int = 0,
+        null_count: int | None = None,
+        children: tuple[NumericalColumn, ColumnBase] = (),  # type: ignore[assignment]
+):
+    
+    kwargs = dict(
+            size=size,
+            dtype=dtype,
+            mask=mask,
+            offset=offset,
+            null_count=null_count,
+            children=children,
+    )
+
+    if version('cudf') <= "24.08":
+        return cudf.core.column.ListColumn(**kwargs)
+    elif version('cudf') >= "24.10":
+        return cudf.core.column.ListColumn(data = None, **kwargs)
 
 def create_list_series_from_1d_or_2d_ar(ar, index):
     """
@@ -32,15 +64,15 @@ def create_list_series_from_1d_or_2d_ar(ar, index):
     offset_col = as_column(cp.arange(start=0, stop=len(data) + 1, step=n_cols), dtype="int32")
     mask_col = cp.full(shape=n_rows, fill_value=cp.bool_(True))
     mask = cudf._lib.transform.bools_to_mask(as_column(mask_col))
-    lc = cudf.core.column.ListColumn(
+
+    lc = _construct_list_column(
         size=n_rows,
         dtype=cudf.ListDtype(data.dtype),
         mask=mask,
         offset=0,
         null_count=0,
-        children=(offset_col, data),
+        children=(offset_col, data)
     )
-
     return cudf.Series(lc, index=index)
 
 
@@ -63,17 +95,16 @@ def create_nested_list_series_from_3d_ar(ar, index):
     outer_list_offsets = as_column(outer_offsets)
 
     # Constructing the nested ListColumn
+    inner_lc = cudf.core.column.ListColumn(
+        size=inner_offsets.size - 1,
+        dtype=cudf.ListDtype(inner_list_data.dtype),
+        children=(inner_list_offsets, inner_list_data),
+    )
+
     lc = cudf.core.column.ListColumn(
         size=n_slices,
         dtype=cudf.ListDtype(inner_list_data.dtype),
-        children=(
-            outer_list_offsets,
-            cudf.core.column.ListColumn(
-                size=inner_offsets.size - 1,
-                dtype=cudf.ListDtype(inner_list_data.dtype),
-                children=(inner_list_offsets, inner_list_data),
-            ),
-        ),
+        children=(outer_list_offsets, inner_lc),
     )
 
     return cudf.Series(lc, index=index)
