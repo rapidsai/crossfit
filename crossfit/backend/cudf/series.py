@@ -25,20 +25,22 @@ if TYPE_CHECKING:
     from cudf.core.column.numerical import NumericalColumn
     from cudf.core.column import ColumnBase
 
-from importlib_metadata import version
-from packaging.version import parse as parse_version
-
 
 @lru_cache
 def _is_cudf_gte_24_10():
+    from importlib_metadata import version
+    from packaging.version import parse as parse_version
+
     current_cudf_version = parse_version(version("cudf_cu12"))
-    cudf_24_10_version = parse_version("24.10")
+    cudf_24_10_version = parse_version("24.10.0")
 
     if current_cudf_version >= cudf_24_10_version or (
         current_cudf_version.base_version >= "24.10.0" and current_cudf_version.is_prerelease
     ):
         return True
-    elif current_cudf_version < cudf_24_10_version:
+    elif current_cudf_version < cudf_24_10_version or (
+        current_cudf_version.base_version < "24.10.0" and current_cudf_version.is_prerelease
+    ):
         return False
     else:
         msg = f"Found uncaught cudf version {current_cudf_version}"
