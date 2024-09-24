@@ -28,10 +28,9 @@ if TYPE_CHECKING:
 
 @lru_cache
 def _is_cudf_gte_24_10():
-    from importlib_metadata import version
     from packaging.version import parse as parse_version
 
-    current_cudf_version = parse_version(version("cudf_cu12"))
+    current_cudf_version = parse_version(cudf.__version__)
     cudf_24_10_version = parse_version("24.10.0")
 
     if current_cudf_version >= cudf_24_10_version or (
