@@ -26,7 +26,7 @@ class ReciprocalRank(BinaryRankingMetric):
 
         # It is 1/rank if document appears in top k, 0 otherwise
         scores = np.max(labels / ranks, axis=-1, initial=0.0)
-        scores[n_pos == 0] = np.NaN  # Not defined for no multiple positives
+        scores[n_pos == 0] = np.nan  # Not defined for no multiple positives
 
         return scores
 
@@ -42,7 +42,7 @@ class MeanRanks(BinaryRankingMetric):
 
         scores = np.sum(ranks * labels, axis=-1)
         scores[n_pos > 0] = scores[n_pos > 0] / n_pos[n_pos > 0]
-        scores[n_pos == 0] = np.NaN
+        scores[n_pos == 0] = np.nan
         return scores
 
 
@@ -58,6 +58,6 @@ class FirstRelevantRank(BinaryRankingMetric):
         ranks = ranks * labels
         ranks[ranks == 0] = np.inf
         scores = np.min(ranks, axis=-1)
-        scores[n_pos == 0] = np.NaN
+        scores[n_pos == 0] = np.nan
 
         return scores

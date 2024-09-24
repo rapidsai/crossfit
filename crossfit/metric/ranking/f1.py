@@ -32,6 +32,6 @@ class F1(Precision, Recall):
         invalid = np.isnan(product)
 
         scores[valid] = product[valid] / sm[valid]
-        scores[invalid] = np.NaN
+        scores[invalid] = np.nan
 
         return scores

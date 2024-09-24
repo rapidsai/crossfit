@@ -37,7 +37,6 @@ def test_create_nested_list_series_from_3d_ar():
     tensor = torch.tensor(nested_list)
     index = [1, 2]
     series = create_nested_list_series_from_3d_ar(tensor, index)
-    print(series)
     assert isinstance(series, cudf.Series)
     expected = cudf.Series(nested_list, index=index)
     # convert to pandas because cudf.Series.equals doesn't work for list series
