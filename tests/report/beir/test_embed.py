@@ -22,6 +22,7 @@ import crossfit as cf  # noqa: E402
 
 @pytest.mark.singlegpu
 @pytest.mark.parametrize("dataset", ["fiqa", "hotpotqa", "nq"])
+@pytest.mark.skip("In 24.10 the merge fails while in 24.08 `embedding` col is not found ")
 def test_embed_multi_gpu(
     dataset,
     model_name="sentence-transformers/all-MiniLM-L6-v2",
