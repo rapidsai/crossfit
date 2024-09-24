@@ -22,8 +22,8 @@ from cudf.core.dtypes import ListDtype
 
 if TYPE_CHECKING:
     from cudf.core.buffer import Buffer
-    from cudf.core.column.numerical import NumericalColumn
     from cudf.core.column import ColumnBase
+    from cudf.core.column.numerical import NumericalColumn
 
 
 @lru_cache
