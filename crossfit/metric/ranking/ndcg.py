@@ -39,7 +39,7 @@ class DCG(RankingMetric):
         ranks = convert_array(ranks, type(y_pred_labels.data))
 
         scores = np.sum(self._rel_scale(labels) / self._log_fct(ranks + 1), axis=-1)
-        scores[n_pos == 0] = np.NaN
+        scores[n_pos == 0] = np.nan
         return scores
 
     def _score(self, y_true: SparseLabels, y_pred_labels: MaskedArray):
@@ -57,6 +57,6 @@ class NDCG(DCG):
         if idcg.shape[0] == 1 and ndcg.shape[0] > 1:
             idcg = np.ones_like(ndcg) * idcg
 
-        ndcg[idcg == 0] = np.NaN
+        ndcg[idcg == 0] = np.nan
 
         return dcg / idcg

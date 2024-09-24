@@ -36,7 +36,7 @@ class Precision(BinaryRankingMetric):
             n_items_in_y_pred = items.sum(axis=1).flatten()
 
             # not defined if there are no relevant labels
-            scores = np.NaN * np.zeros_like(n_relevant, dtype=float)
+            scores = np.nan * np.zeros_like(n_relevant, dtype=float)
             valid = (n_items_in_y_pred > 0) & (n_pos > 0)
 
             scores[valid] = n_relevant[valid].astype(float) / np.minimum(
@@ -45,7 +45,7 @@ class Precision(BinaryRankingMetric):
         else:
             scores = n_relevant.astype(float) / self._k
             # not defined if there are no relevant labels
-            scores[n_pos == 0] = np.NaN
+            scores[n_pos == 0] = np.nan
 
         return scores
 
@@ -68,6 +68,6 @@ class AP(BinaryRankingMetric):
         scores[n_pos > 0] = np.sum(precision * relevant, axis=-1)[n_pos > 0] / np.clip(
             n_pos[n_pos > 0], None, self._k
         )
-        scores[n_pos == 0] = np.NaN
+        scores[n_pos == 0] = np.nan
 
         return scores

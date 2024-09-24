@@ -30,7 +30,7 @@ class Recall(BinaryRankingMetric):
             axis=-1,
         )
 
-        scores = np.NaN * np.zeros_like(n_relevant, dtype=float)
+        scores = np.nan * np.zeros_like(n_relevant, dtype=float)
         if self._truncated:
             denominator = np.clip(n_pos[n_pos > 0], None, self._k)
         else:
