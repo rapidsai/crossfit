@@ -19,6 +19,7 @@ import cudf
 import cupy as cp
 from cudf.core.column import as_column
 from cudf.core.dtypes import ListDtype
+from packaging.version import parse as parse_version
 
 if TYPE_CHECKING:
     from cudf.core.buffer import Buffer
@@ -28,8 +29,6 @@ if TYPE_CHECKING:
 
 @lru_cache
 def _is_cudf_gte_24_10():
-    from packaging.version import parse as parse_version
-
     current_cudf_version = parse_version(cudf.__version__)
     cudf_24_10_version = parse_version("24.10.0")
 
