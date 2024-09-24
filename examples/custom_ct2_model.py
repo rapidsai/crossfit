@@ -65,10 +65,10 @@ class CT2CustomModel:
             tokens_1d[i : i + token_ids_2d.size(1)]
             for i in range(0, len(tokens_1d), token_ids_2d.size(1))
         ]
-        tokenss = self.clean_extra_tokens(tokens_2d)
+        tokens = self.clean_extra_tokens(tokens_2d)
 
         tr_res = self.model.translate_batch(
-            tokenss,
+            tokens,
             min_decoding_length=0,
             max_decoding_length=256,
             beam_size=5,
@@ -81,10 +81,7 @@ class CT2CustomModel:
 class ModelForSeq2SeqModel(HFModel):
     def __init__(self, config):
         self.trans_config = config
-        self.config = AutoConfig.from_pretrained(
-            pretrained_model_name_or_path=self.trans_config.pretrained_model_name_or_path,
-            trust_remote_code=True,
-        )
+        self.config = self.load_cfg()
         super().__init__(
             self.trans_config.pretrained_model_name_or_path, model_output_type="string"
         )
@@ -94,10 +91,7 @@ class ModelForSeq2SeqModel(HFModel):
         return model
 
     def load_config(self):
-        return AutoConfig.from_pretrained(
-            pretrained_model_name_or_path=self.trans_config.pretrained_model_name_or_path,
-            trust_remote_code=True,
-        )
+        return self.load_cfg()
 
     @lru_cache(maxsize=1)
     def load_tokenizer(self):
@@ -155,9 +149,7 @@ def main():
     with cf.Distributed(rmm_pool_size=args.pool_size, n_workers=args.num_workers):
         model = ModelForSeq2SeqModel(Config)
         pipe = op.Sequential(
-            op.Tokenizer(
-                model, cols=[args.input_column], tokenizer_type="default", max_length=255
-            ),
+            op.Tokenizer(model, cols=[args.input_column], tokenizer_type="default", max_length=255),
             op.Predictor(model, sorted_data_loader=True, batch_size=args.batch_size),
             repartition=args.partitions,
             keep_cols=[args.input_column],
