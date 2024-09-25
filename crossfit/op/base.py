@@ -70,7 +70,7 @@ class Op:
                 output[col] = data[col]
 
         columns = list(output.columns)
-        # we use dict.fromkeys to remove duplicates and preserve order
+        # we use dict.fromkeys to remove duplicates and preserve order (to match _build_dask_meta behavior) 
         output = output[list(dict.fromkeys(self.keep_cols + columns))]
 
         return output
