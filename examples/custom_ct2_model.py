@@ -41,20 +41,20 @@ class CT2CustomModel:
         self.model = ctranslate2.Translator(model_path=config.ct2_model_path, device=device)
 
     def clean_extra_tokens(self, token_2d):
-        results = []
-        for token_1d in token_2d:
-            result = []
-            for t in token_1d:
-                if (
-                    t == self.tokenizer.pad_token
-                    or t == self.tokenizer.bos_token
-                    or t == self.tokenizer.eos_token
-                    or t == self.tokenizer.unk_token
-                ):
-                    pass
-                else:
-                    result.append(t)
-            results.append(result)
+        results = [
+            [
+                t
+                for t in token_1d
+                if t
+                not in {
+                    self.tokenizer.pad_token,
+                    self.tokenizer.bos_token,
+                    self.tokenizer.eos_token,
+                    self.tokenizer.unk_token,
+                }
+            ]
+            for token_1d in token_2d
+        ]
         return results
 
     def __call__(self, batch):

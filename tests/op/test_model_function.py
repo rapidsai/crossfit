@@ -30,7 +30,7 @@ cf_loader = pytest.importorskip("crossfit.backend.torch.loader")
 
 
 @pytest.mark.parametrize("trust_remote_code", ["y"])
-def test_model_output_int(trust_remote_code, model_name="ai4bharat/indictrans2-en-indic-1B"):
+def test_model_output_int(trust_remote_code, model_name="microsoft/deberta-v3-base"):
     with patch("builtins.input", return_value=trust_remote_code):
         tokens_data = cudf.DataFrame({"input_ids": [[11, 12, 13], [14, 15, 16], [17, 18, 19]]})
         index = tokens_data.index.copy()
@@ -45,10 +45,15 @@ def test_model_output_int(trust_remote_code, model_name="ai4bharat/indictrans2-e
         out = model.get_model_output(all_outputs_ls, index, loader, pred_output_col)
         assert isinstance(out, cudf.DataFrame)
         assert isinstance(out["translation"][0][0], int)
+        assert (
+            out["translation"][0] == data[2]
+            and out["translation"][1] == data[1]
+            and out["translation"][2] == data[0]
+        )
 
 
 @pytest.mark.parametrize("trust_remote_code", ["y"])
-def test_model_output_str(trust_remote_code, model_name="ai4bharat/indictrans2-en-indic-1B"):
+def test_model_output_str(trust_remote_code, model_name="microsoft/deberta-v3-base"):
     with patch("builtins.input", return_value=trust_remote_code):
         tokens_data = cudf.DataFrame(
             {"input_ids": [[18264, 7728, 8], [123, 99, 2258], [3115, 125, 123]]}
@@ -65,3 +70,8 @@ def test_model_output_str(trust_remote_code, model_name="ai4bharat/indictrans2-e
         out = model.get_model_output(all_outputs_ls, index, loader, pred_output_col)
         assert isinstance(out, cudf.DataFrame)
         assert isinstance(out["translation"][0][0], str)
+        assert (
+            out["translation"][0] == data[2][0]
+            and out["translation"][1] == data[1][0]
+            and out["translation"][2] == data[0][0]
+        )
