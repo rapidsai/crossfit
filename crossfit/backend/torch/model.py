@@ -20,7 +20,6 @@ from crossfit.backend.cudf.series import (
     create_nested_list_series_from_3d_ar,
 )
 from crossfit.utils.torch_utils import cleanup_torch_cache, concat_and_pad_tensors
-from crossfit.backend.torch.loader import SortedSeqLoader
 
 
 class Model:
@@ -61,6 +60,8 @@ class Model:
         raise NotImplementedError()
 
     def get_model_output(self, all_outputs_ls, index, loader, pred_output_col) -> cudf.DataFrame:
+        from crossfit.backend.torch.loader import SortedSeqLoader
+
         out = cudf.DataFrame(index=index)
         _index = loader.sort_column(index.values) if type(loader) == SortedSeqLoader else index
 
@@ -85,7 +86,7 @@ class Model:
             elif len(outputs.shape) == 3:
                 out[pred_output_col] = create_nested_list_series_from_3d_ar(outputs, _index)
             else:
-                raise RuntimeError(f"Unexpected output shape: {output.shape}")
+                raise RuntimeError(f"Unexpected output shape: {outputs.shape}")
             del outputs
         del _index
         cleanup_torch_cache()
