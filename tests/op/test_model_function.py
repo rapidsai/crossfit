@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 cp = pytest.importorskip("cupy")
 cudf = pytest.importorskip("cudf")
@@ -24,7 +25,6 @@ transformers = pytest.importorskip("transformers")
 torch = pytest.importorskip("torch")
 
 import crossfit as cf  # noqa: E402
-
 
 cf_loader = pytest.importorskip("crossfit.backend.torch.loader")
 

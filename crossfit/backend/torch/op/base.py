@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from typing import Optional
+
 import torch
 
 from crossfit.backend.torch.loader import DEFAULT_BATCH_SIZE, InMemoryLoader, SortedSeqLoader

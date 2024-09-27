@@ -15,6 +15,7 @@
 
 import cudf
 import cupy as cp
+
 from crossfit.backend.cudf.series import (
     create_list_series_from_1d_or_2d_ar,
     create_nested_list_series_from_3d_ar,
@@ -60,10 +61,11 @@ class Model:
         raise NotImplementedError()
 
     def get_model_output(self, all_outputs_ls, index, loader, pred_output_col) -> cudf.DataFrame:
+        # importing here to avoid cyclic import error
         from crossfit.backend.torch.loader import SortedSeqLoader
 
         out = cudf.DataFrame(index=index)
-        _index = loader.sort_column(index.values) if type(loader) == SortedSeqLoader else index
+        _index = loader.sort_column(index.values) if type(loader) is SortedSeqLoader else index
 
         if self.model_output_type == "string":
             all_outputs = [o for output in all_outputs_ls for o in output]

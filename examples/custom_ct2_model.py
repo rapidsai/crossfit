@@ -16,13 +16,14 @@
 import argparse
 from dataclasses import dataclass
 from functools import lru_cache
-from crossfit import op
-from crossfit.backend.torch.hf.model import HFModel
-import dask_cudf
-import crossfit as cf
 
 import ctranslate2
+import dask_cudf
 from transformers import AutoConfig, AutoTokenizer
+
+import crossfit as cf
+from crossfit import op
+from crossfit.backend.torch.hf.model import HFModel
 
 
 @dataclass
