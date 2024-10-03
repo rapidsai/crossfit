@@ -21,7 +21,11 @@ from tqdm import tqdm
 from transformers import PreTrainedModel
 
 from crossfit.utils.model_adapter import adapt_model_input
-from crossfit.utils.torch_utils import cleanup_torch_cache
+from crossfit.utils.torch_utils import (
+    cleanup_torch_cache,
+    get_peak_memory_used,
+    reset_memory_tracking,
+)
 
 
 def fit_memory_estimate_curve(
@@ -37,7 +41,7 @@ def fit_memory_estimate_curve(
 ) -> LinearRegression:
     print(f"Fitting memory estimate curve for model: {path_or_name}")
 
-    device = next(model.parameters()).device
+    device = "cuda"
     X: list[list[int]] = []
     y: list[float] = []
 
@@ -51,8 +55,7 @@ def fit_memory_estimate_curve(
             leave=False,
         )
         for seq_len in seq_len_pbar:
-            torch.cuda.reset_peak_memory_stats()
-
+            reset_memory_tracking()
             batch = {
                 "input_ids": torch.randint(1, 501, (batch_size, seq_len)).to(device=device),
                 "attention_mask": torch.ones((batch_size, seq_len)).to(device=device),
@@ -60,7 +63,8 @@ def fit_memory_estimate_curve(
 
             try:
                 _ = adapt_model_input(model, batch)
-                memory_used = torch.cuda.max_memory_allocated() / (1024**2)  # Convert to MB
+                memory_used = get_peak_memory_used()
+                memory_used = memory_used / (1024**2)  # Convert to MB
                 X.append([batch_size, seq_len, seq_len**2])
                 y.append(memory_used)
 
