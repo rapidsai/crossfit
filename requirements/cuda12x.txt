@@ -11,3 +11,4 @@ curated-transformers>=1.0
 bitsandbytes>=0.30
 sentence-transformers>=2.0
 sentencepiece
+tiktoken
