@@ -15,7 +15,6 @@
 import gc
 from typing import List, Union
 
-import rmm
 import torch
 import torch.nn.functional as F
 
@@ -120,6 +119,8 @@ def reset_memory_tracking() -> None:
     # TODO: This is hacky, we need to check if the allocator is rmm
     #  and then reset the peak memory stats
     if torch.cuda.memory.get_allocator_backend() == "pluggable":
+        import rmm
+
         rmm.statistics.enable_statistics()
         rmm.statistics.push_statistics()
     else:
@@ -137,6 +138,8 @@ def get_peak_memory_used() -> int:
         int: Peak memory usage in bytes.
     """
     if torch.cuda.memory.get_allocator_backend() == "pluggable":
+        import rmm
+
         stats = rmm.statistics.pop_statistics()
         return stats.peak_bytes
     else:
