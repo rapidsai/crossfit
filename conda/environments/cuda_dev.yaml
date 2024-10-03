@@ -20,13 +20,15 @@ dependencies:
   - pytest
   - pytest-benchmark
   - pytest-cov>=2
-  - pytorch>=2.0
+  - pytorch>=2.0=*cuda*
+  - tiktoken
   - transformers
   - tokenizers
   - torchvision
   - scikit-learn>=0.23.1
   - scipy
   - setuptools>=61.0.0
+  - sentencepiece
   - sentence-transformers
   - pip:
     - pytrec-eval
