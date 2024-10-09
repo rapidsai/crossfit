@@ -18,17 +18,14 @@ fi
 echo "Installing pytorch,transformers and pytest to the environment for crossfit tests..."
 mamba install \
   cuda-version=$CUDA_VERSION \
-  conda-forge::pytorch \
-  conda-forge::transformers \
-  conda-forge::pytest \
+  "pytorch>=2.*=*cuda*" \
+  transformers \
+  pytest \
+  sentence-transformers  \
+  sentencepiece \
   -c conda-forge \
-  --override-channels \
+  -c nvidia \
   --yes
-
-# Have to install sentence-transformers from pip
-# because conda-forge leads to a torch vision conflict
-# which leads to it being installed on CPUs
-pip3 install sentence-transformers sentencepiece
 
 # Install the crossfit package in editable mode with test dependencies
 pip3 install -e '.[test]'

@@ -26,7 +26,10 @@ class Op:
         self.pre = pre
         self.cols = cols
         self.keep_cols = keep_cols or []
-        self.worker_name = getattr(self.get_worker(), "name", 0)
+
+    @property
+    def worker_name(self):
+        return getattr(self.get_worker(), "name", 0)
 
     def setup(self):
         pass
