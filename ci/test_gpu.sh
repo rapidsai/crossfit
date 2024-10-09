@@ -18,7 +18,7 @@ fi
 echo "Installing pytorch,transformers and pytest to the environment for crossfit tests..."
 mamba install \
   cuda-version=$CUDA_VERSION \
-  "pytorch>=2.0,<=*cuda*"
+  "pytorch>=2.*=*cuda*"
   transformers \
   pytest \
   sentence-transformers  \
