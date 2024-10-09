@@ -18,7 +18,7 @@ fi
 echo "Installing pytorch,transformers and pytest to the environment for crossfit tests..."
 mamba install \
   cuda-version=$CUDA_VERSION \
-  conda-forge::pytorch \
+  conda-forge::pytorch>=2.0=*cuda* \
   conda-forge::transformers \
   conda-forge::pytest \
   -c conda-forge \
