@@ -21,14 +21,11 @@ mamba install \
   conda-forge::pytorch>=2.0=*cuda* \
   conda-forge::transformers \
   conda-forge::pytest \
+  conda-forge::sentence-transformers  \
+  conda-forge::sentencepiece \
   -c conda-forge \
   --override-channels \
   --yes
-
-# Have to install sentence-transformers from pip
-# because conda-forge leads to a torch vision conflict
-# which leads to it being installed on CPUs
-pip3 install sentence-transformers sentencepiece
 
 # Install the crossfit package in editable mode with test dependencies
 pip3 install -e '.[test]'
