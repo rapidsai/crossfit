@@ -11,7 +11,7 @@ fit_memory_estimate_curve = pytest.importorskip(
 MODEL_NAME = "microsoft/deberta-v3-base"
 
 # Have to do it globally
-# TODO: Ask for better way
+# TODO: Long term figure out a better way
 torch.cuda.memory.change_current_allocator(rmm_torch_allocator)
 
 

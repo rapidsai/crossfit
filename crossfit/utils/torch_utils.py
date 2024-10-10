@@ -116,9 +116,7 @@ def reset_memory_tracking() -> None:
     Returns:
         None
     """
-    # TODO: This is hacky, we need to check if the allocator is rmm
-    #  and then reset the peak memory stats
-    if torch.cuda.memory.get_allocator_backend() == "pluggable":
+    if is_torch_memory_rmm():
         import rmm
 
         rmm.statistics.enable_statistics()
@@ -137,10 +135,19 @@ def get_peak_memory_used() -> int:
     Returns:
         int: Peak memory usage in bytes.
     """
-    if torch.cuda.memory.get_allocator_backend() == "pluggable":
+    if is_torch_memory_rmm():
         import rmm
 
         stats = rmm.statistics.pop_statistics()
         return stats.peak_bytes
     else:
         return torch.cuda.max_memory_allocated()
+
+
+def is_torch_memory_rmm():
+    # TODO: This is hacky, we need to check if the allocator is rmm
+    #  and then reset the peak memory stats
+    # we get this fixed in Pytorch
+    # https://github.com/pytorch/pytorch/issues/133281
+    # https://github.com/pytorch/pytorch/issues/133280
+    return torch.cuda.memory.get_allocator_backend() == "pluggable"
