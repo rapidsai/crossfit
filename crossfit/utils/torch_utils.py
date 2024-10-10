@@ -99,3 +99,55 @@ def cleanup_torch_cache() -> None:
     gc.collect()
     torch.cuda.empty_cache()
     return None
+
+
+def reset_memory_tracking() -> None:
+    """
+    Resets memory counters.
+
+    This function enables memory usage statistics tracking and resets the counters
+    for peak memory usage. It handles both RMM (RAPIDS Memory Manager) and PyTorch's
+    native CUDA memory tracking, depending on the current allocator backend.
+
+    If RMM is being used as the allocator, it enables RMM statistics and pushes a new
+    statistics context. If the default PyTorch allocator is being used, it resets the
+    peak memory stats for CUDA.
+
+    Returns:
+        None
+    """
+    if is_torch_memory_rmm():
+        import rmm
+
+        rmm.statistics.enable_statistics()
+        rmm.statistics.push_statistics()
+    else:
+        torch.cuda.reset_peak_memory_stats()
+
+
+def get_peak_memory_used() -> int:
+    """
+    Get the peak memory usage in bytes.
+
+    This function retrieves the peak memory usage, either from RMM statistics
+    if the RMM allocator is being used, or from PyTorch's CUDA memory stats.
+
+    Returns:
+        int: Peak memory usage in bytes.
+    """
+    if is_torch_memory_rmm():
+        import rmm
+
+        stats = rmm.statistics.pop_statistics()
+        return stats.peak_bytes
+    else:
+        return torch.cuda.max_memory_allocated()
+
+
+def is_torch_memory_rmm():
+    # TODO: This is hacky, we need to check if the allocator is rmm
+    #  and then reset the peak memory stats
+    # we get this fixed in Pytorch
+    # https://github.com/pytorch/pytorch/issues/133281
+    # https://github.com/pytorch/pytorch/issues/133280
+    return torch.cuda.memory.get_allocator_backend() == "pluggable"
