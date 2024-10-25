@@ -53,7 +53,7 @@ class Predictor(Op):
         else:
             self.model_output_cols = None
 
-        if pred_output_col and len(self.model_output_cols) > 1:
+        if pred_output_col and self.model_output_cols and len(self.model_output_cols) > 1:
             raise ValueError(
                 "pred_output_col can only be specified when model_output_cols has a single column."
             )
