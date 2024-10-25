@@ -52,7 +52,7 @@ class DummyModel(torch.nn.Module):
         super().__init__()
 
     def forward(self, batch):
-        output_size = len(batch)
+        output_size = len(batch["input_ids"])
         return {
             "a": torch.ones(output_size, device="cuda") * 1,
             "b": torch.ones(output_size, device="cuda") * 2,
