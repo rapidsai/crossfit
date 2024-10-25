@@ -14,8 +14,16 @@
 from unittest.mock import Mock
 
 import pytest
+from distributed import Client
 
 import crossfit as cf
+
+cudf = pytest.importorskip("cudf")
+dask_cudf = pytest.importorskip("dask_cudf")
+torch = pytest.importorskip("torch")
+transformers = pytest.importorskip("transformers")
+HFModel = pytest.importorskip("crossfit.backend.torch").HFModel
+LocalCUDACluster = pytest.importorskip("dask_cuda").LocalCUDACluster
 
 
 class TestHFModel:
@@ -37,3 +45,44 @@ class TestHFModel:
 
         assert not hasattr(mock_worker, "torch_model")
         assert not hasattr(mock_worker, "cfg")
+
+
+class DummyModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, batch):
+        output_size = len(batch)
+        return {
+            "a": torch.ones(output_size, device="cuda") * 1,
+            "b": torch.ones(output_size, device="cuda") * 2,
+        }
+
+
+class DummyHFModel(HFModel):
+    def __init__(self, model_name="microsoft/deberta-v3-base"):
+        self.model_name = model_name
+        super().__init__(model_name)
+
+    def load_model(self, device="cuda"):
+        return DummyModel().to(device)
+
+
+def test_hf_model():
+    cluster = LocalCUDACluster(CUDA_VISIBLE_DEVICES="0")
+    client = Client(cluster)
+
+    model = DummyHFModel()
+    pipe = cf.op.Sequential(
+        cf.op.Tokenizer(model, cols=["text"], tokenizer_type="sentencepiece"),
+        cf.op.Predictor(
+            model, sorted_data_loader=False, batch_size=2, model_output_cols=["a", "b"]
+        ),
+    )
+    ddf = dask_cudf.from_cudf(cudf.DataFrame({"text": ["apple"] * 6}), npartitions=1)
+    outputs = pipe(ddf).compute()
+    assert outputs.a.values.tolist() == [1, 1, 1, 1, 1, 1]
+    assert outputs.b.values.tolist() == [2, 2, 2, 2, 2, 2]
+
+    del client
+    del cluster

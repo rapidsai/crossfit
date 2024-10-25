@@ -44,12 +44,8 @@ def test_model_output_int(trust_remote_code, model_name="microsoft/deberta-v3-ba
         pred_output_col = "translation"
         out = model.get_model_output(all_outputs_ls, index, loader, pred_output_col)
         assert isinstance(out, cudf.DataFrame)
-        assert isinstance(out["translation"][0][0], int)
-        assert (
-            out["translation"][0] == data[0]
-            and out["translation"][1] == data[1]
-            and out["translation"][2] == data[2]
-        )
+        assert pd.api.types.is_integer_dtype(out["translation"])
+        assert out["translation"].values.tolist() == [4, 7, 10]
 
 
 @pytest.mark.parametrize("trust_remote_code", ["y"])
@@ -73,3 +69,21 @@ def test_model_output_str(trust_remote_code, model_name="microsoft/deberta-v3-ba
             and out["translation"][1] == data[1][0]
             and out["translation"][2] == data[2][0]
         )
+
+
+def test_output_dict(model_name="microsoft/deberta-v3-base"):
+    all_outputs_ls = [
+        {"a": torch.tensor([1, 2, 3]), "b": torch.tensor([10, 20, 30])},
+        {"a": torch.tensor([4, 5, 6]), "b": torch.tensor([40, 50, 60])},
+    ]
+    index = cudf.RangeIndex(start=0, stop=6, step=1)
+    model = cf.HFModel(model_name)
+
+    loader = cf_loader.InMemoryLoader(
+        cudf.DataFrame({"input_ids": [[1]] * 6}),
+        batch_size=3,
+    )
+    out = model.get_model_output(all_outputs_ls, index, loader, None)
+    assert isinstance(out, cudf.DataFrame)
+    assert out["a"].values.tolist() == [1, 2, 3, 4, 5, 6]
+    assert out["b"].values.tolist() == [10, 20, 30, 40, 50, 60]

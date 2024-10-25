@@ -33,7 +33,8 @@ class Predictor(Op):
         max_mem: str = "16GB",
         sorted_data_loader: bool = True,
         model_output_col: Optional[str] = None,
-        pred_output_col: str = "preds",
+        model_output_cols: Optional[list] = None,
+        pred_output_col: Optional[str] = None,
     ):
         super().__init__(pre=pre, cols=cols, keep_cols=keep_cols)
         self.model = model
@@ -42,8 +43,21 @@ class Predictor(Op):
         self.max_mem = max_mem
         self.max_mem_gb = int(self.max_mem.split("GB")[0]) / 2.5
         self.sorted_data_loader = sorted_data_loader
-        self.model_output_col = model_output_col
-        self.pred_output_col = pred_output_col
+
+        if model_output_col and model_output_cols:
+            raise ValueError("Specify either model_output_col or model_output_cols, not both.")
+        elif model_output_col:
+            self.model_output_cols = [model_output_col]
+        elif model_output_cols:
+            self.model_output_cols = model_output_cols
+        else:
+            self.model_output_cols = None
+
+        if pred_output_col and len(self.model_output_cols) > 1:
+            raise ValueError(
+                "pred_output_col can only be specified when model_output_cols has a single column."
+            )
+        self.pred_output_col = pred_output_col or "preds"
 
     @torch.no_grad()
     def call(self, data, partition_info=None):
@@ -67,19 +81,25 @@ class Predictor(Op):
         all_outputs_ls = []
         for output in loader.map(self.model.get_model(self.get_worker())):
             if isinstance(output, dict):
-                if self.model_output_col not in output:
-                    raise ValueError(f"Column '{self.model_output_col}' not found in model output.")
-                output = output[self.model_output_col]
-
+                if self.model_output_cols:
+                    output = {col: output[col] for col in self.model_output_cols if col in output}
+                if len(output) == 1:
+                    output = list(output.values())[0]
+                elif len(output) > 1 and self.model_output_cols is None:
+                    raise ValueError(
+                        "Model returned more than one output column, but model_output_cols ",
+                        "was not specified. Please specify model_output_cols",
+                        "to get all model outputs.",
+                    )
             if self.post is not None:
                 output = self.post(output)
-
             all_outputs_ls.append(output)
         out = self.model.get_model_output(all_outputs_ls, index, loader, self.pred_output_col)
         return out
 
     def meta(self):
-        if self.model.model_output_type == "string":
-            return {self.pred_output_col: "object"}
+        dtype = "object" if self.model.model_output_type == "string" else "float32"
+        if self.model_output_cols and len(self.model_output_cols) > 1:
+            return {col: dtype for col in self.model_output_cols}
         else:
-            return {self.pred_output_col: "float32"}
+            return {self.pred_output_col: dtype}

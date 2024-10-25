@@ -13,6 +13,8 @@
 # limitations under the License.
 
 
+from typing import Any, List
+
 import cudf
 import cupy as cp
 
@@ -64,32 +66,65 @@ class Model:
         # importing here to avoid cyclic import error
         from crossfit.backend.torch.loader import SortedSeqLoader
 
-        out = cudf.DataFrame(index=index)
+        out_df = cudf.DataFrame(index=index)
         _index = loader.sort_column(index.values) if type(loader) is SortedSeqLoader else index
-
-        if self.model_output_type == "string":
-            all_outputs = [o for output in all_outputs_ls for o in output]
-            out[pred_output_col] = cudf.Series(data=all_outputs, index=_index)
-            del all_outputs_ls
-            del loader
-        else:
-            outputs = cp.asarray(
-                concat_and_pad_tensors(
-                    all_outputs_ls,
-                    pad_token_id=loader.pad_token_id,
-                    padding_side=loader.padding_side,
+        if isinstance(all_outputs_ls[0], dict):
+            for pred_name in all_outputs_ls[0].keys():
+                _add_column_to_df(
+                    out_df,
+                    [o[pred_name] for o in all_outputs_ls],
+                    _index,
+                    loader,
+                    pred_name,
+                    self.model_output_type,
                 )
+        else:
+            _add_column_to_df(
+                out_df, all_outputs_ls, _index, loader, pred_output_col, self.model_output_type
             )
-            del all_outputs_ls
-            del loader
-            cleanup_torch_cache()
-            if len(outputs.shape) <= 2:
-                out[pred_output_col] = create_list_series_from_1d_or_2d_ar(outputs, _index)
-            elif len(outputs.shape) == 3:
-                out[pred_output_col] = create_nested_list_series_from_3d_ar(outputs, _index)
-            else:
-                raise RuntimeError(f"Unexpected output shape: {outputs.shape}")
-            del outputs
-        del _index
         cleanup_torch_cache()
-        return out
+        return out_df
+
+
+def _add_column_to_df(
+    df: cudf.DataFrame,
+    all_outputs_ls: List[Any],
+    _index: Any,
+    loader: Any,
+    pred_output_col: str,
+    model_output_type: str,
+) -> None:
+    if model_output_type == "string":
+        _add_string_column(df, pred_output_col, all_outputs_ls)
+    else:
+        _add_numeric_column(df, all_outputs_ls, _index, loader, pred_output_col)
+
+
+def _add_string_column(
+    df: cudf.DataFrame, pred_output_col: str, all_outputs_ls: List[List[str]]
+) -> None:
+    df[pred_output_col] = [o for output in all_outputs_ls for o in output]
+
+
+def _add_numeric_column(
+    df: cudf.DataFrame, all_outputs_ls: List[Any], _index: Any, loader: Any, pred_output_col: str
+) -> None:
+    outputs = cp.asarray(
+        concat_and_pad_tensors(
+            all_outputs_ls,
+            pad_token_id=getattr(loader, "pad_token_id", None),
+            padding_side=getattr(loader, "padding_side", None),
+        )
+    )
+    del all_outputs_ls
+    del loader
+    print("outputs", outputs, flush=True)
+    cleanup_torch_cache()
+    if len(outputs.shape) == 1:
+        df[pred_output_col] = cudf.Series(outputs, index=_index)
+    elif len(outputs.shape) == 2:
+        df[pred_output_col] = create_list_series_from_1d_or_2d_ar(outputs, _index)
+    elif len(outputs.shape) == 3:
+        df[pred_output_col] = create_nested_list_series_from_3d_ar(outputs, _index)
+    else:
+        raise RuntimeError(f"Unexpected output shape: {outputs.shape}")
