@@ -118,7 +118,6 @@ def _add_numeric_column(
     )
     del all_outputs_ls
     del loader
-    print("outputs", outputs, flush=True)
     cleanup_torch_cache()
     if len(outputs.shape) == 1:
         df[pred_output_col] = cudf.Series(outputs, index=_index)
