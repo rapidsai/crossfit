@@ -87,6 +87,13 @@ class Predictor(Op):
             if isinstance(output, dict):
                 if self.model_output_cols:
                     output = {col: output[col] for col in self.model_output_cols if col in output}
+                    if len(output) == 0:
+                        raise ValueError(
+                            "None of the specified model_output_cols were found in",
+                            "the output dict. ",
+                            f"Available output keys: {list(output.keys())}. ",
+                            f"Requested columns: {self.model_output_cols}",
+                        )
                 if len(output) == 1:
                     output = list(output.values())[0]
                 elif len(output) > 1 and self.model_output_cols is None:
