@@ -104,8 +104,8 @@ class Model:
                     raise ValueError(
                         f"Invalid prediction name '{pred_name}'.\n"
                         f"Allowed prediction names: {list(self.model_output_type.keys())}\n"
-                        "Please provide a valid prediction name in the model_output_type "
-                        "dictionary."
+                        "Please provide a valid prediction name ands its datatype "
+                        "in the model_output_type dictionary."
                     )
                 model_output_type = self.model_output_type.get(pred_name, self.model_output_type)
                 _add_column_to_df(
