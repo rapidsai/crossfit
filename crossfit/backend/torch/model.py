@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 from enum import Enum
 from typing import Any, List, Union
 
 import cudf
 import cupy as cp
+import torch
 
 from crossfit.backend.cudf.series import (
     create_list_series_from_1d_or_2d_ar,
@@ -82,7 +82,13 @@ class Model:
     def max_seq_length(self) -> int:
         raise NotImplementedError()
 
-    def get_model_output(self, all_outputs_ls, index, loader, pred_output_col) -> cudf.DataFrame:
+    def get_model_output(
+        self,
+        all_outputs_ls: List[Union[dict, torch.Tensor]],
+        index: Union[cudf.Index],
+        loader: Any,
+        pred_output_col: str,
+    ) -> cudf.DataFrame:
         # importing here to avoid cyclic import error
         from crossfit.backend.torch.loader import SortedSeqLoader
 
