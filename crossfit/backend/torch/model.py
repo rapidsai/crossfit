@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from enum import Enum
-from typing import Any, List, Union
+from typing import Any, Dict, List, Union
 
 import cudf
 import cupy as cp
@@ -36,19 +36,16 @@ class Model:
         self,
         path_or_name: str,
         max_mem_gb: int = 16,
-        model_output_type: Any = ModelOutputType.NUMERIC,
+        model_output_type: Union[str, Dict[str, str]] = "numeric",
     ):
         """Initialize a Crossfit Pytorch Model Instance.
 
         Args:
             path_or_name (str): Path to the model file or the model name to load.
-            max_mem_gb (int, optional): Maximum memory in gigabytes to allocate for the model.
-                Defaults to 16.
-            model_output_type (Union[ModelOutputType, dict], optional): Specifies the type of model
-                output. Can be either ModelOutputType.NUMERIC, ModelOutputType.STRING, or a
-                dictionary mapping output names to their respective types.
-                Defaults to ModelOutputType.NUMERIC.
-
+            max_mem_gb (int): Maximum memory in gigabytes to allocate for the model.Defaults to 16.
+            model_output_type (str, dict): Specifies the type of model output. Can be either
+                "numeric" or "string". If a dictionary is provided, it maps prediction names to
+                their respective types. Defaults to "numeric".
         """
         self.path_or_name = path_or_name
         self.max_mem_gb = max_mem_gb
@@ -134,8 +131,10 @@ def _add_column_to_df(
 ) -> None:
     if model_output_type is ModelOutputType.STRING:
         _add_string_column(df, pred_output_col, all_outputs_ls)
-    else:
+    elif model_output_type is ModelOutputType.NUMERIC:
         _add_numeric_column(df, all_outputs_ls, _index, loader, pred_output_col)
+    else:
+        raise ValueError(f"Invalid model_output_type: {model_output_type}")
 
 
 def _add_string_column(

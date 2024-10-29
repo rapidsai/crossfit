@@ -105,7 +105,6 @@ class TestPredictorMeta:
         predictor = cf.op.Predictor(
             model=self.model_string, model_output_cols=["a"], pred_output_col="pred_a"
         )
-        print(predictor.meta())
         expected_output = {"pred_a": "object"}
         assert predictor.meta() == expected_output
 
