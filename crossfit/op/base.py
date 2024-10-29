@@ -29,7 +29,7 @@ class Op:
 
     @property
     def worker_name(self):
-        return getattr(self.get_worker(), "name", 0)
+        return getattr(self.get_worker(), "worker_address")
 
     def setup(self):
         pass
@@ -59,7 +59,6 @@ class Op:
     def create_progress_bar(self, total, partition_info=None, **kwargs):
         return tqdm(
             total=total,
-            position=int(self.worker_name),
             desc=f"GPU: {self.worker_name}, Part: {partition_info['number']}",
             **kwargs,
         )

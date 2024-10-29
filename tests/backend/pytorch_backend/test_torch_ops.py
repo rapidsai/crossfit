@@ -14,8 +14,17 @@
 from unittest.mock import Mock
 
 import pytest
+from distributed import Client
 
 import crossfit as cf
+
+cudf = pytest.importorskip("cudf")
+dask_cudf = pytest.importorskip("dask_cudf")
+torch = pytest.importorskip("torch")
+transformers = pytest.importorskip("transformers")
+HFModel = pytest.importorskip("crossfit.backend.torch").HFModel
+Model = pytest.importorskip("crossfit.backend.torch.model").Model
+LocalCUDACluster = pytest.importorskip("dask_cuda").LocalCUDACluster
 
 
 class TestHFModel:
@@ -37,3 +46,101 @@ class TestHFModel:
 
         assert not hasattr(mock_worker, "torch_model")
         assert not hasattr(mock_worker, "cfg")
+
+
+class DummyModelWithDictOutput(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, batch):
+        output_size = len(batch["input_ids"])
+        return {
+            "a": torch.ones(output_size, device="cuda") * 1,
+            "b": torch.ones(output_size, device="cuda") * 2,
+        }
+
+
+class DummyHFModel(HFModel):
+    def __init__(self, model_name="microsoft/deberta-v3-base"):
+        self.model_name = model_name
+        super().__init__(model_name, model_output_type={"a": "numeric", "b": "numeric"})
+
+    def load_model(self, device="cuda"):
+        return DummyModelWithDictOutput().to(device)
+
+
+def test_hf_model():
+    cluster = LocalCUDACluster(CUDA_VISIBLE_DEVICES="0")
+    client = Client(cluster)
+
+    model = DummyHFModel()
+    pipe = cf.op.Sequential(
+        cf.op.Tokenizer(model, cols=["text"], tokenizer_type="sentencepiece"),
+        cf.op.Predictor(
+            model, sorted_data_loader=False, batch_size=2, model_output_cols=["a", "b"]
+        ),
+    )
+    ddf = dask_cudf.from_cudf(cudf.DataFrame({"text": ["apple"] * 6}), npartitions=1)
+    outputs = pipe(ddf).compute()
+    assert outputs.a.values.tolist() == [1, 1, 1, 1, 1, 1]
+    assert outputs.b.values.tolist() == [2, 2, 2, 2, 2, 2]
+
+    del client
+    del cluster
+
+
+class DummyModelForMetaTest(Model):
+    def __init__(self, model_output_type):
+        super().__init__("dummy_model_path")
+        self.model_output_type = model_output_type
+
+
+class TestPredictorMeta:
+    def setup_method(self):
+        self.model_string = DummyModelForMetaTest(model_output_type="string")
+        self.model_numeric = DummyModelForMetaTest(model_output_type="numeric")
+        self.model_dict = DummyModelForMetaTest(model_output_type={"a": "string", "b": "numeric"})
+
+    def test_meta_single_output_column_string(self):
+        predictor = cf.op.Predictor(
+            model=self.model_string, model_output_cols=["a"], pred_output_col="pred_a"
+        )
+        expected_output = {"pred_a": "object"}
+        assert predictor.meta() == expected_output
+
+    def test_meta_single_output_column_numeric(self):
+        predictor = cf.op.Predictor(
+            model=self.model_numeric, model_output_cols=["a"], pred_output_col="pred_a"
+        )
+        expected_output = {"pred_a": "float32"}
+        assert predictor.meta() == expected_output
+
+    def test_meta_multiple_output_columns(self):
+        predictor = cf.op.Predictor(model=self.model_dict, model_output_cols=["a", "b"])
+        expected_output = {"a": "object", "b": "float32"}
+        assert predictor.meta() == expected_output
+
+    def test_meta_no_model_output_cols_specified_string(self):
+        predictor = cf.op.Predictor(
+            model=self.model_string, model_output_cols=None, pred_output_col="preds"
+        )
+        expected_output = {"preds": "object"}
+        assert predictor.meta() == expected_output
+
+    def test_meta_no_model_output_cols_specified_numeric(self):
+        predictor = cf.op.Predictor(
+            model=self.model_numeric, model_output_cols=None, pred_output_col="preds"
+        )
+        expected_output = {"preds": "float32"}
+        assert predictor.meta() == expected_output
+
+    def test_meta_invalid_model_output_type(self):
+        with pytest.raises(
+            ValueError,
+            match=(
+                "model_output_type must be a dictionary when multiple "
+                "model_output_cols are specified"
+            ),
+        ):
+            predictor = cf.op.Predictor(model=self.model_string, model_output_cols=["a", "b"])
+            predictor.meta()
