@@ -71,13 +71,13 @@ def test_model_output_str(trust_remote_code, model_name="microsoft/deberta-v3-ba
         )
 
 
-def test_output_dict(model_name="microsoft/deberta-v3-base"):
+def test_output_dict_numeric(model_name="microsoft/deberta-v3-base"):
     all_outputs_ls = [
         {"a": torch.tensor([1, 2, 3]), "b": torch.tensor([10, 20, 30])},
         {"a": torch.tensor([4, 5, 6]), "b": torch.tensor([40, 50, 60])},
     ]
     index = cudf.RangeIndex(start=0, stop=6, step=1)
-    model = cf.HFModel(model_name)
+    model = cf.HFModel(model_name, model_output_type={"a": "numeric", "b": "numeric"})
 
     loader = cf_loader.InMemoryLoader(
         cudf.DataFrame({"input_ids": [[1]] * 6}),
@@ -87,3 +87,22 @@ def test_output_dict(model_name="microsoft/deberta-v3-base"):
     assert isinstance(out, cudf.DataFrame)
     assert out["a"].values.tolist() == [1, 2, 3, 4, 5, 6]
     assert out["b"].values.tolist() == [10, 20, 30, 40, 50, 60]
+
+
+def test_output_dict_value_error(model_name="microsoft/deberta-v3-base"):
+    all_outputs_ls = [
+        {"a": torch.tensor([1, 2, 3]), "b": torch.tensor([10, 20, 30])},
+        {"a": torch.tensor([4, 5, 6]), "b": torch.tensor([40, 50, 60])},
+    ]
+    index = cudf.RangeIndex(start=0, stop=6, step=1)
+    model = cf.HFModel(model_name, model_output_type="numeric")
+
+    loader = cf_loader.InMemoryLoader(
+        cudf.DataFrame({"input_ids": [[1]] * 6}),
+        batch_size=3,
+    )
+    with pytest.raises(
+        ValueError,
+        match="model_output_type must be a dictionary when the model output is a dictionary",
+    ):
+        model.get_model_output(all_outputs_ls, index, loader, None)

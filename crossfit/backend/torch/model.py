@@ -13,7 +13,8 @@
 # limitations under the License.
 
 
-from typing import Any, List
+from enum import Enum
+from typing import Any, List, Union
 
 import cudf
 import cupy as cp
@@ -25,16 +26,33 @@ from crossfit.backend.cudf.series import (
 from crossfit.utils.torch_utils import cleanup_torch_cache, concat_and_pad_tensors
 
 
+class ModelOutputType(Enum):
+    NUMERIC = "numeric"
+    STRING = "string"
+
+
 class Model:
-    def __init__(self, path_or_name: str, max_mem_gb: int = 16, model_output_type: str = "numeric"):
+    def __init__(
+        self,
+        path_or_name: str,
+        max_mem_gb: int = 16,
+        model_output_type: Any = ModelOutputType.NUMERIC,
+    ):
+        """Initialize a Crossfit Pytorch Model Instance.
+
+        Args:
+            path_or_name (str): Path to the model file or the model name to load.
+            max_mem_gb (int, optional): Maximum memory in gigabytes to allocate for the model.
+                Defaults to 16.
+            model_output_type (Union[ModelOutputType, dict], optional): Specifies the type of model
+                output. Can be either ModelOutputType.NUMERIC, ModelOutputType.STRING, or a
+                dictionary mapping output names to their respective types.
+                Defaults to ModelOutputType.NUMERIC.
+
+        """
         self.path_or_name = path_or_name
         self.max_mem_gb = max_mem_gb
-        if model_output_type in ["numeric", "string"]:
-            self.model_output_type = model_output_type
-        else:
-            raise ValueError(
-                "Invalid model output type provided. Allowed values are : 'string' or 'numeric'."
-            )
+        self.model_output_type = _validate_model_output_type(model_output_type)
 
     def load_model(self, device="cuda"):
         raise NotImplementedError()
@@ -52,6 +70,8 @@ class Model:
         return worker.torch_model(*args, **kwargs)
 
     def get_model(self, worker):
+        # TODO: We should not hard code the attribute name
+        # to torch_model. We should use the path_or_name_model
         if not hasattr(worker, "torch_model"):
             self.load_on_worker(worker)
         return worker.torch_model
@@ -69,14 +89,26 @@ class Model:
         out_df = cudf.DataFrame(index=index)
         _index = loader.sort_column(index.values) if type(loader) is SortedSeqLoader else index
         if isinstance(all_outputs_ls[0], dict):
+            if not isinstance(self.model_output_type, dict):
+                raise ValueError(
+                    "model_output_type must be a dictionary when the model output is a dictionary"
+                )
             for pred_name in all_outputs_ls[0].keys():
+                if pred_name not in self.model_output_type:
+                    raise ValueError(
+                        f"Invalid prediction name '{pred_name}'.\n"
+                        f"Allowed prediction names: {list(self.model_output_type.keys())}\n"
+                        "Please provide a valid prediction name in the model_output_type "
+                        "dictionary."
+                    )
+                model_output_type = self.model_output_type.get(pred_name, self.model_output_type)
                 _add_column_to_df(
                     out_df,
                     [o[pred_name] for o in all_outputs_ls],
                     _index,
                     loader,
                     pred_name,
-                    self.model_output_type,
+                    model_output_type,
                 )
         else:
             _add_column_to_df(
@@ -92,9 +124,9 @@ def _add_column_to_df(
     _index: Any,
     loader: Any,
     pred_output_col: str,
-    model_output_type: str,
+    model_output_type: ModelOutputType,
 ) -> None:
-    if model_output_type == "string":
+    if model_output_type is ModelOutputType.STRING:
         _add_string_column(df, pred_output_col, all_outputs_ls)
     else:
         _add_numeric_column(df, all_outputs_ls, _index, loader, pred_output_col)
@@ -127,3 +159,40 @@ def _add_numeric_column(
         df[pred_output_col] = create_nested_list_series_from_3d_ar(outputs, _index)
     else:
         raise RuntimeError(f"Unexpected output shape: {outputs.shape}")
+
+
+def _validate_model_output_type(
+    model_output_type: Union[str, ModelOutputType, dict[str, Union[str, ModelOutputType]]]
+) -> Union[ModelOutputType, dict[str, ModelOutputType]]:
+    """Validate and convert model output type to proper enum format.
+
+    Args:
+        model_output_type: Either a string/enum value, or a dict of string/enum values
+
+    Returns:
+        ModelOutputType or dict: Validated and converted output type(s)
+
+    Raises:
+        ValueError: If invalid output type is provided
+    """
+
+    def _convert_single_type(value):
+        if isinstance(value, str):
+            try:
+                return ModelOutputType(value)
+            except ValueError:
+                raise ValueError(
+                    f"Invalid model_output_type: {value}. "
+                    f"Allowed values are: {[e.value for e in ModelOutputType]}"
+                )
+        elif isinstance(value, ModelOutputType):
+            return value
+        else:
+            raise ValueError(
+                f"model_output_type must be string or ModelOutputType, got {type(value)}"
+            )
+
+    if isinstance(model_output_type, dict):
+        return {key: _convert_single_type(value) for key, value in model_output_type.items()}
+    else:
+        return _convert_single_type(model_output_type)

@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import warnings
 from typing import Optional
 
 import torch
@@ -32,8 +33,8 @@ class Predictor(Op):
         batch_size: int = DEFAULT_BATCH_SIZE,
         max_mem: str = "16GB",
         sorted_data_loader: bool = True,
-        model_output_col: Optional[str] = None,
-        model_output_cols: Optional[list] = None,
+        model_output_col: Optional[str] = None,  # Deprecated
+        model_output_cols: Optional[list[str]] = None,
         pred_output_col: Optional[str] = None,
     ):
         super().__init__(pre=pre, cols=cols, keep_cols=keep_cols)
@@ -52,6 +53,9 @@ class Predictor(Op):
             self.model_output_cols = model_output_cols
         else:
             self.model_output_cols = None
+
+        if model_output_col:
+            warnings.warn("model_output_col is deprecated. Please use model_output_cols instead.")
 
         if pred_output_col and self.model_output_cols and len(self.model_output_cols) > 1:
             raise ValueError(
@@ -98,8 +102,31 @@ class Predictor(Op):
         return out
 
     def meta(self):
-        dtype = "object" if self.model.model_output_type == "string" else "float32"
+        # Case 1: Multiple output columns
         if self.model_output_cols and len(self.model_output_cols) > 1:
-            return {col: dtype for col in self.model_output_cols}
+            if not isinstance(self.model.model_output_type, dict):
+                raise ValueError(
+                    "model_output_type must be a dictionary when "
+                    "multiple model_output_cols are specified"
+                )
+            return {
+                col: "object" if self.model.model_output_type.get(col) == "string" else "float32"
+                for col in self.model_output_cols
+            }
+
+        # Case 2: Single output column or default behavior
+        if self.model_output_cols:
+            first_col = self.model_output_cols[0]
+            if isinstance(self.model.model_output_type, dict):
+                output_type = self.model.model_output_type.get(first_col)
+            else:
+                output_type = self.model.model_output_type
         else:
-            return {self.pred_output_col: dtype}
+            # If model_output_cols is empty, fallback to default output type
+            output_type = (
+                list(self.model.model_output_type.values())[0]
+                if isinstance(self.model.model_output_type, dict)
+                else self.model.model_output_type
+            )
+
+        return {self.pred_output_col: "object" if output_type == "string" else "float32"}
