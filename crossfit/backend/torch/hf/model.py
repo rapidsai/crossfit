@@ -81,14 +81,14 @@ class HFModel(Model):
                 )
 
     def load_on_worker(self, worker, device="cuda"):
-        worker.torch_model = self.load_model(device)
-        worker.cfg = self.load_cfg()
+        setattr(worker, f"torch_model_{self.path_or_name}", self.load_model(device))
+        setattr(worker, f"cfg_{self.path_or_name}", self.load_cfg())
 
     def unload_from_worker(self, worker):
-        if hasattr(worker, "torch_model"):
-            delattr(worker, "torch_model")
-        if hasattr(worker, "cfg"):
-            delattr(worker, "cfg")
+        if hasattr(worker, f"torch_model_{self.path_or_name}"):
+            delattr(worker, f"torch_model_{self.path_or_name}")
+        if hasattr(worker, f"cfg_{self.path_or_name}"):
+            delattr(worker, f"cfg_{self.path_or_name}")
         cleanup_torch_cache()
 
     def load_model(self, device="cuda"):

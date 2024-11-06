@@ -39,13 +39,13 @@ class TestHFModel:
     def test_unload_from_worker(self, model, mock_worker):
         model.load_on_worker(mock_worker)
 
-        assert hasattr(mock_worker, "torch_model")
-        assert hasattr(mock_worker, "cfg")
+        assert hasattr(mock_worker, f"torch_model_{model.path_or_name}")
+        assert hasattr(mock_worker, f"cfg_{model.path_or_name}")
 
         model.unload_from_worker(mock_worker)
 
-        assert not hasattr(mock_worker, "torch_model")
-        assert not hasattr(mock_worker, "cfg")
+        assert not hasattr(mock_worker, f"torch_model_{model.path_or_name}")
+        assert not hasattr(mock_worker, f"cfg_{model.path_or_name}")
 
 
 class DummyModelWithDictOutput(torch.nn.Module):
