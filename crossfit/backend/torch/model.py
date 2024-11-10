@@ -64,14 +64,12 @@ class Model:
         raise NotImplementedError()
 
     def call_on_worker(self, worker, *args, **kwargs):
-        return worker.torch_model(*args, **kwargs)
+        return getattr(worker, f"torch_model_{id(self)}")(*args, **kwargs)
 
     def get_model(self, worker):
-        # TODO: We should not hard code the attribute name
-        # to torch_model. We should use the path_or_name_model
-        if not hasattr(worker, "torch_model"):
+        if not hasattr(worker, f"torch_model_{id(self)}"):
             self.load_on_worker(worker)
-        return worker.torch_model
+        return getattr(worker, f"torch_model_{id(self)}")
 
     def estimate_memory(self, max_num_tokens: int, batch_size: int) -> int:
         raise NotImplementedError()

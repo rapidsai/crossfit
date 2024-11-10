@@ -39,13 +39,13 @@ class TestHFModel:
     def test_unload_from_worker(self, model, mock_worker):
         model.load_on_worker(mock_worker)
 
-        assert hasattr(mock_worker, "torch_model")
-        assert hasattr(mock_worker, "cfg")
+        assert hasattr(mock_worker, f"torch_model_{id(model)}")
+        assert hasattr(mock_worker, f"cfg_{id(model)}")
 
         model.unload_from_worker(mock_worker)
 
-        assert not hasattr(mock_worker, "torch_model")
-        assert not hasattr(mock_worker, "cfg")
+        assert not hasattr(mock_worker, f"torch_model_{id(model)}")
+        assert not hasattr(mock_worker, f"cfg_{id(model)}")
 
 
 class DummyModelWithDictOutput(torch.nn.Module):
@@ -144,3 +144,50 @@ class TestPredictorMeta:
         ):
             predictor = cf.op.Predictor(model=self.model_string, model_output_cols=["a", "b"])
             predictor.meta()
+
+
+class DummyHFModel_WithOutputValue(HFModel):
+    def __init__(self, model_name, output_value):
+        self.model_name = model_name
+        self.output_value = output_value
+        super().__init__(model_name)
+
+    def load_model(self, device="cuda"):
+        class DummyModel(torch.nn.Module):
+            def __init__(self, output_value):
+                super().__init__()
+                self.output_value = output_value
+
+            def forward(self, batch):
+                output_size = len(batch["input_ids"])
+                return torch.ones(output_size, device="cuda") * self.output_value
+
+        return DummyModel(output_value=self.output_value).to(device)
+
+
+def test_loading_multiple_models():
+    cluster = LocalCUDACluster(CUDA_VISIBLE_DEVICES="0")
+    client = Client(cluster)
+
+    ddf = dask_cudf.from_cudf(cudf.DataFrame({"text": ["apple"] * 6}), npartitions=1)
+    model_1 = DummyHFModel_WithOutputValue("microsoft/deberta-v3-base", 1)
+    model_2 = DummyHFModel_WithOutputValue("microsoft/deberta-v3-base", 2)
+
+    pipe_1 = cf.op.Sequential(
+        cf.op.Tokenizer(model_1, cols=["text"], tokenizer_type="sentencepiece"),
+        cf.op.Predictor(model_1, sorted_data_loader=False, batch_size=2, pred_output_col="pred_1"),
+        keep_cols=list(ddf.columns),
+    )
+    output_1_ddf = pipe_1(ddf)
+    pipe_2 = cf.op.Sequential(
+        cf.op.Tokenizer(model_2, cols=["text"], tokenizer_type="sentencepiece"),
+        cf.op.Predictor(model_2, sorted_data_loader=False, batch_size=2, pred_output_col="pred_2"),
+        keep_cols=list(output_1_ddf.columns),
+    )
+    output_2_ddf = pipe_2(output_1_ddf)
+    output_2_df = output_2_ddf.to_backend("pandas").compute()
+    assert output_2_df["pred_1"].values.tolist() == [1, 1, 1, 1, 1, 1]
+    assert output_2_df["pred_2"].values.tolist() == [2, 2, 2, 2, 2, 2]
+
+    del client
+    del cluster
