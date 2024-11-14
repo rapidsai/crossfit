@@ -45,6 +45,7 @@ class HFModel(Model):
         self.batch_size_increment = batch_size_increment
         self.start_seq_len = start_seq_len
         self.seq_len_increment = seq_len_increment
+        self._cfg_id = f"cfg_{id(self)}"
 
         cache_dir = os.path.join(CF_HOME, "memory", self.load_cfg()._name_or_path)
         os.makedirs(cache_dir, exist_ok=True)
@@ -81,14 +82,14 @@ class HFModel(Model):
                 )
 
     def load_on_worker(self, worker, device="cuda"):
-        setattr(worker, f"torch_model_{id(self)}", self.load_model(device))
-        setattr(worker, f"cfg_{id(self)}", self.load_cfg())
+        setattr(worker, self._model_id, self.load_model(device))
+        setattr(worker, self._cfg_id, self.load_cfg())
 
     def unload_from_worker(self, worker):
-        if hasattr(worker, f"torch_model_{id(self)}"):
-            delattr(worker, f"torch_model_{id(self)}")
-        if hasattr(worker, f"cfg_{id(self)}"):
-            delattr(worker, f"cfg_{id(self)}")
+        if hasattr(worker, self._model_id):
+            delattr(worker, self._model_id)
+        if hasattr(worker, self._cfg_id):
+            delattr(worker, self._cfg_id)
         cleanup_torch_cache()
 
     def load_model(self, device="cuda"):
