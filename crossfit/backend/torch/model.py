@@ -50,6 +50,7 @@ class Model:
         self.path_or_name = path_or_name
         self.max_mem_gb = max_mem_gb
         self.model_output_type = _validate_model_output_type(model_output_type)
+        self._torch_model_id = f"torch_model_{id(self)}"
 
     def load_model(self, device="cuda"):
         raise NotImplementedError()
@@ -64,12 +65,12 @@ class Model:
         raise NotImplementedError()
 
     def call_on_worker(self, worker, *args, **kwargs):
-        return getattr(worker, f"torch_model_{id(self)}")(*args, **kwargs)
+        return getattr(worker, self._torch_model_id)(*args, **kwargs)
 
     def get_model(self, worker):
-        if not hasattr(worker, f"torch_model_{id(self)}"):
+        if not hasattr(worker, self._torch_model_id):
             self.load_on_worker(worker)
-        return getattr(worker, f"torch_model_{id(self)}")
+        return getattr(worker, self._torch_model_id)
 
     def estimate_memory(self, max_num_tokens: int, batch_size: int) -> int:
         raise NotImplementedError()
