@@ -17,15 +17,21 @@ from typing import overload
 import cudf
 import cupy as cp
 import dask.dataframe as dd
+import pylibraft
 from cuml.dask.neighbors import NearestNeighbors
 from dask import delayed
 from dask_cudf import from_delayed
-from pylibraft.neighbors.brute_force import knn
+from packaging.version import parse as parse_version
 
 from crossfit.backend.cudf.series import create_list_series_from_1d_or_2d_ar
 from crossfit.backend.dask.cluster import global_dask_client
 from crossfit.dataset.base import EmbeddingDatataset
 from crossfit.op.base import Op
+
+if parse_version(pylibraft.__version__).base_version >= "24.12":
+    from cuvs.neighbors.brute_force import search
+else:
+    from pylibraft.neighbors.brute_force import knn as search
 
 
 class VectorSearchOp(Op):
@@ -171,7 +177,7 @@ class RaftExactSearch(ExactSearchOp):
         self.normalize = normalize
 
     def search_tensors(self, queries, corpus):
-        results, indices = knn(dataset=corpus, queries=queries, k=self.k, metric=self.metric)
+        results, indices = search(dataset=corpus, queries=queries, k=self.k, metric=self.metric)
 
         return cp.asarray(results), cp.asarray(indices)
 
