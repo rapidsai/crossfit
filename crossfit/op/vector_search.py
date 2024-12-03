@@ -16,6 +16,7 @@ from typing import overload
 
 import cudf
 import cupy as cp
+import cuvs
 import dask.dataframe as dd
 import pylibraft
 from cuml.dask.neighbors import NearestNeighbors
@@ -30,8 +31,7 @@ from crossfit.op.base import Op
 
 if (
     (parse_version(pylibraft.__version__).base_version >= "24.12") or
-    (parse_version(cuvs.__version__).base_version >= "24.12") or
-
+    (parse_version(cuvs.__version__).base_version >= "24.12")
 ):
     from cuvs.neighbors.brute_force import search
 else:
