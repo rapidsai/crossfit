@@ -28,7 +28,11 @@ from crossfit.backend.dask.cluster import global_dask_client
 from crossfit.dataset.base import EmbeddingDatataset
 from crossfit.op.base import Op
 
-if parse_version(pylibraft.__version__).base_version >= "24.12":
+if (
+    (parse_version(pylibraft.__version__).base_version >= "24.12") or
+    (parse_version(cuvs.__version__).base_version >= "24.12") or
+
+):
     from cuvs.neighbors.brute_force import search
 else:
     from pylibraft.neighbors.brute_force import knn as search
