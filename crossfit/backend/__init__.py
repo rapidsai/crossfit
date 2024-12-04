@@ -13,6 +13,7 @@
 # limitations under the License.
 
 # flake8: noqa
+import logging
 
 from crossfit.backend.dask.dataframe import *
 from crossfit.backend.numpy.sparse import *
@@ -23,17 +24,20 @@ try:
     from crossfit.backend.cudf.array import *
     from crossfit.backend.cudf.dataframe import *
 except ImportError:
+    logging.warning("Import Error for cudf backend in Crossfit. Skipping it.")
     pass
 
 try:
     from crossfit.backend.cupy.array import *
     from crossfit.backend.cupy.sparse import *
 except ImportError:
+    logging.warning("Import Error for cupy backend in Crossfit. Skipping it.")
     pass
 
 try:
     from crossfit.backend.torch.array import *
 except ImportError:
+    logging.warning("Import Error for Torch backend in Crossfit. Skipping it.")
     pass
 
 # from crossfit.backend.tf.array import *
