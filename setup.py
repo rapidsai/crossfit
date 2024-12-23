@@ -18,7 +18,7 @@ import os
 
 from setuptools import find_packages, setup
 
-VERSION = "0.0.7"
+VERSION = "0.0.8"
 
 
 def get_long_description():
@@ -78,6 +78,6 @@ setup(
         **dev_requirements,
         "all": list(itertools.chain(*list(requirements.values()))),
     },
-    python_requires=">=3.7, <3.12",
+    python_requires=">=3.10, <3.13",
     test_suite="tests",
 )
