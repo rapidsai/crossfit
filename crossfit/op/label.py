@@ -57,7 +57,7 @@ class Labeler(Op):
         return output
 
     def meta(self):
-        labeled = {"labels": "string"}
+        labeled = {self.suffix: "string"}
 
         if self.cols and len(self.cols) > 1:
             labeled = {
