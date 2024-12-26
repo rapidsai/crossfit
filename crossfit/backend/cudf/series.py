@@ -91,8 +91,7 @@ def create_list_series_from_1d_or_2d_ar(ar, index):
         return RuntimeError(f"Unexpected input shape: {ar.shape}")
     data = as_column(ar.flatten())
     offset_col = as_column(cp.arange(start=0, stop=len(data) + 1, step=n_cols), dtype="int32")
-    mask_col = cp.full(shape=n_rows, fill_value=cp.bool_(True))
-    mask = cudf._lib.transform.bools_to_mask(as_column(mask_col))
+    mask = cudf.Series(cp.full(shape=n_rows, fill_value=cp.bool_(True)))._column.as_mask()
 
     lc = _construct_list_column(
         size=n_rows,
