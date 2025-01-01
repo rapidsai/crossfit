@@ -11,4 +11,3 @@ typing_extensions
 typing_utils
 tqdm
 rich
-pynvml>=11.0.0,<11.5
