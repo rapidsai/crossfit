@@ -65,7 +65,7 @@ if __name__ == "__main__":
     t0 = time.time()
     result = aggregate(ddf, agg, to_frame=True)
     tf = time.time()
-    print(f"\nWall Time: {tf-t0} seconds\n")
+    print(f"\nWall Time: {tf - t0} seconds\n")
 
     # View result
     print(f"Result:\n{result}\n")
@@ -76,12 +76,12 @@ if __name__ == "__main__":
         t0 = time.time()
         std = ddf.groupby(groupby).std().compute()
         tf = time.time()
-        print(f"\nddf.groupby().std() takes {tf-t0} seconds, and returns:\n")
+        print(f"\nddf.groupby().std() takes {tf - t0} seconds, and returns:\n")
         print(f"\n{std}\n")
     else:
         # Compare to ddf.std()
         t0 = time.time()
         std = ddf.std().compute()
         tf = time.time()
-        print(f"\nddf.std() takes {tf-t0} seconds, and returns:\n")
+        print(f"\nddf.std() takes {tf - t0} seconds, and returns:\n")
         print(f"\n{std}\n")

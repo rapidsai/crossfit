@@ -172,12 +172,12 @@ class SparseMatrixBackend:
 
         qrel = {}
         for i in range(self.indices.shape[0]):
-            query_id = f"q{i+1}"
+            query_id = f"q{i + 1}"
             qrel[query_id] = {}
 
             row = sparse_matrix[i]
             for j, score in zip(row.indices, row.data):
-                doc_id = f"d{j+1}"
+                doc_id = f"d{j + 1}"
                 qrel[query_id][doc_id] = int(score) if is_run else float(score)
 
         return qrel
