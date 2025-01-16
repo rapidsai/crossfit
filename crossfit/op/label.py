@@ -16,6 +16,11 @@ class Labeler(Op):
         suffix: str = "labels",
         axis=-1,
     ):
+        if keep_cols is not None and suffix in keep_cols:
+            # suffix is already kept as a column
+            # and will raise an error if it is in keep_cols
+            keep_cols.remove(suffix)
+
         super().__init__(pre=pre, cols=cols, keep_cols=keep_cols)
         self.labels = labels
         self.suffix = suffix
