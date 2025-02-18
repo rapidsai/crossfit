@@ -1,9 +1,10 @@
 astunparse
 pandas
+pyarrow
 numpy
 numba
-dask
-distributed>=2022.11.1
+dask>=2025.1.0
+distributed>=2025.1.0
 scikit-learn>=1.2.0
 fsspec>=2022.7.1
 tensorflow_metadata
