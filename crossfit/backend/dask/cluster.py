@@ -20,7 +20,6 @@ from typing import Any, Callable, Optional
 
 import dask
 import distributed
-from dask.dataframe.optimize import optimize as dd_optimize
 from dask.distributed import Client, get_client
 
 from crossfit.backend.gpu import HAS_GPU
@@ -91,60 +90,6 @@ def increase_gc_threshold():
 
     g0, g1, g2 = gc.get_threshold()
     gc.set_threshold(g0 * 3, g1 * 3, g2 * 3)
-
-
-def ensure_optimize_dataframe_graph(ddf=None, dsk=None, keys=None):
-    """Perform HLG DataFrame optimizations
-
-    If `ddf` is specified, an optimized Dataframe
-    collection will be returned. If `dsk` and `keys`
-    are specified, an optimized graph will be returned.
-
-    These optimizations are performed automatically
-    when a DataFrame collection is computed/persisted,
-    but they are NOT always performed when statistics
-    are computed. The purpose of this utility is to
-    ensure that the Dataframe-based optimizations are
-    always applied.
-
-    Parameters
-    ----------
-    ddf : dask_cudf.DataFrame, optional
-        The dataframe to optimize, by default None
-    dsk : dask.highlevelgraph.HighLevelGraph, optional
-        Dask high level graph, by default None
-    keys : List[str], optional
-        The keys to optimize, by default None
-
-    Returns
-    -------
-    Union[dask_cudf.DataFrame, dask.highlevelgraph.HighLevelGraph]
-        A dask_cudf DataFrame or dask HighLevelGraph depending
-        on the parameters provided.
-
-    Raises
-    ------
-    ValueError
-        If ddf is not provided and one of dsk or keys are None.
-    """
-
-    if ddf is None:
-        if dsk is None or keys is None:
-            raise ValueError("Must specify both `dsk` and `keys` if `ddf` is not supplied.")
-    dsk = ddf.dask if dsk is None else dsk
-    keys = ddf.__dask_keys__() if keys is None else keys
-
-    if isinstance(dsk, dask.highlevelgraph.HighLevelGraph):
-        with dask.config.set({"optimization.fuse.active": False}):
-            dsk = dd_optimize(dsk, keys=keys)
-
-    if ddf is None:
-        # Return optimized graph
-        return dsk
-
-    # Return optimized ddf
-    ddf.dask = dsk
-    return ddf
 
 
 class Distributed:
