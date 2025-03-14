@@ -12,13 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
 
 import joblib
 import numpy as np
 import torch
+import transformers
 from sklearn.linear_model import LinearRegression
 from tqdm import tqdm
-from transformers import PreTrainedModel
 
 from crossfit.utils.model_adapter import adapt_model_input
 from crossfit.utils.torch_utils import (
@@ -29,7 +30,7 @@ from crossfit.utils.torch_utils import (
 
 
 def fit_memory_estimate_curve(
-    model: PreTrainedModel,
+    model: "transformers.PreTrainedModel",
     path_or_name: str,
     start_batch_size: int = 1,
     end_batch_size: int = 2048,
