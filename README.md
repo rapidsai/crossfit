@@ -1,4 +1,4 @@
-# crossfit
+# crossfit test
 
 [![PyPI](https://img.shields.io/pypi/v/crossfit.svg)](https://pypi.org/project/crossfit/)
 [![Changelog](https://img.shields.io/github/v/release/rapidsai/crossfit?include_prereleases&label=changelog)](https://github.com/rapidsai/crossfit/releases)
