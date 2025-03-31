@@ -1,4 +1,4 @@
-# Copyright 2023 NVIDIA CORPORATION
+# Copyright 2025 NVIDIA CORPORATION
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Any, Optional
 
 import cudf
 import cupy as cp
+import numpy as np
 from cudf.core.column import as_column
 from cudf.core.dtypes import ListDtype
 from packaging.version import parse as parse_version
@@ -90,7 +91,9 @@ def create_list_series_from_1d_or_2d_ar(ar, index):
     else:
         return RuntimeError(f"Unexpected input shape: {ar.shape}")
     data = as_column(ar.flatten())
-    offset_col = as_column(cp.arange(start=0, stop=len(data) + 1, step=n_cols), dtype="int32")
+    offset_col = as_column(
+        cp.arange(start=0, stop=len(data) + 1, step=n_cols), dtype=np.dtype("int32")
+    )
     mask = cudf.Series(cp.full(shape=n_rows, fill_value=cp.bool_(True)))._column.as_mask()
 
     lc = _construct_list_column(
