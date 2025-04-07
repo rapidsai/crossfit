@@ -1,4 +1,4 @@
-# Copyright 2023 NVIDIA CORPORATION
+# Copyright 2025 NVIDIA CORPORATION
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@ from itertools import product
 from typing import Any, Type, TypeVar
 
 import numpy as np
-import torch
 from dask.utils import Dispatch
 
 from crossfit.utils import dispatch_utils
@@ -108,6 +107,8 @@ class ArrayConverter:
 
         # 4. Handle 1-element lists directly
         try:
+            import torch
+
             flat = input.list.leaves
             return torch.as_tensor(flat.to_cupy()).view(-1, 1).to("cuda")
         except Exception:
