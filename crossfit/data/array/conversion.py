@@ -105,12 +105,11 @@ class ArrayConverter:
         except Exception:
             pass
 
-        # 4. Handle 1-element lists directly
+        # 4. Try to convert directly to torch tensor
         try:
             import torch
 
-            flat = input.list.leaves
-            return torch.as_tensor(flat.to_cupy()).view(-1, 1).to("cuda")
+            return torch.tensor(np.stack(input.to_arrow().to_pylist()), device="cuda")
         except Exception:
             pass
 
