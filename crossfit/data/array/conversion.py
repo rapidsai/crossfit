@@ -1,4 +1,4 @@
-# Copyright 2023 NVIDIA CORPORATION
+# Copyright 2025 NVIDIA CORPORATION
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -105,7 +105,13 @@ class ArrayConverter:
         except Exception:
             pass
 
-        # TODO: Check step here
+        # 4. Try to convert directly to torch tensor
+        try:
+            import torch
+
+            return torch.tensor(np.stack(input.to_arrow().to_pylist()), device="cuda")
+        except Exception:
+            pass
 
         raise TypeError(
             f"Can't create {input} array from type {to}, "
