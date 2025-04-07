@@ -16,6 +16,7 @@ from itertools import product
 from typing import Any, Type, TypeVar
 
 import numpy as np
+import torch
 from dask.utils import Dispatch
 
 from crossfit.utils import dispatch_utils
@@ -105,7 +106,12 @@ class ArrayConverter:
         except Exception:
             pass
 
-        # TODO: Check step here
+        # 4. Handle 1-element lists directly
+        try:
+            flat = input.list.leaves
+            return torch.as_tensor(flat.to_cupy()).view(-1, 1).to("cuda")
+        except Exception:
+            pass
 
         raise TypeError(
             f"Can't create {input} array from type {to}, "
