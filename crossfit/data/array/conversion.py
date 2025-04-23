@@ -105,7 +105,13 @@ class ArrayConverter:
         except Exception:
             pass
 
-        # TODO: Check step here
+        # 4. Try to convert directly to torch tensor
+        try:
+            import torch
+
+            return torch.tensor(np.stack(input.to_arrow().to_pylist()), device="cuda")
+        except Exception:
+            pass
 
         raise TypeError(
             f"Can't create {input} array from type {to}, "
