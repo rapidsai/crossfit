@@ -1,8 +1,6 @@
 [tool.pytest.ini_options]
 markers = [
-    "tensorflow",
-    "pytorch",
-    "jax",
+    "singlegpu"
 ]
 
 [tool.black]
