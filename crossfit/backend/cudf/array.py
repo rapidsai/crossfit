@@ -14,8 +14,6 @@
 
 import logging
 
-import numpy as np
-
 from crossfit.data.array import conversion
 from crossfit.data.array.dispatch import ArrayBackend, np_backend_dispatch
 
@@ -46,14 +44,8 @@ def register_cudf_to_dlpack():
             if not input_array.list.len().min() == input_array.list.len().max():
                 raise NotImplementedError("Cannot convert list column with variable length")
 
-            try:
-                dim = input_array.list.len().iloc[0]
-                return input_array.list.leaves.values.reshape(-1, dim).toDlpack()
-            except Exception:
-                import torch
-
-                # Less memory efficient fallback
-                return torch.tensor(np.stack(input_array.to_arrow().to_pylist()), device="cuda")
+            dim = input_array.list.len().iloc[0]
+            return input_array.list.leaves.values.reshape(-1, dim).toDlpack()
 
         return input_array.to_dlpack()
 
