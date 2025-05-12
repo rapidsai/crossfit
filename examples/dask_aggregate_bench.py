@@ -53,11 +53,7 @@ if __name__ == "__main__":
     columns = [f"I{i}" for i in range(1, ncolumns + 1)]
     if groupby:
         columns += groupby if isinstance(groupby, list) else [groupby]
-    ddf = dd.read_parquet(
-        path,
-        blocksize=blocksize,
-        columns=columns,
-    )
+    ddf = dd.read_parquet(path, blocksize=blocksize, columns=columns)
     print(f"\nddf: {ddf}\n")
 
     # Aggregate moments (mean, var, std)

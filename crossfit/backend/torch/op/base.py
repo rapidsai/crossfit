@@ -1,4 +1,4 @@
-# Copyright 2023 NVIDIA CORPORATION
+# Copyright 2025 NVIDIA CORPORATION
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -36,6 +36,7 @@ class Predictor(Op):
         model_output_col: Optional[str] = None,  # Deprecated
         model_output_cols: Optional[list[str]] = None,
         pred_output_col: Optional[str] = None,
+        progress_bar: bool = True,
     ):
         super().__init__(pre=pre, cols=cols, keep_cols=keep_cols)
         self.model = model
@@ -44,6 +45,7 @@ class Predictor(Op):
         self.max_mem = max_mem
         self.max_mem_gb = int(self.max_mem.split("GB")[0]) / 2.5
         self.sorted_data_loader = sorted_data_loader
+        self.progress_bar = progress_bar
 
         if model_output_col and model_output_cols:
             raise ValueError("Specify either model_output_col or model_output_cols, not both.")
@@ -70,7 +72,9 @@ class Predictor(Op):
             loader = SortedSeqLoader(
                 data[["input_ids", "attention_mask"]],
                 self.model,
-                progress_bar=self.create_progress_bar(len(data), partition_info),
+                progress_bar=self.create_progress_bar(len(data), partition_info)
+                if self.progress_bar
+                else None,
                 initial_batch_size=self.batch_size,
             )
         else:
@@ -78,7 +82,9 @@ class Predictor(Op):
                 data[["input_ids", "attention_mask"]],
                 batch_size=self.batch_size,
                 padding_side=self.model.load_tokenizer().padding_side,
-                progress_bar=self.create_progress_bar(len(data), partition_info),
+                progress_bar=self.create_progress_bar(len(data), partition_info)
+                if self.progress_bar
+                else None,
                 max_seq_len=self.model.max_seq_length(),
             )
         del data
