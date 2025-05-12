@@ -20,7 +20,6 @@ import cupy as cp
 import numpy as np
 import pylibcudf as plc
 from cudf.core.column import as_column
-from cudf.core.dtypes import ListDtype
 from packaging.version import parse as parse_version
 
 if TYPE_CHECKING:
@@ -58,7 +57,7 @@ def _construct_series_from_list_column(index: Any, lc: cudf.core.column.ListColu
 
 def _construct_list_column(
     size: int,
-    dtype: ListDtype,
+    dtype: cudf.ListDtype,
     mask: Optional["Buffer"] = None,
     offset: int = 0,
     null_count: Optional[int] = None,
@@ -123,37 +122,46 @@ def create_nested_list_series_from_3d_ar(ar, index):
     """
     Create a cudf list of lists series from 3d arrays
     """
-    n_slices, n_rows, n_cols = ar.shape
-    flattened_data = ar.reshape(-1)  # Flatten the 3-D array into 1-D
+    if _is_cudf_gte_version("25.06.0"):
+        arr = cp.asarray(ar)
+        if not isinstance(index, (cudf.RangeIndex, cudf.Index, cudf.MultiIndex)):
+            index = cudf.Index(index)
+        return cudf.Series.from_pylibcudf(
+            plc.Column.from_cuda_array_interface(arr),
+            metadata={"index": index},
+        )
+    else:
+        n_slices, n_rows, n_cols = ar.shape
+        flattened_data = ar.reshape(-1)  # Flatten the 3-D array into 1-D
 
-    # Inner list offsets (for each row in 2D slices)
-    inner_offsets = cp.arange(
-        start=0, stop=n_cols * n_rows * n_slices + 1, step=n_cols, dtype="int32"
-    )
-    inner_list_data = as_column(flattened_data)
-    inner_list_offsets = as_column(inner_offsets)
+        # Inner list offsets (for each row in 2D slices)
+        inner_offsets = cp.arange(
+            start=0, stop=n_cols * n_rows * n_slices + 1, step=n_cols, dtype="int32"
+        )
+        inner_list_data = as_column(flattened_data)
+        inner_list_offsets = as_column(inner_offsets)
 
-    # Outer list offsets (for each 2D slice in the 3D array)
-    outer_offsets = cp.arange(start=0, stop=n_slices + 1, step=1, dtype="int32") * n_rows
-    outer_list_offsets = as_column(outer_offsets)
+        # Outer list offsets (for each 2D slice in the 3D array)
+        outer_offsets = cp.arange(start=0, stop=n_slices + 1, step=1, dtype="int32") * n_rows
+        outer_list_offsets = as_column(outer_offsets)
 
-    # Constructing the nested ListColumn
-    inner_lc = _construct_list_column(
-        size=inner_offsets.size - 1,
-        dtype=cudf.ListDtype(inner_list_data.dtype),
-        children=(inner_list_offsets, inner_list_data),
-        mask=None,
-        offset=0,
-        null_count=None,
-    )
+        # Constructing the nested ListColumn
+        inner_lc = _construct_list_column(
+            size=inner_offsets.size - 1,
+            dtype=cudf.ListDtype(inner_list_data.dtype),
+            children=(inner_list_offsets, inner_list_data),
+            mask=None,
+            offset=0,
+            null_count=None,
+        )
 
-    lc = _construct_list_column(
-        size=n_slices,
-        dtype=cudf.ListDtype(inner_list_data.dtype),
-        children=(outer_list_offsets, inner_lc),
-        mask=None,
-        offset=0,
-        null_count=None,
-    )
+        lc = _construct_list_column(
+            size=n_slices,
+            dtype=cudf.ListDtype(inner_list_data.dtype),
+            children=(outer_list_offsets, inner_lc),
+            mask=None,
+            offset=0,
+            null_count=None,
+        )
 
-    return _construct_series_from_list_column(lc=lc, index=index)
+        return _construct_series_from_list_column(lc=lc, index=index)
