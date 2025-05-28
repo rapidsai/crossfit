@@ -1,23 +1,26 @@
-#
-# Copyright (c) 2023, NVIDIA CORPORATION.
+# Copyright 2025 NVIDIA CORPORATION
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
 
 # pylint: disable=unused-import
 import os
 
-from dask.distributed.diagnostics import nvml
+try:
+    from dask.distributed.diagnostics.nvml import device_get_count
+except ImportError:
+    import pynvml
+
+    device_get_count = None
 
 
 def _get_gpu_count():
@@ -30,7 +33,14 @@ def _get_gpu_count():
     # that are incompatible with Dask-CUDA. If CUDA runtime functions are
     # called before Dask-CUDA can spawn worker processes
     # then Dask-CUDA it will not work correctly (raises an exception)
-    nvml_device_count = nvml.device_get_count()
+    if device_get_count is not None:
+        nvml_device_count = device_get_count()
+    else:
+        try:
+            nvml_device_count = pynvml.nvmlDeviceGetCount()
+        except Exception:
+            nvml_device_count = 0
+
     if nvml_device_count == 0:
         return 0
     try:

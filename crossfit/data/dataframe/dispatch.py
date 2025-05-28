@@ -1,4 +1,4 @@
-# Copyright 2023 NVIDIA CORPORATION
+# Copyright 2025 NVIDIA CORPORATION
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dask.utils import Dispatch
+from crossfit.utils.dispatch_utils import Dispatch
 
 
 class _CrossFrameDispatch(Dispatch):
@@ -22,11 +22,18 @@ class _CrossFrameDispatch(Dispatch):
         if isinstance(data, FrameBackend):
             return data
 
+        backends = []
         # TODO: Fix this
-        from crossfit.backend.dask.dataframe import DaskDataFrame
+        try:
+            from crossfit.backend.dask.dataframe import DaskDataFrame
+
+            backends.append(DaskDataFrame)
+        except ImportError:
+            pass
+
         from crossfit.backend.pandas.dataframe import PandasDataFrame
 
-        backends = [PandasDataFrame, DaskDataFrame]
+        backends.append(PandasDataFrame)
 
         try:
             from crossfit.backend.cudf.dataframe import CudfDataFrame

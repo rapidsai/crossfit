@@ -1,4 +1,4 @@
-# Copyright 2023 NVIDIA CORPORATION
+# Copyright 2025 NVIDIA CORPORATION
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,12 +17,16 @@ from typing import overload
 import cudf
 import cupy as cp
 import cuvs
-import dask.dataframe as dd
 import pylibraft
-from cuml.dask.neighbors import NearestNeighbors
-from dask import delayed
-from dask_cudf import from_delayed
 from packaging.version import parse as parse_version
+
+try:
+    import dask.dataframe as dd
+    from cuml.dask.neighbors import NearestNeighbors
+    from dask import delayed
+    from dask_cudf import from_delayed
+except ImportError:
+    pass
 
 from crossfit.backend.cudf.series import create_list_series_from_1d_or_2d_ar
 from crossfit.backend.dask.cluster import global_dask_client
@@ -295,8 +299,8 @@ def _get_embedding_cupy(data, embedding_col, normalize=True):
 
 
 def _per_dim_ddf(
-    data: dd.DataFrame, embedding_col: str, index_col: str = "index", normalize: bool = True
-) -> dd.DataFrame:
+    data: "dd.DataFrame", embedding_col: str, index_col: str = "index", normalize: bool = True
+) -> "dd.DataFrame":
     dim = len(data.head()[embedding_col].iloc[0])
 
     def to_map(part, dim):

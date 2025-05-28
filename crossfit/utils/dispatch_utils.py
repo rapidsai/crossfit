@@ -1,4 +1,4 @@
-# Copyright 2023 NVIDIA CORPORATION
+# Copyright 2025 NVIDIA CORPORATION
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,7 +12,80 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dask.utils import Dispatch
+# Code recycled from Dask: https://github.com/dask/dask/blob/main/dask/utils.py
+class Dispatch:
+    """Simple single dispatch."""
+
+    def __init__(self, name=None):
+        self._lookup = {}
+        self._lazy = {}
+        if name:
+            self.__name__ = name
+
+    def register(self, type, func=None):
+        """Register dispatch of `func` on arguments of type `type`"""
+
+        def wrapper(func):
+            if isinstance(type, tuple):
+                for t in type:
+                    self.register(t, func)
+            else:
+                self._lookup[type] = func
+            return func
+
+        return wrapper(func) if func is not None else wrapper
+
+    def register_lazy(self, toplevel, func=None):
+        """
+        Register a registration function which will be called if the
+        *toplevel* module (e.g. 'pandas') is ever loaded.
+        """
+
+        def wrapper(func):
+            self._lazy[toplevel] = func
+            return func
+
+        return wrapper(func) if func is not None else wrapper
+
+    def dispatch(self, cls):
+        """Return the function implementation for the given ``cls``"""
+        lk = self._lookup
+        for cls2 in cls.__mro__:
+            # Is a lazy registration function present?
+            toplevel, _, _ = cls2.__module__.partition(".")
+            try:
+                register = self._lazy[toplevel]
+            except KeyError:
+                pass
+            else:
+                register()
+                self._lazy.pop(toplevel, None)
+                return self.dispatch(cls)  # recurse
+            try:
+                impl = lk[cls2]
+            except KeyError:
+                pass
+            else:
+                if cls is not cls2:
+                    # Cache lookup
+                    lk[cls] = impl
+                return impl
+        raise TypeError(f"No dispatch for {cls}")
+
+    def __call__(self, arg, *args, **kwargs):
+        """
+        Call the corresponding method based on type of argument.
+        """
+        meth = self.dispatch(type(arg))
+        return meth(arg, *args, **kwargs)
+
+    @property
+    def __doc__(self):
+        try:
+            func = self.dispatch(object)
+            return func.__doc__
+        except TypeError:
+            return "Single Dispatch for %s" % self.__name__
 
 
 def supports(dispatch: Dispatch) -> set:

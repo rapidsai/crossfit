@@ -1,4 +1,4 @@
-# Copyright 2023 NVIDIA CORPORATION
+# Copyright 2025 NVIDIA CORPORATION
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,7 +15,12 @@
 # flake8: noqa
 import logging
 
-from crossfit.backend.dask.dataframe import *
+try:
+    from crossfit.backend.dask.dataframe import *
+except ImportError:
+    logging.warning("Import error for Dask backend in CrossFit. Skipping it.")
+    pass
+
 from crossfit.backend.numpy.sparse import *
 from crossfit.backend.pandas.array import *
 from crossfit.backend.pandas.dataframe import *
@@ -24,20 +29,20 @@ try:
     from crossfit.backend.cudf.array import *
     from crossfit.backend.cudf.dataframe import *
 except ImportError:
-    logging.warning("Import Error for cudf backend in Crossfit. Skipping it.")
+    logging.warning("Import error for cuDF backend in Crossfit. Skipping it.")
     pass
 
 try:
     from crossfit.backend.cupy.array import *
     from crossfit.backend.cupy.sparse import *
 except ImportError:
-    logging.warning("Import Error for cupy backend in Crossfit. Skipping it.")
+    logging.warning("Import error for CuPy backend in Crossfit. Skipping it.")
     pass
 
 try:
     from crossfit.backend.torch.array import *
 except ImportError:
-    logging.warning("Import Error for Torch backend in Crossfit. Skipping it.")
+    logging.warning("Import error for Torch backend in Crossfit. Skipping it.")
     pass
 
 # from crossfit.backend.tf.array import *

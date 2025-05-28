@@ -1,4 +1,4 @@
-# Copyright 2024 NVIDIA CORPORATION
+# Copyright 2025 NVIDIA CORPORATION
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -36,11 +36,15 @@ def read_requirements(filename):
         return [line for line in lineiter if line and not line.startswith("#")]
 
 
+_dask = read_requirements("requirements/dask.txt")
+_dask_cuda12x = read_requirements("requirements/dask_cuda12x.txt")
 _dev = read_requirements("requirements/dev.txt")
 
 requirements = {
-    "base": read_requirements("requirements/base.txt"),
-    "cuda12x": read_requirements("requirements/cuda12x.txt"),
+    "base": read_requirements("requirements/base.txt") + _dask,
+    "base_no_dask": read_requirements("requirements/base.txt"),
+    "cuda12x": read_requirements("requirements/cuda12x.txt") + _dask_cuda12x,
+    "cuda12x_no_dask": read_requirements("requirements/cuda12x.txt"),
     "dev": _dev,
     "tensorflow": read_requirements("requirements/tensorflow.txt"),
     "pytorch": read_requirements("requirements/pytorch.txt"),
