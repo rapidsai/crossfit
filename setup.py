@@ -82,6 +82,6 @@ setup(
         **dev_requirements,
         "all": list(itertools.chain(*list(requirements.values()))),
     },
-    python_requires=">=3.10, <3.13",
+    python_requires=">=3.10, <3.14",
     test_suite="tests",
 )
