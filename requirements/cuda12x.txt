@@ -1,7 +1,3 @@
-cudf-cu12>=24.4
-cuml-cu12>=24.4
-pylibraft-cu12>=24.4
-cuvs-cu12>=24.4
 cudf-cu12>=25.6
 cuml-cu12>=25.6
 pylibraft-cu12>=25.6
