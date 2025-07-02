@@ -57,10 +57,8 @@ def register_cupy_backend():
 @CrossFrame.register_lazy("cudf")
 def register_cudf_backend():
     import cudf
-    from cudf.core.dataframe import DataFrame
 
     @CrossFrame.register(cudf.DataFrame)
-    @CrossFrame.register(DataFrame)
     def _cudf_dataframe(data):
         return CudfDataFrame(data)
 
