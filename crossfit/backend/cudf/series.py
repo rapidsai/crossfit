@@ -12,156 +12,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Optional
-
 import cudf
 import cupy as cp
-import numpy as np
 import pylibcudf as plc
-from cudf.core.column import as_column
-from packaging.version import parse as parse_version
-
-if TYPE_CHECKING:
-    from cudf.core.buffer import Buffer
-    from cudf.core.column import ColumnBase
-    from cudf.core.column.numerical import NumericalColumn
-
-
-@lru_cache
-def _is_cudf_gte_version(version: str) -> bool:
-    current_cudf_version = parse_version(cudf.__version__)
-    cudf_version = parse_version(version)
-
-    if current_cudf_version >= cudf_version or (
-        current_cudf_version.base_version >= version and current_cudf_version.is_prerelease
-    ):
-        return True
-    elif current_cudf_version < cudf_version or (
-        current_cudf_version.base_version < version and current_cudf_version.is_prerelease
-    ):
-        return False
-    else:
-        msg = f"Found uncaught cudf version {current_cudf_version}"
-        raise NotImplementedError(msg)
-
-
-def _construct_series_from_list_column(index: Any, lc: cudf.core.column.ListColumn) -> cudf.Series:
-    if not _is_cudf_gte_version("24.10.0"):
-        return cudf.Series(data=lc, index=index)
-    else:
-        if not isinstance(index, (cudf.RangeIndex, cudf.Index, cudf.MultiIndex)):
-            index = cudf.Index(index)
-        return cudf.Series._from_column(column=lc, index=index)
-
-
-def _construct_list_column(
-    size: int,
-    dtype: cudf.ListDtype,
-    mask: Optional["Buffer"] = None,
-    offset: int = 0,
-    null_count: Optional[int] = None,
-    children: tuple["NumericalColumn", "ColumnBase"] = (),  # type: ignore[assignment]
-) -> cudf.core.column.ListColumn:
-    kwargs = dict(
-        size=size,
-        dtype=dtype,
-        mask=mask,
-        offset=offset,
-        null_count=null_count,
-        children=children,
-    )
-
-    if not _is_cudf_gte_version("24.10.0"):
-        return cudf.core.column.ListColumn(**kwargs)
-    else:
-        # in 24.10 ListColumn added `data` kwarg see https://github.com/rapidsai/crossfit/issues/84
-        return cudf.core.column.ListColumn(data=None, **kwargs)
 
 
 def create_list_series_from_1d_or_2d_ar(ar, index):
     """
     Create a cudf list series  from 2d arrays
     """
-    if _is_cudf_gte_version("25.06.0"):
-        arr = cp.asarray(ar)
-        if len(arr.shape) == 1:
-            arr = arr.reshape(-1, 1)
-        if not isinstance(index, (cudf.RangeIndex, cudf.Index, cudf.MultiIndex)):
-            index = cudf.Index(index)
-        return cudf.Series.from_pylibcudf(
-            plc.Column.from_cuda_array_interface(arr),
-            metadata={"index": index},
-        )
-    else:
-        if len(ar.shape) == 1:
-            n_rows, *_ = ar.shape
-            n_cols = 1
-        elif len(ar.shape) == 2:
-            n_rows, n_cols = ar.shape
-        else:
-            return RuntimeError(f"Unexpected input shape: {ar.shape}")
-        data = as_column(ar.flatten())
-        offset_col = as_column(
-            cp.arange(start=0, stop=len(data) + 1, step=n_cols), dtype=np.dtype("int32")
-        )
-        mask = cudf.Series(cp.full(shape=n_rows, fill_value=cp.bool_(True)))._column.as_mask()
-
-        lc = _construct_list_column(
-            size=n_rows,
-            dtype=cudf.ListDtype(data.dtype),
-            mask=mask,
-            offset=0,
-            null_count=0,
-            children=(offset_col, data),
-        )
-        return _construct_series_from_list_column(lc=lc, index=index)
+    arr = cp.asarray(ar)
+    if len(arr.shape) == 1:
+        arr = arr.reshape(-1, 1)
+    if not isinstance(index, (cudf.RangeIndex, cudf.Index, cudf.MultiIndex)):
+        index = cudf.Index(index)
+    return cudf.Series.from_pylibcudf(
+        plc.Column.from_cuda_array_interface(arr),
+        metadata={"index": index},
+    )
 
 
 def create_nested_list_series_from_3d_ar(ar, index):
     """
     Create a cudf list of lists series from 3d arrays
     """
-    if _is_cudf_gte_version("25.06.0"):
-        arr = cp.asarray(ar)
-        if not isinstance(index, (cudf.RangeIndex, cudf.Index, cudf.MultiIndex)):
-            index = cudf.Index(index)
-        return cudf.Series.from_pylibcudf(
-            plc.Column.from_cuda_array_interface(arr),
-            metadata={"index": index},
-        )
-    else:
-        n_slices, n_rows, n_cols = ar.shape
-        flattened_data = ar.reshape(-1)  # Flatten the 3-D array into 1-D
-
-        # Inner list offsets (for each row in 2D slices)
-        inner_offsets = cp.arange(
-            start=0, stop=n_cols * n_rows * n_slices + 1, step=n_cols, dtype="int32"
-        )
-        inner_list_data = as_column(flattened_data)
-        inner_list_offsets = as_column(inner_offsets)
-
-        # Outer list offsets (for each 2D slice in the 3D array)
-        outer_offsets = cp.arange(start=0, stop=n_slices + 1, step=1, dtype="int32") * n_rows
-        outer_list_offsets = as_column(outer_offsets)
-
-        # Constructing the nested ListColumn
-        inner_lc = _construct_list_column(
-            size=inner_offsets.size - 1,
-            dtype=cudf.ListDtype(inner_list_data.dtype),
-            children=(inner_list_offsets, inner_list_data),
-            mask=None,
-            offset=0,
-            null_count=None,
-        )
-
-        lc = _construct_list_column(
-            size=n_slices,
-            dtype=cudf.ListDtype(inner_list_data.dtype),
-            children=(outer_list_offsets, inner_lc),
-            mask=None,
-            offset=0,
-            null_count=None,
-        )
-
-        return _construct_series_from_list_column(lc=lc, index=index)
+    arr = cp.asarray(ar)
+    if not isinstance(index, (cudf.RangeIndex, cudf.Index, cudf.MultiIndex)):
+        index = cudf.Index(index)
+    return cudf.Series.from_pylibcudf(
+        plc.Column.from_cuda_array_interface(arr),
+        metadata={"index": index},
+    )
