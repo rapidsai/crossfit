@@ -1,4 +1,6 @@
-FROM nvcr.io/nvidia/nemo:23.10
+FROM nvcr.io/nvidia/nemo:25.04
+
+# TODO: Move away from NeMo Framework container
 
 COPY . /tmp/crossfit/
 RUN cd /tmp/crossfit && \
