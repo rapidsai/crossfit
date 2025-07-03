@@ -52,7 +52,10 @@ class Op:
 
     def get_worker(self):
         if not crossfit.config.DISABLE_DASK:
-            worker = get_dask_worker() if get_dask_worker is not None else self
+            try:
+                worker = get_dask_worker()
+            except ValueError:
+                worker = self
         else:
             worker = self
 
