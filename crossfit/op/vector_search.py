@@ -20,16 +20,21 @@ import cuvs
 import pylibraft
 from packaging.version import parse as parse_version
 
-try:
-    import dask.dataframe as dd
-    from cuml.dask.neighbors import NearestNeighbors
-    from dask import delayed
-    from dask_cudf import from_delayed
-except ImportError:
-    pass
+import crossfit.config
+
+if not crossfit.config.DISABLE_DASK:
+    # Still need a try/except here because crossfit.config needs to import this file
+    # before we can set DISABLE_DASK.
+    try:
+        import dask.dataframe as dd
+        from cuml.dask.neighbors import NearestNeighbors
+        from dask import delayed
+        from dask_cudf import from_delayed
+        from crossfit.backend.dask.cluster import global_dask_client
+    except ImportError:
+        pass
 
 from crossfit.backend.cudf.series import create_list_series_from_1d_or_2d_ar
-from crossfit.backend.dask.cluster import global_dask_client
 from crossfit.dataset.base import EmbeddingDatataset
 from crossfit.op.base import Op
 
@@ -209,10 +214,15 @@ class CuMLVectorSearch(VectorSearchOp):
         self.normalize = normalize
 
     def fit(self, items, **kwargs):
+        if not crossfit.config.DISABLE_DASK:
+            client = global_dask_client()
+        else:
+            client = None
+
         knn = NearestNeighbors(
             n_neighbors=self.k,
             algorithm=self.algorithm,
-            client=global_dask_client(),
+            client=client,
             metric=self.metric,
             **kwargs,
         )

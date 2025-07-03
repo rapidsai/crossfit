@@ -18,12 +18,12 @@ import warnings
 from contextvars import ContextVar
 from typing import Any, Callable, Optional
 
-try:
+import crossfit.config
+
+if not crossfit.config.DISABLE_DASK:
     import dask
     import distributed
     from dask.distributed import Client, get_client
-except ImportError:
-    pass
 
 from crossfit.backend.gpu import HAS_GPU
 

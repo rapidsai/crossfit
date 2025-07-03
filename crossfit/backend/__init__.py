@@ -15,12 +15,6 @@
 # flake8: noqa
 import logging
 
-try:
-    from crossfit.backend.dask.dataframe import *
-except ImportError:
-    logging.warning("Import error for Dask backend in CrossFit. Skipping it.")
-    pass
-
 from crossfit.backend.numpy.sparse import *
 from crossfit.backend.pandas.array import *
 from crossfit.backend.pandas.dataframe import *
@@ -29,20 +23,21 @@ try:
     from crossfit.backend.cudf.array import *
     from crossfit.backend.cudf.dataframe import *
 except ImportError:
-    logging.warning("Import error for cuDF backend in Crossfit. Skipping it.")
+    logging.warning("Import error for cuDF backend in CrossFit. Skipping it.")
     pass
 
 try:
     from crossfit.backend.cupy.array import *
     from crossfit.backend.cupy.sparse import *
 except ImportError:
-    logging.warning("Import error for CuPy backend in Crossfit. Skipping it.")
+    logging.warning("Import error for CuPy backend in CrossFit. Skipping it.")
     pass
 
+# NOTE: Removing this block is useful for debugging.
 try:
     from crossfit.backend.torch.array import *
 except ImportError:
-    logging.warning("Import error for Torch backend in Crossfit. Skipping it.")
+    logging.warning("Import error for Torch backend in CrossFit. Skipping it.")
     pass
 
 # from crossfit.backend.tf.array import *

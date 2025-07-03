@@ -16,9 +16,16 @@ import os
 from dataclasses import dataclass
 from typing import Dict, Optional, Union
 
-try:
-    from dask_cudf import read_parquet
-except ImportError:
+import crossfit.config
+
+if not crossfit.config.DISABLE_DASK:
+    # Still need a try/except here because crossfit.config needs to import this file
+    # before we can set DISABLE_DASK.
+    try:
+        from dask_cudf import read_parquet
+    except ImportError:
+        pass
+else:
     from cudf import read_parquet
 
 _SPLIT_ALIASES = {

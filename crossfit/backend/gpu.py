@@ -15,9 +15,11 @@
 # pylint: disable=unused-import
 import os
 
-try:
+import crossfit.config
+
+if not crossfit.config.DISABLE_DASK:
     from dask.distributed.diagnostics.nvml import device_get_count
-except ImportError:
+else:
     import pynvml
 
     device_get_count = None

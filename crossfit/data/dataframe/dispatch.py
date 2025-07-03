@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import crossfit.config
 from crossfit.utils.dispatch_utils import Dispatch
 
 
@@ -24,12 +25,10 @@ class _CrossFrameDispatch(Dispatch):
 
         backends = []
         # TODO: Fix this
-        try:
+        if not crossfit.config.DISABLE_DASK:
             from crossfit.backend.dask.dataframe import DaskDataFrame
 
             backends.append(DaskDataFrame)
-        except ImportError:
-            pass
 
         from crossfit.backend.pandas.dataframe import PandasDataFrame
 
