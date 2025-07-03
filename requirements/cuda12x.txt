@@ -1,10 +1,7 @@
 cudf-cu12>=25.6
-dask-cudf-cu12>=25.6
 cuml-cu12>=25.6
 pylibraft-cu12>=25.6
-raft-dask-cu12>=25.6
 cuvs-cu12>=25.6
-dask-cuda>=25.6
 torch>=2.0
 transformers>=4.0
 curated-transformers>=1.0

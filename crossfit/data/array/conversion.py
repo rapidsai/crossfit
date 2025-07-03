@@ -1,4 +1,4 @@
-# Copyright 2023 NVIDIA CORPORATION
+# Copyright 2025 NVIDIA CORPORATION
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,9 +16,9 @@ from itertools import product
 from typing import Any, Type, TypeVar
 
 import numpy as np
-from dask.utils import Dispatch
 
 from crossfit.utils import dispatch_utils
+from crossfit.utils.dispatch_utils import Dispatch
 
 InputType = TypeVar("InputType")
 IntermediateType = TypeVar("IntermediateType")

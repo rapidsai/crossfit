@@ -1,4 +1,4 @@
-# Copyright 2023 NVIDIA CORPORATION
+# Copyright 2025 NVIDIA CORPORATION
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -154,7 +154,9 @@ class FrameBackend:
                 frame = frame.assign(**new_columns)
             else:
                 try:
-                    frame = CrossFrame(self.to_dict()).apply(cf.convert_array, columns)
+                    frame = CrossFrame(self.to_dict()).apply(
+                        cf.data.array.conversion.convert_array, columns
+                    )
                 except TypeError as err:
                     raise TypeError(
                         f"Unable to cast all column types to {columns}.\nOriginal error: {err}"

@@ -1,4 +1,4 @@
-# Copyright 2023 NVIDIA CORPORATION
+# Copyright 2025 NVIDIA CORPORATION
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,17 @@ import os
 from dataclasses import dataclass
 from typing import Dict, Optional, Union
 
-import dask_cudf
+import crossfit.config
+
+if not crossfit.config.DISABLE_DASK:
+    # Still need a try/except here because crossfit.config needs to import this file
+    # before we can set DISABLE_DASK.
+    try:
+        from dask_cudf import read_parquet
+    except ImportError:
+        pass
+else:
+    from cudf import read_parquet
 
 _SPLIT_ALIASES = {
     "val": ["validation", "valid", "dev"],
@@ -36,7 +46,7 @@ class Dataset:
     engine: str = "parquet"
 
     def ddf(self):
-        return dask_cudf.read_parquet(self.path)
+        return read_parquet(self.path)
 
 
 class FromDirMixin:

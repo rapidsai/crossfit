@@ -1,4 +1,4 @@
-# Copyright 2023 NVIDIA CORPORATION
+# Copyright 2025 NVIDIA CORPORATION
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,11 +14,21 @@
 
 import inspect
 
-import dask.dataframe as dd
-from dask.distributed import get_worker, wait
-from tqdm.auto import tqdm
+import crossfit.config
 
-from crossfit.backend.dask.cluster import global_dask_client
+if not crossfit.config.DISABLE_DASK:
+    # Still need a try/except here because crossfit.config needs to import this file
+    # before we can set DISABLE_DASK.
+    try:
+        import dask.dataframe as dd
+        from dask.distributed import get_worker as get_dask_worker
+        from dask.distributed import wait
+
+        from crossfit.backend.dask.cluster import global_dask_client
+    except ImportError:
+        pass
+
+from tqdm.auto import tqdm
 
 
 class Op:
@@ -41,17 +51,20 @@ class Op:
         return None
 
     def get_worker(self):
-        try:
-            worker = get_worker()
-        except ValueError:
+        if not crossfit.config.DISABLE_DASK:
+            try:
+                worker = get_dask_worker()
+            except ValueError:
+                worker = self
+        else:
             worker = self
 
         return worker
 
-    def call_dask(self, data: dd.DataFrame):
+    def call_dask(self, data: "dd.DataFrame"):
         output = data.map_partitions(self, meta=self._build_dask_meta(data))
 
-        if global_dask_client():
+        if not crossfit.config.DISABLE_DASK and global_dask_client():
             wait(output)
 
         return output
@@ -79,7 +92,7 @@ class Op:
         return output
 
     def __call__(self, data, *args, partition_info=None, **kwargs):
-        if isinstance(data, dd.DataFrame):
+        if not crossfit.config.DISABLE_DASK and isinstance(data, dd.DataFrame):
             output = self.call_dask(data, *args, **kwargs)
             self.teardown()
             return output

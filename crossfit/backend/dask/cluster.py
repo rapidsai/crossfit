@@ -1,4 +1,4 @@
-# Copyright 2023 NVIDIA CORPORATION
+# Copyright 2025 NVIDIA CORPORATION
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,9 +18,12 @@ import warnings
 from contextvars import ContextVar
 from typing import Any, Callable, Optional
 
-import dask
-import distributed
-from dask.distributed import Client, get_client
+import crossfit.config
+
+if not crossfit.config.DISABLE_DASK:
+    import dask
+    import distributed
+    from dask.distributed import Client, get_client
 
 from crossfit.backend.gpu import HAS_GPU
 
@@ -403,7 +406,7 @@ def set_dask_client(client="auto", new_cluster=None, force_new=False, **cluster_
     return None if active == "auto" else active
 
 
-def global_dask_client() -> Optional[distributed.Client]:
+def global_dask_client() -> Optional["distributed.Client"]:
     """Get Global Dask client if it's been set.
 
     Returns

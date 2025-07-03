@@ -1,0 +1,3 @@
+dask-cudf-cu12>=25.6
+raft-dask-cu12>=25.6
+dask-cuda>=25.6

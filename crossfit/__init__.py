@@ -1,4 +1,4 @@
-# Copyright 2023 NVIDIA CORPORATION
+# Copyright 2025 NVIDIA CORPORATION
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
 # flake8: noqa
 
 from crossfit import backend, metric, op
-from crossfit.backend.dask.cluster import Distributed, Serial
 from crossfit.calculate.aggregate import Aggregator
 from crossfit.calculate.module import CrossModule
 from crossfit.data.array.conversion import convert_array
@@ -67,12 +66,10 @@ __all__ = [
     "CrossFrame",
     "crossarray",
     "convert_array",
-    "Distributed",
     "FrameBackend",
     "op",
     "metric",
     "setup_dask_cluster",
-    "Serial",
 ]
 
 # Using the lazy import function
