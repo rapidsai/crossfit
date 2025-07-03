@@ -30,6 +30,7 @@ if not crossfit.config.DISABLE_DASK:
         from cuml.dask.neighbors import NearestNeighbors
         from dask import delayed
         from dask_cudf import from_delayed
+
         from crossfit.backend.dask.cluster import global_dask_client
     except ImportError:
         pass

@@ -23,6 +23,7 @@ if not crossfit.config.DISABLE_DASK:
         import dask.dataframe as dd
         from dask.distributed import get_worker as get_dask_worker
         from dask.distributed import wait
+
         from crossfit.backend.dask.cluster import global_dask_client
     except ImportError:
         pass
